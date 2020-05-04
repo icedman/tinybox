@@ -1,9 +1,14 @@
 tinybox_src = files(
-  'main.c'
+  'main.c',
+  'cursor.c',
+  'seat.c',
+  'output.c',
+  'xdg_shell.c'
   )
 
 tinybox_dep = [
   wayland_server,
+  cairo,
   wlroots,
   xkbcommon,
   ]
