@@ -1,6 +1,18 @@
 #include "tinybox/tbx_server.h"
 #include "tinybox/tbx_cursor.h"
 
+const char * cursor_images[] = {
+    "top_side",// HS_EDGE_TOP,
+    "bottom_side",// HS_EDGE_BOTTOM,
+    "left_side",// HS_EDGE_LEFT,
+    "right_side",// HS_EDGE_RIGHT,
+    "left_ptr",// HS_TITLEBAR,
+    "left_ptr",// HS_HANDLE,
+    "left_ptr",// HS_GRIP_LEFT,
+    "left_ptr",// HS_GRIP_RIGHT,
+    // HS_COUNT
+};
+
 static void process_cursor_move(struct tbx_server *server, uint32_t time) {
   /* Move the grabbed view to the new position. */
   server->grabbed_view->x = server->cursor->x - server->grab_x;
@@ -63,6 +75,10 @@ static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
   /* If the mode is non-passthrough, delegate to those functions. */
   if (server->cursor_mode == TBX_CURSOR_MOVE) {
     process_cursor_move(server, time);
+
+        wlr_xcursor_manager_set_cursor_image(
+          server->cursor_mgr, "grabbing", server->cursor);
+
     return;
   } else if (server->cursor_mode == TBX_CURSOR_RESIZE) {
     process_cursor_resize(server, time);
@@ -82,6 +98,13 @@ static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
     wlr_xcursor_manager_set_cursor_image(
         server->cursor_mgr, "left_ptr", server->cursor);
   }
+
+  if (view && view->hotspot != -1 &&view->hotspot < HS_COUNT) { 
+    // view->hotspot_edges != WLR_EDGE_NONE) {
+    wlr_xcursor_manager_set_cursor_image(
+        server->cursor_mgr, cursor_images[view->hotspot], server->cursor);
+  }
+
   if (surface) {
     bool focus_changed = seat->pointer_state.focused_surface != surface;
     /*
@@ -152,6 +175,10 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
   if (event->state == WLR_BUTTON_RELEASED) {
     /* If you released any buttons, we exit interactive move/resize mode. */
     server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
+
+      wlr_xcursor_manager_set_cursor_image(
+        server->cursor_mgr, "left_ptr", server->cursor);
+
   } else {
     /* Focus that client if the button was _pressed_ */
     focus_view(view, surface);

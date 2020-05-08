@@ -216,6 +216,16 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   render_rect(output, &box, color);
   memcpy(&view->hotspots[HS_EDGE_RIGHT], &box, sizeof(struct wlr_box));
 
+  // make hotspot edges tolerant
+  int hs_thickness = 4;
+  view->hotspots[HS_EDGE_TOP].y -= (title_bar_height + hs_thickness);
+  view->hotspots[HS_EDGE_TOP].height += hs_thickness;
+  view->hotspots[HS_EDGE_BOTTOM].y += footer_height;
+  view->hotspots[HS_EDGE_BOTTOM].height += hs_thickness;
+  view->hotspots[HS_EDGE_LEFT].x -= hs_thickness;
+  view->hotspots[HS_EDGE_LEFT].width += hs_thickness;
+  view->hotspots[HS_EDGE_RIGHT].width += hs_thickness;
+
   // --------------
   // titlebar
   // --------------
