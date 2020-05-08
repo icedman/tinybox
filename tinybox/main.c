@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < argc; i++) {
       if (!strcmp("--debug", argv[i]) || !strcmp("-v", argv[i]) || !strcmp("--exit", argv[i])) {
         printf("Warning: option %s is currently unimplemented\n", argv[i]);
-      } else if ((!strcmp("--startup", argv[i]) || !strcmp("-s", argv[i])) && i < argc) {
+      } else if ((!strcmp("--cmd", argv[i]) || !strcmp("-c", argv[i])) && i < argc) {
         startup_cmd = argv[i + 1];
       } else if ((!strcmp("--style", argv[i]) || !strcmp("-s", argv[i])) && i < argc) {
         style_path = argv[i + 1];
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
         // printf(PACKAGE_NAME " " PACKAGE_VERSION "\n");
         return 0;
       } else if (argv[i][0] == '-') {
-        printf("Usage: %s [--debug] [--exit] [--help] [--startup CMD] [--version]\n", argv[0]);
+        printf("Usage: %s [--debug] [--exit] [--help] [--style STYLE] [--startup CMD] [--version]\n", argv[0]);
         return strcmp("--help", argv[i]) != 0 && strcmp("-h", argv[i]) != 0;
       }
     }

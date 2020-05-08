@@ -99,7 +99,7 @@ static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
         server->cursor_mgr, "left_ptr", server->cursor);
   }
 
-  if (view && view->hotspot != -1 &&view->hotspot < HS_COUNT) { 
+  if (view && view->hotspot != -1 && view->hotspot < HS_COUNT) { 
     // view->hotspot_edges != WLR_EDGE_NONE) {
     wlr_xcursor_manager_set_cursor_image(
         server->cursor_mgr, cursor_images[view->hotspot], server->cursor);
@@ -175,13 +175,17 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
   if (event->state == WLR_BUTTON_RELEASED) {
     /* If you released any buttons, we exit interactive move/resize mode. */
     server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
-
       wlr_xcursor_manager_set_cursor_image(
         server->cursor_mgr, "left_ptr", server->cursor);
-
+    server->resize_edges = WLR_EDGE_NONE;
+    
   } else {
     /* Focus that client if the button was _pressed_ */
     focus_view(view, surface);
+
+  // int border_thickness = 2;
+  int footer_height = 8;
+  int title_bar_height = 28;
 
     if (view && view->hotspot_edges != WLR_EDGE_NONE) {
         server->cursor_mode = TBX_CURSOR_RESIZE;
@@ -189,9 +193,19 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
         server->resize_edges = view->hotspot_edges;
         server->grab_x = 0;
         server->grab_y = 0;
+
+        if (view->hotspot_edges & WLR_EDGE_TOP) {
+          server->grab_y -= title_bar_height;
+        }
+        if (view->hotspot_edges & WLR_EDGE_BOTTOM) {
+          server->grab_y += footer_height;
+        }
+
         wlr_xdg_surface_get_geometry(view->xdg_surface, &server->grab_geobox);
         server->grab_geobox.x = view->x;
         server->grab_geobox.y = view->y;
+        view->hotspot = -1;
+        view->hotspot_edges = WLR_EDGE_NONE;
         return;
     }
 
@@ -203,6 +217,8 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
         wlr_xdg_surface_get_geometry(view->xdg_surface, &server->grab_geobox);
         server->grab_geobox.x = view->x;
         server->grab_geobox.y = view->y;
+        view->hotspot = -1;
+        view->hotspot_edges = WLR_EDGE_NONE;
         return;
     }
     
