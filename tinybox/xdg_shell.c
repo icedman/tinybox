@@ -37,7 +37,7 @@ static void begin_interactive(struct tbx_view *view,
   server->grabbed_view = view;
   server->cursor_mode = mode;
 
-  if (mode == tbx_CURSOR_MOVE) {
+  if (mode == TBX_CURSOR_MOVE) {
     server->grab_x = server->cursor->x - view->x;
     server->grab_y = server->cursor->y - view->y;
   } else {
@@ -65,7 +65,7 @@ static void xdg_toplevel_request_move(
    * provied serial against a list of button press serials sent to this
    * client, to prevent the client from requesting this whenever they want. */
   struct tbx_view *view = wl_container_of(listener, view, request_move);
-  begin_interactive(view, tbx_CURSOR_MOVE, 0);
+  begin_interactive(view, TBX_CURSOR_MOVE, 0);
 }
 
 static void xdg_toplevel_request_resize(
@@ -77,9 +77,10 @@ static void xdg_toplevel_request_resize(
    * client, to prevent the client from requesting this whenever they want. */
   struct wlr_xdg_toplevel_resize_event *event = data;
   struct tbx_view *view = wl_container_of(listener, view, request_resize);
-  begin_interactive(view, tbx_CURSOR_RESIZE, event->edges);
+  begin_interactive(view, TBX_CURSOR_RESIZE, event->edges);
 }
 
+int offset = 0;
 static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   /* This event is raised when wlr_xdg_shell receives a new xdg surface from a
    * client, either a toplevel (application window) or popup. */
@@ -95,8 +96,9 @@ static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   view->server = server;
   view->xdg_surface = xdg_surface;
 
-  view->x = 4;
-  view->y = 32;
+  view->x = 4 + (offset*20);
+  view->y = 32 + (offset*20);
+  offset = (offset+1)%8;
 
   /* Listen to the various events it can emit */
   view->map.notify = xdg_surface_map;
@@ -177,6 +179,33 @@ bool view_at(struct tbx_view *view,
     *sy = _sy;
     *surface = _surface;
     return true;
+  }
+
+  // printf("------------\n%d %d %d %d\n", (int)lx, (int)ly, (int)*sx, (int)*sy);
+  const int resizeEdges[] = {
+    WLR_EDGE_TOP,
+    WLR_EDGE_BOTTOM,
+    WLR_EDGE_LEFT,
+    WLR_EDGE_RIGHT
+  };
+
+  view->hotspot = -1;
+  view->hotspot_edges = WLR_EDGE_NONE;
+  for(int i=0; i<(int)HS_COUNT;i++) {
+    struct wlr_box *box = &view->hotspots[i];
+    // printf("%d %d %d %d %d\n", i, box->x, box->y, box->width, box->height);
+    if (!box->width || !box->height) {
+      continue;
+    }
+    if (lx >= box->x && lx <= box->x + box->width &&
+        ly >= box->y && ly <= box->y + box->height) {
+      view->hotspot = i;
+
+      if (i>=HS_EDGE_TOP && i<=HS_EDGE_RIGHT) {
+        view->hotspot_edges = resizeEdges[i];
+      }
+      return true;
+    }
   }
 
   return false;

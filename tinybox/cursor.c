@@ -61,10 +61,10 @@ static void process_cursor_resize(struct tbx_server *server, uint32_t time) {
 
 static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
   /* If the mode is non-passthrough, delegate to those functions. */
-  if (server->cursor_mode == tbx_CURSOR_MOVE) {
+  if (server->cursor_mode == TBX_CURSOR_MOVE) {
     process_cursor_move(server, time);
     return;
-  } else if (server->cursor_mode == tbx_CURSOR_RESIZE) {
+  } else if (server->cursor_mode == TBX_CURSOR_RESIZE) {
     process_cursor_resize(server, time);
     return;
   }
@@ -151,11 +151,34 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
       server->cursor->x, server->cursor->y, &surface, &sx, &sy);
   if (event->state == WLR_BUTTON_RELEASED) {
     /* If you released any buttons, we exit interactive move/resize mode. */
-    server->cursor_mode = tbx_CURSOR_PASSTHROUGH;
+    server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
   } else {
     /* Focus that client if the button was _pressed_ */
-    
     focus_view(view, surface);
+
+    if (view && view->hotspot_edges != WLR_EDGE_NONE) {
+        server->cursor_mode = TBX_CURSOR_RESIZE;
+        server->grabbed_view = view;
+        server->resize_edges = view->hotspot_edges;
+        server->grab_x = 0;
+        server->grab_y = 0;
+        wlr_xdg_surface_get_geometry(view->xdg_surface, &server->grab_geobox);
+        server->grab_geobox.x = view->x;
+        server->grab_geobox.y = view->y;
+        return;
+    }
+
+    if (view && view->hotspot == HS_TITLEBAR) {
+        server->cursor_mode = TBX_CURSOR_MOVE;
+        server->grabbed_view = view;
+        server->grab_x = server->cursor->x - view->x;
+        server->grab_y = server->cursor->y - view->y;
+        wlr_xdg_surface_get_geometry(view->xdg_surface, &server->grab_geobox);
+        server->grab_geobox.x = view->x;
+        server->grab_geobox.y = view->y;
+        return;
+    }
+    
   }
 }
 

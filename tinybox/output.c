@@ -182,7 +182,6 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   box.width = (box.width + border_thickness * 2) * output->scale;
   box.height = (box.height + border_thickness * 2) * output->scale;
 
-
   struct wlr_box base_box;  
   memcpy(&base_box, &box, sizeof(struct wlr_box));
 
@@ -199,19 +198,23 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   // top
   box.height = border_thickness * output->scale;
   render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_EDGE_TOP], &box, sizeof(struct wlr_box));
 
   // bottom
   box.y = base_box.y + base_box.height - border_thickness;
   render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_EDGE_BOTTOM], &box, sizeof(struct wlr_box));
 
   // left
   memcpy(&box, &base_box, sizeof(struct wlr_box));
   box.width = border_thickness;
   render_rect(output, &box, color);
-
+  memcpy(&view->hotspots[HS_EDGE_LEFT], &box, sizeof(struct wlr_box));
+  
   // right
   box.x += base_box.width - border_thickness;
   render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_EDGE_RIGHT], &box, sizeof(struct wlr_box));
 
   // --------------
   // titlebar
@@ -220,6 +223,7 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   box.y = box.y - title_bar_height;
   box.height = title_bar_height;
   render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_TITLEBAR], &box, sizeof(struct wlr_box));
 
   box.x += border_thickness;
   box.y += border_thickness;
@@ -234,13 +238,13 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   box.height -= (border_thickness*2);
   render_texture(output, &box, textCache[tx_window_label_focus + focusTextureOffset]);
 
-  // footer
+  // handle
   memcpy(&box, &base_box, sizeof(struct wlr_box));
   box.y = box.y + box.height;
   box.height = footer_height + border_thickness;
   render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_HANDLE], &box, sizeof(struct wlr_box));
 
-  // handle
   box.x += border_thickness;
   box.y += border_thickness;
   box.width -= (border_thickness * 2);

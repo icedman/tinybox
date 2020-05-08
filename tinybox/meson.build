@@ -2,6 +2,7 @@ tinybox_src = files(
   'main.c',
   'cursor.c',
   'seat.c',
+  'server.c',
   'stringop.c',
   'style.c',
   'output.c',

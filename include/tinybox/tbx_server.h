@@ -70,4 +70,6 @@ struct tbx_server {
 
 extern struct tbx_server server;
 
+void init_server();
+
 #endif //  TBX_SERVER_H
