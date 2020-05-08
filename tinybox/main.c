@@ -60,6 +60,12 @@ int main(int argc, char *argv[]) {
   wlr_compositor_create(server.wl_display, server.renderer);
   wlr_data_device_manager_create(server.wl_display);
 
+  server.server_decoration = wlr_server_decoration_manager_create(server.wl_display);
+
+  wlr_server_decoration_manager_set_default_mode(
+    server.server_decoration,
+    WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
+
   init_output();
   init_xdg_shell();
   init_cursor();
@@ -96,7 +102,10 @@ int main(int argc, char *argv[]) {
       socket);
   wl_display_run(server.wl_display);
 
+  // wlr_server_decoration_manager_destroy(server.server_decoration);
+  
   /* Once wl_display_run returns, we shut down the server. */
+  wl_display_destroy_clients(server.wl_display);
   wl_display_destroy_clients(server.wl_display);
   wl_display_destroy(server.wl_display);
   return 0;
