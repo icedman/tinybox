@@ -95,6 +95,9 @@ static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   view->server = server;
   view->xdg_surface = xdg_surface;
 
+  view->x = 4;
+  view->y = 32;
+
   /* Listen to the various events it can emit */
   view->map.notify = xdg_surface_map;
   wl_signal_add(&xdg_surface->events.map, &view->map);

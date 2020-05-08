@@ -12,6 +12,9 @@ tinybox_src = files(
 tinybox_dep = [
   wayland_server,
   cairo,
+  pango,
+  pangocairo,
+  glesv2,
   wlroots,
   xkbcommon,
   ]
