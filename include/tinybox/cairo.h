@@ -13,4 +13,9 @@ cairo_surface_t *cairo_image_surface_scale(cairo_surface_t *image,
 
 void draw_gradient_rect(cairo_t *cx, int flags, int w, int h, float color[static 4], float colorTo[static 4]);
 
+
+void console_init(int w, int h);
+void console_clear();
+void console_log(const char *format, ...) ;
+
 #endif

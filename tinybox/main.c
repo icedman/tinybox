@@ -8,6 +8,7 @@
 
 #include "tinybox/style_defaults.h"
 #include "tinybox/tbx_server.h"
+#include "tinybox/cairo.h"
 
 struct tbx_server server;
 
@@ -43,6 +44,10 @@ int main(int argc, char *argv[]) {
   } else {
     memcpy(&server.style, style_bin, sizeof(struct tbx_style));
   }
+
+  console_init(400, 400);
+  console_log("hello %d", 1);
+  console_log("hello %d", 2);
 
   init_server();
   init_output();
