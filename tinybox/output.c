@@ -191,7 +191,6 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
   cairo_surface_destroy(dummy_surface);
   cairo_destroy(c);
 
-
   cairo_surface_t *surf = cairo_image_surface_create(
       WL_SHM_FORMAT_ARGB8888, w, h);
   cairo_t *cx = cairo_create(surf);
@@ -204,25 +203,26 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
 
   color_to_rgba(color, server.style.window_label_focus_textColor);
   cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
-  pango_printf(cx, font, scale, true,
-      "%s", title);
+  pango_printf(cx, font, scale, true, "%s", title);
 
   unsigned char *data = cairo_image_surface_get_data(surf);
-  // int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, w);
 
   view->title = wlr_texture_from_pixels(renderer,
       WL_SHM_FORMAT_ARGB8888,
       cairo_image_surface_get_stride(surf),
       w, h, data);
 
-  // printf("stride: %d height: %d\n", stride, h);
-
   // clear
+  cairo_save(cx);
+  cairo_set_source_rgba(cx, 0.0, 0.0, 0.0, 0.0);
+  cairo_set_operator(cx, CAIRO_OPERATOR_CLEAR);
+  cairo_rectangle(cx, 0, 0, w, h);
+  cairo_paint(cx);
+  cairo_restore(cx);
 
   color_to_rgba(color, server.style.window_label_unfocus_textColor);
   cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
-  pango_printf(cx, font, scale, true,
-      "%s", title);
+  pango_printf(cx, font, scale, true, "%s", title);
 
   data = cairo_image_surface_get_data(surf);
   view->title_unfocused = wlr_texture_from_pixels(renderer,
@@ -429,10 +429,13 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   render_texture(output, &box, textCache[tx_window_grip_focus + focusTextureOffset]);
   memcpy(&view->hotspots[HS_GRIP_RIGHT], &box, sizeof(struct wlr_box));
 
-  
   view->hotspots[HS_GRIP_LEFT].x -= hs_thickness;
   view->hotspots[HS_GRIP_LEFT].width += hs_thickness;
+  view->hotspots[HS_GRIP_LEFT].y -= hs_thickness;
+  view->hotspots[HS_GRIP_LEFT].height += hs_thickness;
   view->hotspots[HS_GRIP_RIGHT].width += hs_thickness;
+  view->hotspots[HS_GRIP_RIGHT].y -= hs_thickness;
+  view->hotspots[HS_GRIP_RIGHT].height += hs_thickness;
 }
 
 static void render_view_content(struct wlr_surface *surface,
