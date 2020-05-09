@@ -185,10 +185,9 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
     /* Focus that client if the button was _pressed_ */
     focus_view(view, surface);
 
-  int footer_height = view->server->style.handleWidth + (view->server->style.borderWidth * 2);
-  int title_bar_height = 28;
-
     if (view && view->hotspot_edges != WLR_EDGE_NONE) {
+        int title_bar_height = 28;
+        int footer_height = view->server->style.handleWidth + (view->server->style.borderWidth * 2);
         server->cursor_mode = TBX_CURSOR_RESIZE;
         server->grabbed_view = view;
         server->resize_edges = view->hotspot_edges;

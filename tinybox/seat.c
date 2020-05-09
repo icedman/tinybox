@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include "tinybox/tbx_server.h"
 #include "tinybox/tbx_seat.h"
 
@@ -31,6 +33,13 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
   case XKB_KEY_Escape:
     wl_display_terminate(server->wl_display);
     break;
+
+  case XKB_KEY_F2:
+    if (fork() == 0) {
+      execl("/bin/sh", "/bin/sh", "-c", "termite 2>/dev/null", (char *) NULL);
+    }
+    break;
+
   case XKB_KEY_F1:
     /* Cycle to the next view */
     if (wl_list_length(&server->views) < 2) {

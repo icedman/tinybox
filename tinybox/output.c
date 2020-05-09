@@ -426,11 +426,14 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   int footer_height = view->server->style.handleWidth + (view->server->style.borderWidth * 2);
   int title_bar_height = 28;
 
+  if (!view->title) {
+    title_bar_height = footer_height + view->server->style.borderWidth;
+  }
+
   struct wlr_box box;
   wlr_xdg_surface_get_geometry((struct wlr_xdg_surface*)surface, &box);
-
-  box.x = (ox - border_thickness) * output->scale;
-  box.y = (oy - border_thickness) * output->scale;
+  box.x += (ox - border_thickness) * output->scale;
+  box.y += (oy - border_thickness) * output->scale;
   box.width = (box.width + border_thickness * 2) * output->scale;
   box.height = (box.height + border_thickness * 2) * output->scale;
 
@@ -486,7 +489,6 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   render_rect(output, &box, color);
   memcpy(&view->hotspots[HS_TITLEBAR], &box, sizeof(struct wlr_box));
 
-
   box.x += border_thickness;
   box.y += border_thickness;
   box.width -= (border_thickness*2);
@@ -497,9 +499,10 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   box.y += border_thickness;
   box.width -= (border_thickness*2);
   box.height -= (border_thickness*2);
-  render_texture(output, &box, textCache[tx_window_label_focus + focusTextureOffset]);
-
+  
   if (view->title) {
+    render_texture(output, &box, textCache[tx_window_label_focus + focusTextureOffset]);
+
     box.width -= 4;
     scissor_output(output, box);
 
@@ -683,6 +686,7 @@ static void output_frame(struct wl_listener *listener, void *data) {
     }
 
     render_view_frame((struct wlr_surface *)view->xdg_surface, 0, 0, &rdata);
+    // wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_frame, &rdata);
 
     /* This calls our render_surface function for each surface among the
      * xdg_surface's toplevel and popups. */

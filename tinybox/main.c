@@ -77,6 +77,7 @@ int main(int argc, char *argv[]) {
       execl("/bin/sh", "/bin/sh", "-c", startup_cmd, (void *)NULL);
     }
   }
+
   /* Run the Wayland event loop. This does not return until you exit the
    * compositor. Starting the backend rigged up all of the necessary event
    * loop configuration to listen to libinput events, DRM events, generate
