@@ -165,7 +165,7 @@ struct tbx_style {
     int window_tab_label_focus_textColor;
     int window_tab_borderWidth;
     int window_tab_borderColor;
-    int window_tab_font;;
+    int window_tab_font;
 
     int window_font;
     int window_justify;
@@ -183,8 +183,9 @@ struct tbx_style {
     int menuFont;
     int titleFont;
     
-
     int hash;
+
+    char font[255];
 };
 
 void load_style(struct tbx_style *config_style, const char *path);

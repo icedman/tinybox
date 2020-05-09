@@ -55,6 +55,7 @@ struct line {
 };
 struct line lines[CONSOLE_LINES];
 int lineIdx;
+int lineRenderIdx;
 bool console_dirty;
 
 void console_init(int w, int h) {
@@ -65,16 +66,19 @@ void console_init(int w, int h) {
 
 void console_clear() {
   lineIdx = 0;
+  lineRenderIdx = 0;
   memset(lines, 0, sizeof(struct line [CONSOLE_LINES]));
 }
 
 void console_log(const char *format, ...) {
   va_list args;
   va_start (args, format);
-  vsnprintf (lines[lineIdx].l, 255, format, args);
+  vsnprintf (lines[lineIdx % CONSOLE_LINES].l, 255, format, args);
   va_end (args);
   lineIdx++;
-  lineIdx = lineIdx % CONSOLE_LINES;
+  if (lineIdx >= CONSOLE_LINES) {
+    lineRenderIdx = (lineIdx + 1) % CONSOLE_LINES;
+  }
   console_dirty = true;
 }
 
@@ -87,7 +91,7 @@ static void render_console(struct tbx_output *output) {
   }
 
   // float scale = 1.0f;
-  const char *font = "monospace 10";
+  const char *font = output->server->style.font;
 
   // We must use a non-nil cairo_t for cairo_set_font_options to work.
   // Therefore, we cannot use cairo_create(NULL).
@@ -131,8 +135,8 @@ static void render_console(struct tbx_output *output) {
   cairo_set_font_size(cx, 12);
 
   for(int i=0; i<CONSOLE_LINES; i++) {
-    int idx = (lineIdx + i) % CONSOLE_LINES;
-  cairo_move_to(cx, 10,(14 * i));
+    int idx = (lineRenderIdx + i) % CONSOLE_LINES;
+  cairo_move_to(cx, 10, 14 + (14 * i));
   cairo_show_text(cx, lines[idx].l);  
     
   }
@@ -148,8 +152,6 @@ static void render_console(struct tbx_output *output) {
 
 
   cairo_destroy(cx);
-
-
   console_dirty = false;
 }
 
@@ -264,16 +266,23 @@ static void generate_view_title_texture(struct tbx_output *output, struct tbx_vi
   if (view->title) {
     wlr_texture_destroy(view->title);
     wlr_texture_destroy(view->title_unfocused);
+    view->title = NULL;
+    view->title_unfocused = NULL;
   }
 
-  const char *font = "monospace 10";
+  const char *font = output->server->style.font;
 
   char title[128];
   char appId[64];
   sprintf(title, "%s", get_string_prop(view, VIEW_PROP_TITLE));
   sprintf(appId, "%s", get_string_prop(view, VIEW_PROP_APP_ID));
 
-  console_log(title);
+  if (strlen(title) == 0) {
+    view->title_dirty = false;
+    return;
+  }
+
+  // console_log("%s %s", appId, title);
 
   float scale = 1.0f;
   int w = 400;
@@ -413,8 +422,8 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   double ooy = oy;
   ox += view->x + sx, oy += view->y + sy;
 
-  int border_thickness = 2;
-  int footer_height = 8;
+  int border_thickness = view->server->style.borderWidth;
+  int footer_height = view->server->style.handleWidth + (view->server->style.borderWidth * 2);
   int title_bar_height = 28;
 
   struct wlr_box box;
@@ -669,16 +678,14 @@ static void output_frame(struct wl_listener *listener, void *data) {
       .renderer = renderer,
       .when = &now,
     };
-    /* This calls our render_surface function for each surface among the
-     * xdg_surface's toplevel and popups. */
-
     if (view->title_dirty) {
         generate_view_title_texture(output, view);
     }
 
     render_view_frame((struct wlr_surface *)view->xdg_surface, 0, 0, &rdata);
 
-    // if (view != output->server->grabbed_view)
+    /* This calls our render_surface function for each surface among the
+     * xdg_surface's toplevel and popups. */
     wlr_xdg_surface_for_each_surface(view->xdg_surface,
         render_view_content, &rdata);
   }

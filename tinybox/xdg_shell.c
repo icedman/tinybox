@@ -220,9 +220,9 @@ bool hotspot_at(struct tbx_view *view,
   for(int i=0; i<(int)HS_COUNT;i++) {
     struct wlr_box *box = &view->hotspots[i];
 
-    if (i == HS_TITLEBAR) {
-      console_log("hs: x:%d y:%d w:%d h:%d", box->x, box->y, box->width, box->height);
-    }
+    // if (i == HS_TITLEBAR) {
+    //   console_log("hs: x:%d y:%d w:%d h:%d", box->x, box->y, box->width, box->height);
+    // }
 
     if (!box->width || !box->height) {
       continue;
@@ -248,12 +248,12 @@ struct tbx_view *desktop_view_at(
    * cursor. This relies on server->views being ordered from top-to-bottom. */
   struct tbx_view *view;
 
-  console_clear();
-  console_log("lx:%d ly:%d", (int)lx,(int)ly);
+  // console_clear();
+  // console_log("lx:%d ly:%d", (int)lx,(int)ly);
 
   wl_list_for_each(view, &server->views, link) {
 
-  console_log("vx:%d vy:%d", (int)view->x, (int)view->y);
+  // console_log("vx:%d vy:%d", (int)view->x, (int)view->y);
 
     if (view_at(view, lx, ly, surface, sx, sy)) {
       return view;

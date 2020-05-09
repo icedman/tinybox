@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
   } else {
     memcpy(&server.style, style_bin, sizeof(struct tbx_style));
   }
+  strcpy(server.style.font, "monospace 10");
 
   console_init(400, 400);
 
