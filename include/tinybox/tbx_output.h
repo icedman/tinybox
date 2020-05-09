@@ -21,6 +21,6 @@ struct tbx_view {
   int x, y;
 };
 
-void init_output();
+void output_init();
 
 #endif //  TBX_OUTPUT_H

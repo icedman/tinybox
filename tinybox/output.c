@@ -172,7 +172,7 @@ static void server_new_output(struct wl_listener *listener, void *data) {
   wlr_output_layout_add_auto(server->output_layout, wlr_output);
 }
 
-void init_output() {
+void output_init() {
 
   /* Creates an output layout, which a wlroots utility for working with an
    * arrangement of screens in a physical layout. */

@@ -182,7 +182,7 @@ static void server_cursor_frame(struct wl_listener *listener, void *data) {
   wlr_seat_pointer_notify_frame(server->seat);
 }
 
-void init_cursor()
+void cursor_init()
 {
   /*
    * Creates a cursor, which is a wlroots utility for tracking the cursor

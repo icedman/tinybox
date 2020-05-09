@@ -10,6 +10,25 @@
 
 struct tbx_server server;
 
+const char *header_format = "\n==========\n%s\n----------\n";
+void server_print() {
+    struct tbx_view *view;
+    printf(header_format, "views");
+    wl_list_for_each_reverse(view, &server.views, link) {
+        printf("%s\n", view->xdg_surface->toplevel->title);
+    }
+
+    struct tbx_output *output;
+    printf(header_format, "outputs");
+    wl_list_for_each(output, &server.outputs, link) {
+        // double ox = 0, oy = 0;
+        // wlr_output_layout_output_coords(
+        //     server.output_layout, output->wlr_output, &ox, &oy);
+        // printf("%s %f %f\n", output->wlr_output->name, ox, oy);
+        printf("%s\n", output->wlr_output->name);
+    } 
+}
+
 int main(int argc, char *argv[]) {
   printf("tinybox\n");
 
@@ -60,10 +79,10 @@ int main(int argc, char *argv[]) {
   wlr_compositor_create(server.wl_display, server.renderer);
   wlr_data_device_manager_create(server.wl_display);
 
-  init_output();
-  init_xdg_shell();
-  init_cursor();
-  init_seat();
+  output_init();
+  xdg_shell_init();
+  cursor_init();
+  seat_init();
 
   /* Add a Unix socket to the Wayland display. */
   const char *socket = wl_display_add_socket_auto(server.wl_display);

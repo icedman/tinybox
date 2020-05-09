@@ -193,7 +193,7 @@ struct tbx_view *desktop_view_at(
   return NULL;
 }
 
-void init_xdg_shell() {
+void xdg_shell_init() {
   /* Set up our list of views and the xdg-shell. The xdg-shell is a Wayland
    * protocol which is used for application windows. For more detail on
    * shells, refer to my article:

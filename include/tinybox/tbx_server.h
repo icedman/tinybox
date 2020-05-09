@@ -61,5 +61,6 @@ struct tbx_server {
 };
 
 extern struct tbx_server server;
+extern void server_print();
 
 #endif //  TBX_SERVER_H

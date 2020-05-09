@@ -27,10 +27,17 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
    *
    * This function assumes Alt is held down.
    */
+
+
+
   switch (sym) {
   case XKB_KEY_Escape:
     wl_display_terminate(server->wl_display);
     break;
+  case XKB_KEY_F3:
+    server_print();
+    break;
+  break;
   case XKB_KEY_F1:
     /* Cycle to the next view */
     if (wl_list_length(&server->views) < 2) {
@@ -71,7 +78,7 @@ static void keyboard_handle_key(
 
   bool handled = false;
   uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
-  if ((modifiers & WLR_MODIFIER_ALT) && event->state == WLR_KEY_PRESSED) {
+  if ((modifiers & WLR_MODIFIER_CTRL) && event->state == WLR_KEY_PRESSED) {
     /* If alt is held down and this button was _pressed_, we attempt to
      * process it as a compositor keybinding. */
     for (int i = 0; i < nsyms; i++) {
@@ -183,7 +190,7 @@ static void seat_request_set_selection(struct wl_listener *listener, void *data)
   wlr_seat_set_selection(server->seat, event->source, event->serial);
 }
 
-void init_seat() {
+void seat_init() {
   /*
    * Configures a seat, which is a single "seat" at which a user sits and
    * operates the computer. This conceptually includes up to one keyboard,

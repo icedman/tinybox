@@ -13,6 +13,6 @@ struct tbx_keyboard {
   struct wl_listener key;
 };
 
-void init_seat();
+void seat_init();
 
 #endif //  TBX_SEAT_H

@@ -7,6 +7,6 @@ enum tbx_cursor_mode {
   tbx_CURSOR_RESIZE,
 };
 
-void init_cursor();
+void cursor_init();
 
 #endif //  TBX_CURSOR_H
