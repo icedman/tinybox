@@ -43,3 +43,35 @@ cairo_surface_t *cairo_image_surface_scale(cairo_surface_t *image,
     cairo_destroy(cairo);
     return new;
 }
+
+void draw_gradient_rect(cairo_t *cx, int flags, int w, int h, float color[static 4], float colorTo[static 4]) {
+    cairo_pattern_t *pat = 0;
+
+    cairo_set_antialias(cx, CAIRO_ANTIALIAS_BEST);
+
+    if (flags & sf_gradient) {
+        if (flags & sf_diagonal) {
+            pat = cairo_pattern_create_linear(0.0, 0.0, w, h);
+        } else if (flags & sf_crossdiagonal) {
+            pat = cairo_pattern_create_linear(0.0, h, w, 0.0);
+        } else {
+            pat = cairo_pattern_create_linear(0.0, 0.0, w, 0.0);
+        }
+    }
+
+    if (pat) {
+        cairo_pattern_add_color_stop_rgb(pat, 0, color[0], color[1], color[2]);
+        cairo_pattern_add_color_stop_rgb(pat, 1.0, colorTo[0], colorTo[1], colorTo[2]);
+
+        cairo_rectangle (cx, 0.0, 0.0, w, h);
+        cairo_set_source(cx, pat);
+        cairo_fill (cx);
+      
+        cairo_pattern_destroy(pat);
+    } else {
+
+        cairo_rectangle (cx, 0.0, 0.0, w, h);
+        cairo_set_source_rgb(cx, color[0], color[1], color[2]);
+        cairo_fill (cx);
+    }
+};
