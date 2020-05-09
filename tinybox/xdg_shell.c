@@ -195,6 +195,8 @@ bool view_at(struct tbx_view *view,
 
   // printf("------------\n%d %d %d %d\n", (int)lx, (int)ly, (int)*sx, (int)*sy);
   const int resizeEdges[] = {
+    WLR_EDGE_BOTTOM | WLR_EDGE_LEFT,
+    WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT,
     WLR_EDGE_TOP,
     WLR_EDGE_BOTTOM,
     WLR_EDGE_LEFT,
@@ -212,8 +214,7 @@ bool view_at(struct tbx_view *view,
     if (lx >= box->x && lx <= box->x + box->width &&
         ly >= box->y && ly <= box->y + box->height) {
       view->hotspot = i;
-
-      if (i>=HS_EDGE_TOP && i<=HS_EDGE_RIGHT) {
+      if (i<=HS_EDGE_RIGHT) {
         view->hotspot_edges = resizeEdges[i];
       }
       return true;

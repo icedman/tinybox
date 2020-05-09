@@ -402,11 +402,32 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   render_rect(output, &box, color);
   memcpy(&view->hotspots[HS_HANDLE], &box, sizeof(struct wlr_box));
 
+  int grip_width = 32;
+  box.x += grip_width;
+  box.width -= (grip_width * 2);
+
   box.x += border_thickness;
   box.y += border_thickness;
   box.width -= (border_thickness * 2);
   box.height -= (border_thickness * 2);
   render_texture(output, &box, textCache[tx_window_handle_focus + focusTextureOffset]);
+
+  // grips
+  memcpy(&box, &base_box, sizeof(struct wlr_box));
+  box.x += border_thickness;
+  box.width = grip_width - border_thickness;
+  box.y = box.y + box.height + border_thickness;
+  box.height = footer_height - border_thickness;
+  render_texture(output, &box, textCache[tx_window_grip_focus + focusTextureOffset]);
+  memcpy(&view->hotspots[HS_GRIP_LEFT], &box, sizeof(struct wlr_box));
+
+  memcpy(&box, &base_box, sizeof(struct wlr_box));
+  box.x += box.width - grip_width;
+  box.width = grip_width - border_thickness;
+  box.y = box.y + box.height + border_thickness;
+  box.height = footer_height - border_thickness;
+  render_texture(output, &box, textCache[tx_window_grip_focus + focusTextureOffset]);
+  memcpy(&view->hotspots[HS_GRIP_RIGHT], &box, sizeof(struct wlr_box));
 }
 
 static void render_view_content(struct wlr_surface *surface,
