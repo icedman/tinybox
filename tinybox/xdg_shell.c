@@ -1,6 +1,6 @@
 #include "tinybox/tbx_server.h"
 #include "tinybox/xdg_shell.h"
-
+#include "tinybox/cairo.h"
 
 static void xdg_surface_map(struct wl_listener *listener, void *data) {
   /* Called when the surface is mapped, or ready to display on-screen. */
@@ -18,6 +18,12 @@ static void xdg_surface_unmap(struct wl_listener *listener, void *data) {
 static void xdg_surface_destroy(struct wl_listener *listener, void *data) {
   /* Called when the surface is destroyed and should never be shown again. */
   struct tbx_view *view = wl_container_of(listener, view, destroy);
+
+  if (view->title) {
+    wlr_texture_destroy(view->title);
+    wlr_texture_destroy(view->title_unfocused);
+  }
+
   wl_list_remove(&view->link);
   free(view);
 }
@@ -191,9 +197,15 @@ bool view_at(struct tbx_view *view,
     return true;
   }
 
+  return false;
+}
+
+bool hotspot_at(struct tbx_view *view,
+    double lx, double ly, struct wlr_surface **surface,
+    double *sx, double *sy) {
+
   // TODO: check multiple outputs
 
-  // printf("------------\n%d %d %d %d\n", (int)lx, (int)ly, (int)*sx, (int)*sy);
   const int resizeEdges[] = {
     WLR_EDGE_BOTTOM | WLR_EDGE_LEFT,
     WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT,
@@ -207,7 +219,11 @@ bool view_at(struct tbx_view *view,
   view->hotspot_edges = WLR_EDGE_NONE;
   for(int i=0; i<(int)HS_COUNT;i++) {
     struct wlr_box *box = &view->hotspots[i];
-    // printf("%d %d %d %d %d\n", i, box->x, box->y, box->width, box->height);
+
+    if (i == HS_TITLEBAR) {
+      console_log("hs: x:%d y:%d w:%d h:%d", box->x, box->y, box->width, box->height);
+    }
+
     if (!box->width || !box->height) {
       continue;
     }
@@ -224,16 +240,29 @@ bool view_at(struct tbx_view *view,
   return false;
 }
 
+
 struct tbx_view *desktop_view_at(
     struct tbx_server *server, double lx, double ly,
     struct wlr_surface **surface, double *sx, double *sy) {
   /* This iterates over all of our surfaces and attempts to find one under the
    * cursor. This relies on server->views being ordered from top-to-bottom. */
   struct tbx_view *view;
+
+  console_clear();
+  console_log("lx:%d ly:%d", (int)lx,(int)ly);
+
   wl_list_for_each(view, &server->views, link) {
+
+  console_log("vx:%d vy:%d", (int)view->x, (int)view->y);
+
     if (view_at(view, lx, ly, surface, sx, sy)) {
       return view;
     }
+
+      if (hotspot_at(view, lx, ly, surface, sx, sy)) {
+        return view;
+      }
+      
   }
   return NULL;
 }

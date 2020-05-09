@@ -13,6 +13,8 @@
 #include "tinybox/cairo.h"
 #include "tinybox/pango.h"
 
+#include <stdarg.h>
+
 /* Used to move all of the data necessary to render a surface from the top-level
  * frame handler to the per-surface render function. */
 struct render_data {
@@ -39,8 +41,117 @@ enum {
   tx_window_handle_focus,
   tx_window_handle_unfocus,
   tx_window_grip_focus,
-  tx_window_grip_unfocus,
+  tx_window_grip_unfocus
 };
+
+#define CONSOLE_LINES 24
+#define CONSOLE_WIDTH 400
+#define CONSOLE_HEIGHT 400
+cairo_surface_t *console = NULL;
+struct wlr_texture *console_texture = NULL;
+
+struct line {
+  char l[255];
+};
+struct line lines[CONSOLE_LINES];
+int lineIdx;
+bool console_dirty;
+
+void console_init(int w, int h) {
+  console = cairo_image_surface_create(
+      CAIRO_FORMAT_ARGB32, w, h);
+  console_clear();
+}
+
+void console_clear() {
+  lineIdx = 0;
+  memset(lines, 0, sizeof(struct line [CONSOLE_LINES]));
+}
+
+void console_log(const char *format, ...) {
+  va_list args;
+  va_start (args, format);
+  vsnprintf (lines[lineIdx].l, 255, format, args);
+  va_end (args);
+  lineIdx++;
+  lineIdx = lineIdx % CONSOLE_LINES;
+  console_dirty = true;
+}
+
+static void render_console(struct tbx_output *output) {
+
+  struct wlr_renderer *renderer = output->server->renderer;
+
+  if (console_texture) {
+    wlr_texture_destroy(console_texture);
+  }
+
+  // float scale = 1.0f;
+  const char *font = "monospace 10";
+
+  // We must use a non-nil cairo_t for cairo_set_font_options to work.
+  // Therefore, we cannot use cairo_create(NULL).
+  cairo_surface_t *dummy_surface = cairo_image_surface_create(
+      WL_SHM_FORMAT_ARGB8888, 0, 0);
+  cairo_t *c = cairo_create(dummy_surface);
+  cairo_set_antialias(c, CAIRO_ANTIALIAS_BEST);
+  cairo_font_options_t *fo = cairo_font_options_create();
+  cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_FULL);
+  if (output->wlr_output->subpixel == WL_OUTPUT_SUBPIXEL_NONE) {
+    cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_GRAY);
+  } else {
+    cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
+    
+    // cairo.c
+    cairo_font_options_set_subpixel_order(fo,
+      to_cairo_subpixel_order(output->wlr_output->subpixel));
+  }
+  cairo_set_font_options(c, fo);
+  cairo_surface_destroy(dummy_surface);
+  cairo_destroy(c);
+
+  cairo_t *cx = cairo_create(console);
+  cairo_set_font_options(cx, fo);
+  cairo_font_options_destroy(fo);
+
+  cairo_save(cx);
+  cairo_set_source_rgba(cx, 0.0, 0.0, 0.0, 0.0);
+  cairo_set_operator(cx, CAIRO_OPERATOR_CLEAR);
+  cairo_rectangle(cx, 0, 0, CONSOLE_WIDTH, CONSOLE_HEIGHT);
+  cairo_paint(cx);
+  cairo_restore(cx);
+
+  cairo_move_to(cx, 0, 0);
+
+  float color [4];
+  color_to_rgba(color, server.style.window_label_focus_textColor);
+  cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
+
+  cairo_select_font_face(cx, font, 0, 0);
+  cairo_set_font_size(cx, 12);
+
+  for(int i=0; i<CONSOLE_LINES; i++) {
+    int idx = (lineIdx + i) % CONSOLE_LINES;
+  cairo_move_to(cx, 10,(14 * i));
+  cairo_show_text(cx, lines[idx].l);  
+    
+  }
+  // char fname[255] = "";
+  // sprintf(fname, "/tmp/text_%s.png", appId);
+  // cairo_surface_write_to_png(surf, fname);
+
+  unsigned char *data = cairo_image_surface_get_data(console);
+  console_texture = wlr_texture_from_pixels(renderer,
+      WL_SHM_FORMAT_ARGB8888,
+      cairo_image_surface_get_stride(console),
+      CONSOLE_WIDTH, CONSOLE_HEIGHT, data);
+
+
+  cairo_destroy(cx);
+
+
+  console_dirty = false;
+}
 
 static void generate_texture(struct wlr_renderer *renderer, int idx, int flags, int w, int h, float color[static 4], float colorTo[static 4]) {
   // printf("generate texture %d\n", idx);
@@ -146,7 +257,7 @@ const char *get_string_prop(struct tbx_view *view,
   }
 }
 
-void generate_view_title_texture(struct tbx_output *output, struct tbx_view *view)
+static void generate_view_title_texture(struct tbx_output *output, struct tbx_view *view)
 {
   struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
 
@@ -161,6 +272,8 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
   char appId[64];
   sprintf(title, "%s", get_string_prop(view, VIEW_PROP_TITLE));
   sprintf(appId, "%s", get_string_prop(view, VIEW_PROP_APP_ID));
+
+  console_log(title);
 
   float scale = 1.0f;
   int w = 400;
@@ -183,13 +296,12 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
     cairo_font_options_set_subpixel_order(fo,
       to_cairo_subpixel_order(output->wlr_output->subpixel));
   }
-
-  float color[4];
-
   cairo_set_font_options(c, fo);
   get_text_size(c, font, &w, NULL, NULL, scale, true, "%s", title);
   cairo_surface_destroy(dummy_surface);
   cairo_destroy(c);
+
+  float color[4];
 
   cairo_surface_t *surf = cairo_image_surface_create(
       WL_SHM_FORMAT_ARGB8888, w, h);
@@ -297,6 +409,8 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   double ox = 0, oy = 0;
   wlr_output_layout_output_coords(
       view->server->output_layout, output, &ox, &oy);
+  double oox = ox;
+  double ooy = oy;
   ox += view->x + sx, oy += view->y + sy;
 
   int border_thickness = 2;
@@ -349,7 +463,6 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   int hs_thickness = 4;
   view->hotspots[HS_EDGE_TOP].y -= (title_bar_height + hs_thickness - border_thickness);
   view->hotspots[HS_EDGE_TOP].height += hs_thickness;
-  // view->hotspots[HS_EDGE_BOTTOM].y += ;
   view->hotspots[HS_EDGE_BOTTOM].height += (footer_height + hs_thickness);
   view->hotspots[HS_EDGE_LEFT].x -= (hs_thickness - border_thickness);
   view->hotspots[HS_EDGE_LEFT].width += hs_thickness;
@@ -436,6 +549,13 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   view->hotspots[HS_GRIP_RIGHT].width += hs_thickness;
   view->hotspots[HS_GRIP_RIGHT].y -= hs_thickness;
   view->hotspots[HS_GRIP_RIGHT].height += hs_thickness;
+
+  for(int i=0; i<HS_COUNT;i++) {
+    view->hotspots[i].x -= oox;
+    view->hotspots[i].y -= ooy;
+  }
+
+  // adjust hotspots to output layout
 }
 
 static void render_view_content(struct wlr_surface *surface,
@@ -524,6 +644,17 @@ static void output_frame(struct wl_listener *listener, void *data) {
   float color[4] = {0.3, 0.3, 0.3, 1.0};
   wlr_renderer_clear(renderer, color);
 
+  // console
+  if (console_texture) {
+    struct wlr_box console_box = {
+      .x = 0,
+      .y = 0,
+      .width = CONSOLE_WIDTH,
+      .height = CONSOLE_HEIGHT
+    };
+    render_texture(output->wlr_output, &console_box, console_texture);
+  }
+
   /* Each subsequent window we render is rendered on top of the last. Because
    * our view list is ordered front-to-back, we iterate over it backwards. */
   struct tbx_view *view;
@@ -550,6 +681,10 @@ static void output_frame(struct wl_listener *listener, void *data) {
     // if (view != output->server->grabbed_view)
     wlr_xdg_surface_for_each_surface(view->xdg_surface,
         render_view_content, &rdata);
+  }
+
+  if (console_dirty) {
+    render_console(output);
   }
 
   /* Hardware cursors are rendered by the GPU on a separate plane, and can be

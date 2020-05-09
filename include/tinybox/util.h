@@ -39,6 +39,4 @@ float parse_float(const char *value);
 
 // bool sway_set_cloexec(int fd, bool cloexec);
 
-void draw_gradient_rect(cairo_t *cx, int flags, int w, int h, float color[static 4], float colorTo[static 4]);
-
 #endif
