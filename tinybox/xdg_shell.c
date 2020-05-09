@@ -1,6 +1,6 @@
 #include "tinybox/tbx_server.h"
 #include "tinybox/xdg_shell.h"
-
+#include "tinybox/cairo.h"
 
 static void xdg_surface_map(struct wl_listener *listener, void *data) {
   /* Called when the surface is mapped, or ready to display on-screen. */
@@ -18,6 +18,12 @@ static void xdg_surface_unmap(struct wl_listener *listener, void *data) {
 static void xdg_surface_destroy(struct wl_listener *listener, void *data) {
   /* Called when the surface is destroyed and should never be shown again. */
   struct tbx_view *view = wl_container_of(listener, view, destroy);
+
+  if (view->title) {
+    wlr_texture_destroy(view->title);
+    wlr_texture_destroy(view->title_unfocused);
+  }
+
   wl_list_remove(&view->link);
   free(view);
 }
@@ -37,7 +43,7 @@ static void begin_interactive(struct tbx_view *view,
   server->grabbed_view = view;
   server->cursor_mode = mode;
 
-  if (mode == tbx_CURSOR_MOVE) {
+  if (mode == TBX_CURSOR_MOVE) {
     server->grab_x = server->cursor->x - view->x;
     server->grab_y = server->cursor->y - view->y;
   } else {
@@ -65,7 +71,7 @@ static void xdg_toplevel_request_move(
    * provied serial against a list of button press serials sent to this
    * client, to prevent the client from requesting this whenever they want. */
   struct tbx_view *view = wl_container_of(listener, view, request_move);
-  begin_interactive(view, tbx_CURSOR_MOVE, 0);
+  begin_interactive(view, TBX_CURSOR_MOVE, 0);
 }
 
 static void xdg_toplevel_request_resize(
@@ -77,9 +83,16 @@ static void xdg_toplevel_request_resize(
    * client, to prevent the client from requesting this whenever they want. */
   struct wlr_xdg_toplevel_resize_event *event = data;
   struct tbx_view *view = wl_container_of(listener, view, request_resize);
-  begin_interactive(view, tbx_CURSOR_RESIZE, event->edges);
+  begin_interactive(view, TBX_CURSOR_RESIZE, event->edges);
 }
 
+static void handle_set_title(struct wl_listener *listener, void *data) {
+  struct tbx_view *view =
+    wl_container_of(listener, view, set_title);
+  view->title_dirty = true;
+}
+
+int offset = 0;
 static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   /* This event is raised when wlr_xdg_shell receives a new xdg surface from a
    * client, either a toplevel (application window) or popup. */
@@ -95,6 +108,10 @@ static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   view->server = server;
   view->xdg_surface = xdg_surface;
 
+  view->x = 4 + (offset*20);
+  view->y = 32 + (offset*20);
+  offset = (offset+1)%8;
+
   /* Listen to the various events it can emit */
   view->map.notify = xdg_surface_map;
   wl_signal_add(&xdg_surface->events.map, &view->map);
@@ -109,6 +126,10 @@ static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   wl_signal_add(&toplevel->events.request_move, &view->request_move);
   view->request_resize.notify = xdg_toplevel_request_resize;
   wl_signal_add(&toplevel->events.request_resize, &view->request_resize);
+
+  /* title */
+  view->set_title.notify = handle_set_title;
+  wl_signal_add(&toplevel->events.set_title, &view->set_title);
 
   /* Add it to the list of views. */
   wl_list_insert(&server->views, &view->link);
@@ -179,16 +200,69 @@ bool view_at(struct tbx_view *view,
   return false;
 }
 
+bool hotspot_at(struct tbx_view *view,
+    double lx, double ly, struct wlr_surface **surface,
+    double *sx, double *sy) {
+
+  // TODO: check multiple outputs
+
+  const int resizeEdges[] = {
+    WLR_EDGE_BOTTOM | WLR_EDGE_LEFT,
+    WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT,
+    WLR_EDGE_TOP,
+    WLR_EDGE_BOTTOM,
+    WLR_EDGE_LEFT,
+    WLR_EDGE_RIGHT
+  };
+
+  view->hotspot = -1;
+  view->hotspot_edges = WLR_EDGE_NONE;
+  for(int i=0; i<(int)HS_COUNT;i++) {
+    struct wlr_box *box = &view->hotspots[i];
+
+    // if (i == HS_TITLEBAR) {
+    //   console_log("hs: x:%d y:%d w:%d h:%d", box->x, box->y, box->width, box->height);
+    // }
+
+    if (!box->width || !box->height) {
+      continue;
+    }
+    if (lx >= box->x && lx <= box->x + box->width &&
+        ly >= box->y && ly <= box->y + box->height) {
+      view->hotspot = i;
+      if (i<=HS_EDGE_RIGHT) {
+        view->hotspot_edges = resizeEdges[i];
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
 struct tbx_view *desktop_view_at(
     struct tbx_server *server, double lx, double ly,
     struct wlr_surface **surface, double *sx, double *sy) {
   /* This iterates over all of our surfaces and attempts to find one under the
    * cursor. This relies on server->views being ordered from top-to-bottom. */
   struct tbx_view *view;
+
+  // console_clear();
+  // console_log("lx:%d ly:%d", (int)lx,(int)ly);
+
   wl_list_for_each(view, &server->views, link) {
+
+  // console_log("vx:%d vy:%d", (int)view->x, (int)view->y);
+
     if (view_at(view, lx, ly, surface, sx, sy)) {
       return view;
     }
+
+      if (hotspot_at(view, lx, ly, surface, sx, sy)) {
+        return view;
+      }
+      
   }
   return NULL;
 }
@@ -205,5 +279,6 @@ void xdg_shell_init() {
   server.new_xdg_surface.notify = server_new_xdg_surface;
   wl_signal_add(&server.xdg_shell->events.new_surface,
       &server.new_xdg_surface);
+
 }
 

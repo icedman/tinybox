@@ -2,6 +2,18 @@
 
 #include "tinybox/tbx_server.h"
 #include "tinybox/tbx_output.h"
+#include "tinybox/util.h"
+
+#include <wlr/render/gles2.h>
+#include <wlr/render/wlr_renderer.h>
+#include <GLES2/gl2.h>
+#include <cairo/cairo.h>
+#include <pango/pangocairo.h>
+
+#include "tinybox/cairo.h"
+#include "tinybox/pango.h"
+
+#include <stdarg.h>
 
 /* Used to move all of the data necessary to render a surface from the top-level
  * frame handler to the per-surface render function. */
@@ -12,7 +24,553 @@ struct render_data {
   struct timespec *when;
 };
 
-static void render_surface(struct wlr_surface *surface,
+struct wlr_texture *textCache[16] = {
+  NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL
+};
+
+static int lastCacheHash = 0;
+
+enum {
+  tx_window_title_focus,
+  tx_window_title_unfocus,
+  tx_window_label_focus,
+  tx_window_label_unfocus,
+  tx_window_handle_focus,
+  tx_window_handle_unfocus,
+  tx_window_grip_focus,
+  tx_window_grip_unfocus
+};
+
+#define CONSOLE_LINES 24
+#define CONSOLE_WIDTH 400
+#define CONSOLE_HEIGHT 400
+cairo_surface_t *console = NULL;
+struct wlr_texture *console_texture = NULL;
+
+struct line {
+  char l[255];
+};
+struct line lines[CONSOLE_LINES];
+int lineIdx;
+int lineRenderIdx;
+bool console_dirty;
+
+void console_init(int w, int h) {
+  console = cairo_image_surface_create(
+      CAIRO_FORMAT_ARGB32, w, h);
+  console_clear();
+}
+
+void console_clear() {
+  lineIdx = 0;
+  lineRenderIdx = 0;
+  memset(lines, 0, sizeof(struct line [CONSOLE_LINES]));
+}
+
+void console_log(const char *format, ...) {
+  va_list args;
+  va_start (args, format);
+  vsnprintf (lines[lineIdx % CONSOLE_LINES].l, 255, format, args);
+  va_end (args);
+  lineIdx++;
+  if (lineIdx >= CONSOLE_LINES) {
+    lineRenderIdx = (lineIdx + 1) % CONSOLE_LINES;
+  }
+  console_dirty = true;
+}
+
+static void render_console(struct tbx_output *output) {
+
+  struct wlr_renderer *renderer = output->server->renderer;
+
+  if (console_texture) {
+    wlr_texture_destroy(console_texture);
+  }
+
+  // float scale = 1.0f;
+  const char *font = output->server->style.font;
+
+  // We must use a non-nil cairo_t for cairo_set_font_options to work.
+  // Therefore, we cannot use cairo_create(NULL).
+  cairo_surface_t *dummy_surface = cairo_image_surface_create(
+      WL_SHM_FORMAT_ARGB8888, 0, 0);
+  cairo_t *c = cairo_create(dummy_surface);
+  cairo_set_antialias(c, CAIRO_ANTIALIAS_BEST);
+  cairo_font_options_t *fo = cairo_font_options_create();
+  cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_FULL);
+  if (output->wlr_output->subpixel == WL_OUTPUT_SUBPIXEL_NONE) {
+    cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_GRAY);
+  } else {
+    cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
+    
+    // cairo.c
+    cairo_font_options_set_subpixel_order(fo,
+      to_cairo_subpixel_order(output->wlr_output->subpixel));
+  }
+  cairo_set_font_options(c, fo);
+  cairo_surface_destroy(dummy_surface);
+  cairo_destroy(c);
+
+  cairo_t *cx = cairo_create(console);
+  cairo_set_font_options(cx, fo);
+  cairo_font_options_destroy(fo);
+
+  cairo_save(cx);
+  cairo_set_source_rgba(cx, 0.0, 0.0, 0.0, 0.0);
+  cairo_set_operator(cx, CAIRO_OPERATOR_CLEAR);
+  cairo_rectangle(cx, 0, 0, CONSOLE_WIDTH, CONSOLE_HEIGHT);
+  cairo_paint(cx);
+  cairo_restore(cx);
+
+  cairo_move_to(cx, 0, 0);
+
+  float color [4];
+  color_to_rgba(color, server.style.window_label_focus_textColor);
+  cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
+
+  cairo_select_font_face(cx, font, 0, 0);
+  cairo_set_font_size(cx, 12);
+
+  for(int i=0; i<CONSOLE_LINES; i++) {
+    int idx = (lineRenderIdx + i) % CONSOLE_LINES;
+  cairo_move_to(cx, 10, 14 + (14 * i));
+  cairo_show_text(cx, lines[idx].l);  
+    
+  }
+  // char fname[255] = "";
+  // sprintf(fname, "/tmp/text_%s.png", appId);
+  // cairo_surface_write_to_png(surf, fname);
+
+  unsigned char *data = cairo_image_surface_get_data(console);
+  console_texture = wlr_texture_from_pixels(renderer,
+      WL_SHM_FORMAT_ARGB8888,
+      cairo_image_surface_get_stride(console),
+      CONSOLE_WIDTH, CONSOLE_HEIGHT, data);
+
+
+  cairo_destroy(cx);
+  console_dirty = false;
+}
+
+static void generate_texture(struct wlr_renderer *renderer, int idx, int flags, int w, int h, float color[static 4], float colorTo[static 4]) {
+  // printf("generate texture %d\n", idx);
+
+  if (textCache[idx]) {
+    wlr_texture_destroy(textCache[idx]);
+    textCache[idx] = NULL;
+  }
+
+  if (flags == 0) {
+    return;
+  }
+  
+  cairo_surface_t *surf = cairo_image_surface_create(
+      CAIRO_FORMAT_ARGB32, w, h);
+  cairo_t *cx = cairo_create(surf);
+
+  draw_gradient_rect(cx, flags, w, h, color, colorTo);
+
+  unsigned char *data = cairo_image_surface_get_data(surf);
+  textCache[idx] = wlr_texture_from_pixels(renderer,
+      WL_SHM_FORMAT_ARGB8888,
+      cairo_image_surface_get_stride(surf),
+      w, h, data);
+
+  // char fname[255] = "";
+  // sprintf(fname, "/tmp/text_%d.png", idx);
+  // cairo_surface_write_to_png(surf, fname);
+
+  cairo_destroy(cx);
+  cairo_surface_destroy(surf);
+};
+
+static void generate_textures(struct wlr_renderer *renderer, bool forced) {
+
+  if (textCache[0] != NULL && !(forced || lastCacheHash != server.style.hash)) {
+    return;
+  }
+
+  lastCacheHash = server.style.hash;
+
+  float color[4];
+  float colorTo[4];
+  int flags;
+
+  // titlebar
+  color_to_rgba(color, server.style.window_title_focus_color);
+  color_to_rgba(colorTo, server.style.window_title_focus_colorTo);
+  flags = server.style.window_title_focus;
+  generate_texture(renderer, tx_window_title_focus, flags, 512, 16, color, colorTo);
+
+  color_to_rgba(color, server.style.window_title_unfocus_color);
+  color_to_rgba(colorTo, server.style.window_title_unfocus_colorTo);
+  flags = server.style.window_title_unfocus;
+  generate_texture(renderer, tx_window_title_unfocus, flags, 512, 16, color, colorTo);
+
+  // titlebar/label
+  color_to_rgba(color, server.style.window_label_focus_color);
+  color_to_rgba(colorTo, server.style.window_label_focus_colorTo);
+  flags = server.style.window_label_focus;
+  generate_texture(renderer, tx_window_label_focus, flags, 512, 16, color, colorTo);
+
+  color_to_rgba(color, server.style.window_label_unfocus_color);
+  color_to_rgba(colorTo, server.style.window_label_unfocus_colorTo);
+  flags = server.style.window_label_unfocus;
+  generate_texture(renderer, tx_window_label_unfocus, flags, 512, 16, color, colorTo);
+
+  // handle
+  color_to_rgba(color, server.style.window_handle_focus_color);
+  color_to_rgba(colorTo, server.style.window_handle_focus_colorTo);
+  flags = server.style.window_handle_focus;
+  generate_texture(renderer, tx_window_handle_focus, flags, 512, 16, color, colorTo);
+
+  color_to_rgba(color, server.style.window_handle_unfocus_color);
+  color_to_rgba(colorTo, server.style.window_handle_unfocus_colorTo);
+  flags = server.style.window_handle_unfocus;
+  generate_texture(renderer, tx_window_handle_unfocus, flags, 512, 16, color, colorTo);
+
+  // grip
+  color_to_rgba(color, server.style.window_grip_focus_color);
+  color_to_rgba(colorTo, server.style.window_grip_focus_colorTo);
+  flags = server.style.window_grip_focus;
+  generate_texture(renderer, tx_window_grip_focus, flags, 30, 16, color, colorTo);
+
+  color_to_rgba(color, server.style.window_grip_unfocus_color);
+  color_to_rgba(colorTo, server.style.window_grip_unfocus_colorTo);
+  flags = server.style.window_grip_unfocus;
+  generate_texture(renderer, tx_window_grip_unfocus, flags, 30, 16, color, colorTo);
+}
+
+//--------------------
+// move to view
+//--------------------
+const char *get_string_prop(struct tbx_view *view,
+    enum tbx_view_prop prop) {
+  switch (prop) {
+  case VIEW_PROP_TITLE:
+    return view->xdg_surface->toplevel->title;
+  case VIEW_PROP_APP_ID:
+    return view->xdg_surface->toplevel->app_id;
+  default:
+    return NULL;
+  }
+}
+
+static void generate_view_title_texture(struct tbx_output *output, struct tbx_view *view)
+{
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+
+  if (view->title) {
+    wlr_texture_destroy(view->title);
+    wlr_texture_destroy(view->title_unfocused);
+    view->title = NULL;
+    view->title_unfocused = NULL;
+  }
+
+  const char *font = output->server->style.font;
+
+  char title[128];
+  char appId[64];
+  sprintf(title, "%s", get_string_prop(view, VIEW_PROP_TITLE));
+  sprintf(appId, "%s", get_string_prop(view, VIEW_PROP_APP_ID));
+
+  if (strlen(title) == 0) {
+    view->title_dirty = false;
+    return;
+  }
+
+  // console_log("%s %s", appId, title);
+
+  float scale = 1.0f;
+  int w = 400;
+  int h = 32;
+
+  // We must use a non-nil cairo_t for cairo_set_font_options to work.
+  // Therefore, we cannot use cairo_create(NULL).
+  cairo_surface_t *dummy_surface = cairo_image_surface_create(
+      WL_SHM_FORMAT_ARGB8888, 0, 0);
+  cairo_t *c = cairo_create(dummy_surface);
+  cairo_set_antialias(c, CAIRO_ANTIALIAS_BEST);
+  cairo_font_options_t *fo = cairo_font_options_create();
+  cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_FULL);
+  if (output->wlr_output->subpixel == WL_OUTPUT_SUBPIXEL_NONE) {
+    cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_GRAY);
+  } else {
+    cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
+    
+    // cairo.c
+    cairo_font_options_set_subpixel_order(fo,
+      to_cairo_subpixel_order(output->wlr_output->subpixel));
+  }
+  cairo_set_font_options(c, fo);
+  get_text_size(c, font, &w, NULL, NULL, scale, true, "%s", title);
+  cairo_surface_destroy(dummy_surface);
+  cairo_destroy(c);
+
+  float color[4];
+
+  cairo_surface_t *surf = cairo_image_surface_create(
+      WL_SHM_FORMAT_ARGB8888, w, h);
+  cairo_t *cx = cairo_create(surf);
+
+  cairo_set_font_options(cx, fo);
+  cairo_font_options_destroy(fo);
+
+  PangoContext *pango = pango_cairo_create_context(cx);
+  cairo_move_to(cx, 0, 0);
+
+  color_to_rgba(color, server.style.window_label_focus_textColor);
+  cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
+  pango_printf(cx, font, scale, true, "%s", title);
+
+  unsigned char *data = cairo_image_surface_get_data(surf);
+
+  view->title = wlr_texture_from_pixels(renderer,
+      WL_SHM_FORMAT_ARGB8888,
+      cairo_image_surface_get_stride(surf),
+      w, h, data);
+
+  // clear
+  cairo_save(cx);
+  cairo_set_source_rgba(cx, 0.0, 0.0, 0.0, 0.0);
+  cairo_set_operator(cx, CAIRO_OPERATOR_CLEAR);
+  cairo_rectangle(cx, 0, 0, w, h);
+  cairo_paint(cx);
+  cairo_restore(cx);
+
+  color_to_rgba(color, server.style.window_label_unfocus_textColor);
+  cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
+  pango_printf(cx, font, scale, true, "%s", title);
+
+  data = cairo_image_surface_get_data(surf);
+  view->title_unfocused = wlr_texture_from_pixels(renderer,
+      WL_SHM_FORMAT_ARGB8888,
+      cairo_image_surface_get_stride(surf),
+      w, h, data);
+
+  view->title_box.width = w;
+  view->title_box.height = h;
+  view->title_dirty = false;
+
+  // char fname[255] = "";
+  // sprintf(fname, "/tmp/text_%s.png", appId);
+  // cairo_surface_write_to_png(surf, fname);
+
+  g_object_unref(pango);
+  cairo_destroy(cx);
+  cairo_surface_destroy(surf);
+}
+
+static void scissor_output(struct wlr_output *wlr_output,
+    struct wlr_box box) {
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
+  
+  //assert(renderer);
+
+  int ow, oh;
+  wlr_output_transformed_resolution(wlr_output, &ow, &oh);
+
+  enum wl_output_transform transform =
+    wlr_output_transform_invert(wlr_output->transform);
+  wlr_box_transform(&box, &box, transform, ow, oh);
+
+  wlr_renderer_scissor(renderer, &box);
+}
+
+
+static void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4]) {
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->backend);
+  wlr_render_rect(renderer, box, color, output->transform_matrix);
+}
+
+
+static void render_texture(struct wlr_output *output, struct wlr_box *box, struct wlr_texture *texture) {
+  if (!texture) {
+    return;
+  }
+  
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->backend);
+
+  struct wlr_gles2_texture_attribs attribs;
+  wlr_gles2_texture_get_attribs(texture, &attribs);
+  glBindTexture(attribs.target, attribs.tex);
+  glTexParameteri(attribs.target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  float matrix[9];
+  wlr_matrix_project_box(matrix, box,
+    WL_OUTPUT_TRANSFORM_NORMAL,
+    0.0, output->transform_matrix);
+
+  wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0);
+}
+
+static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void *data) {
+  /* This function is called for every surface that needs to be rendered. */
+  struct render_data *rdata = data;
+  struct tbx_view *view = rdata->view;
+  struct wlr_output *output = rdata->output;
+
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->backend);
+
+  double ox = 0, oy = 0;
+  wlr_output_layout_output_coords(
+      view->server->output_layout, output, &ox, &oy);
+  double oox = ox;
+  double ooy = oy;
+  ox += view->x + sx, oy += view->y + sy;
+
+  int border_thickness = view->server->style.borderWidth;
+  int footer_height = view->server->style.handleWidth + (view->server->style.borderWidth * 2);
+  int title_bar_height = 28;
+
+  if (!view->title) {
+    title_bar_height = footer_height + view->server->style.borderWidth;
+  }
+
+  struct wlr_box box;
+  wlr_xdg_surface_get_geometry((struct wlr_xdg_surface*)surface, &box);
+  box.x += (ox - border_thickness) * output->scale;
+  box.y += (oy - border_thickness) * output->scale;
+  box.width = (box.width + border_thickness * 2) * output->scale;
+  box.height = (box.height + border_thickness * 2) * output->scale;
+
+  struct wlr_box base_box;  
+  memcpy(&base_box, &box, sizeof(struct wlr_box));
+
+  // struct tbx_view *active_view = server.active_view;
+  int focusTextureOffset = !(view->xdg_surface->surface == server.seat->keyboard_state.focused_surface);
+
+  float color[4];
+  color_to_rgba(color, server.style.borderColor);
+  color[3] = 1.0;
+
+  // --------------
+  // borders
+  // --------------
+  // top
+  box.height = border_thickness * output->scale;
+  render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_EDGE_TOP], &box, sizeof(struct wlr_box));
+
+  // bottom
+  box.y = base_box.y + base_box.height - border_thickness;
+  render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_EDGE_BOTTOM], &box, sizeof(struct wlr_box));
+
+  // left
+  memcpy(&box, &base_box, sizeof(struct wlr_box));
+  box.width = border_thickness;
+  render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_EDGE_LEFT], &box, sizeof(struct wlr_box));
+  
+  // right
+  box.x += base_box.width - border_thickness;
+  render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_EDGE_RIGHT], &box, sizeof(struct wlr_box));
+
+  // make hotspot edges tolerant
+  int hs_thickness = 4;
+  view->hotspots[HS_EDGE_TOP].y -= (title_bar_height + hs_thickness - border_thickness);
+  view->hotspots[HS_EDGE_TOP].height += hs_thickness;
+  view->hotspots[HS_EDGE_BOTTOM].height += (footer_height + hs_thickness);
+  view->hotspots[HS_EDGE_LEFT].x -= (hs_thickness - border_thickness);
+  view->hotspots[HS_EDGE_LEFT].width += hs_thickness;
+  view->hotspots[HS_EDGE_RIGHT].width += hs_thickness;
+
+  // --------------
+  // titlebar
+  // --------------
+  memcpy(&box, &base_box, sizeof(struct wlr_box));
+  box.y = box.y - title_bar_height;
+  box.height = title_bar_height;
+  render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_TITLEBAR], &box, sizeof(struct wlr_box));
+
+  box.x += border_thickness;
+  box.y += border_thickness;
+  box.width -= (border_thickness*2);
+  box.height -= (border_thickness*2);
+  render_texture(output, &box, textCache[tx_window_title_focus + focusTextureOffset]);
+  // label
+  box.x += border_thickness;
+  box.y += border_thickness;
+  box.width -= (border_thickness*2);
+  box.height -= (border_thickness*2);
+  
+  if (view->title) {
+    render_texture(output, &box, textCache[tx_window_label_focus + focusTextureOffset]);
+
+    box.width -= 4;
+    scissor_output(output, box);
+
+    box.x += 2;
+    box.y += 2;
+    box.width = view->title_box.width;
+    box.height = view->title_box.height;
+
+    if (!focusTextureOffset) {
+      render_texture(output, &box, view->title);
+    } else {
+      render_texture(output, &box, view->title_unfocused);
+    }
+
+    wlr_renderer_scissor(renderer, NULL);
+  }
+
+  // handle
+  memcpy(&box, &base_box, sizeof(struct wlr_box));
+  box.y = box.y + box.height;
+  box.height = footer_height + border_thickness;
+  render_rect(output, &box, color);
+  memcpy(&view->hotspots[HS_HANDLE], &box, sizeof(struct wlr_box));
+
+  int grip_width = 32;
+  box.x += grip_width;
+  box.width -= (grip_width * 2);
+
+  box.x += border_thickness;
+  box.y += border_thickness;
+  box.width -= (border_thickness * 2);
+  box.height -= (border_thickness * 2);
+  render_texture(output, &box, textCache[tx_window_handle_focus + focusTextureOffset]);
+
+  // grips
+  memcpy(&box, &base_box, sizeof(struct wlr_box));
+  box.x += border_thickness;
+  box.width = grip_width - border_thickness;
+  box.y = box.y + box.height + border_thickness;
+  box.height = footer_height - border_thickness;
+  render_texture(output, &box, textCache[tx_window_grip_focus + focusTextureOffset]);
+  memcpy(&view->hotspots[HS_GRIP_LEFT], &box, sizeof(struct wlr_box));
+
+  memcpy(&box, &base_box, sizeof(struct wlr_box));
+  box.x += box.width - grip_width;
+  box.width = grip_width - border_thickness;
+  box.y = box.y + box.height + border_thickness;
+  box.height = footer_height - border_thickness;
+  render_texture(output, &box, textCache[tx_window_grip_focus + focusTextureOffset]);
+  memcpy(&view->hotspots[HS_GRIP_RIGHT], &box, sizeof(struct wlr_box));
+
+  view->hotspots[HS_GRIP_LEFT].x -= hs_thickness;
+  view->hotspots[HS_GRIP_LEFT].width += hs_thickness;
+  view->hotspots[HS_GRIP_LEFT].y -= hs_thickness;
+  view->hotspots[HS_GRIP_LEFT].height += hs_thickness * 2;
+  view->hotspots[HS_GRIP_RIGHT].width += hs_thickness;
+  view->hotspots[HS_GRIP_RIGHT].y -= hs_thickness;
+  view->hotspots[HS_GRIP_RIGHT].height += hs_thickness * 2;
+
+  for(int i=0; i<HS_COUNT;i++) {
+    view->hotspots[i].x -= oox;
+    view->hotspots[i].y -= ooy;
+  }
+
+  // adjust hotspots to output layout
+}
+
+static void render_view_content(struct wlr_surface *surface,
     int sx, int sy, void *data) {
   /* This function is called for every surface that needs to be rendered. */
   struct render_data *rdata = data;
@@ -80,6 +638,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
     wl_container_of(listener, output, frame);
   struct wlr_renderer *renderer = output->server->renderer;
 
+  generate_textures(renderer, false);
+
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -96,6 +656,17 @@ static void output_frame(struct wl_listener *listener, void *data) {
   float color[4] = {0.3, 0.3, 0.3, 1.0};
   wlr_renderer_clear(renderer, color);
 
+  // console
+  if (console_texture) {
+    struct wlr_box console_box = {
+      .x = 0,
+      .y = 0,
+      .width = CONSOLE_WIDTH,
+      .height = CONSOLE_HEIGHT
+    };
+    render_texture(output->wlr_output, &console_box, console_texture);
+  }
+
   /* Each subsequent window we render is rendered on top of the last. Because
    * our view list is ordered front-to-back, we iterate over it backwards. */
   struct tbx_view *view;
@@ -110,10 +681,21 @@ static void output_frame(struct wl_listener *listener, void *data) {
       .renderer = renderer,
       .when = &now,
     };
+    if (view->title_dirty) {
+        generate_view_title_texture(output, view);
+    }
+
+    render_view_frame((struct wlr_surface *)view->xdg_surface, 0, 0, &rdata);
+    // wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_frame, &rdata);
+
     /* This calls our render_surface function for each surface among the
      * xdg_surface's toplevel and popups. */
     wlr_xdg_surface_for_each_surface(view->xdg_surface,
-        render_surface, &rdata);
+        render_view_content, &rdata);
+  }
+
+  if (console_dirty) {
+    render_console(output);
   }
 
   /* Hardware cursors are rendered by the GPU on a separate plane, and can be
@@ -128,6 +710,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
    * on-screen. */
   wlr_renderer_end(renderer);
   wlr_output_commit(output->wlr_output);
+
+  output->last_render = now;
 }
 
 static void server_new_output(struct wl_listener *listener, void *data) {
@@ -184,3 +768,4 @@ void output_init() {
   server.new_output.notify = server_new_output;
   wl_signal_add(&server.backend->events.new_output, &server.new_output);
 }
+

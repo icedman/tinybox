@@ -2,9 +2,9 @@
 #define TBX_CURSOR_H
 
 enum tbx_cursor_mode {
-  tbx_CURSOR_PASSTHROUGH,
-  tbx_CURSOR_MOVE,
-  tbx_CURSOR_RESIZE,
+  TBX_CURSOR_PASSTHROUGH,
+  TBX_CURSOR_MOVE,
+  TBX_CURSOR_RESIZE,
 };
 
 void cursor_init();

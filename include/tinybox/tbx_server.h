@@ -18,6 +18,9 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/types/wlr_server_decoration.h>
+
 #include <wlr/util/log.h>
 #include <xkbcommon/xkbcommon.h>
 
@@ -26,6 +29,7 @@
 #include "tinybox/tbx_seat.h"
 #include "tinybox/xdg_shell.h"
 #include "tinybox/tbx_server.h"
+#include "tinybox/style.h"
 
 struct tbx_server {
   struct wl_display *wl_display;
@@ -35,6 +39,7 @@ struct tbx_server {
   struct wlr_xdg_shell *xdg_shell;
   struct wl_listener new_xdg_surface;
   struct wl_list views;
+  struct wl_listener set_title;
 
   struct wlr_cursor *cursor;
   struct wlr_xcursor_manager *cursor_mgr;
@@ -54,13 +59,19 @@ struct tbx_server {
   double grab_x, grab_y;
   struct wlr_box grab_geobox;
   uint32_t resize_edges;
+  
+  struct wlr_server_decoration_manager *server_decoration;
 
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;
   struct wl_listener new_output;
+
+  struct tbx_style style;
 };
 
 extern struct tbx_server server;
 extern void server_print();
+
+void init_server();
 
 #endif //  TBX_SERVER_H
