@@ -243,6 +243,23 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
   cairo_surface_destroy(surf);
 }
 
+static void scissor_output(struct wlr_output *wlr_output,
+    struct wlr_box box) {
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
+  
+  //assert(renderer);
+
+  int ow, oh;
+  wlr_output_transformed_resolution(wlr_output, &ow, &oh);
+
+  enum wl_output_transform transform =
+    wlr_output_transform_invert(wlr_output->transform);
+  wlr_box_transform(&box, &box, transform, ow, oh);
+
+  wlr_renderer_scissor(renderer, &box);
+}
+
+
 static void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4]) {
   struct wlr_renderer *renderer = wlr_backend_get_renderer(output->backend);
   wlr_render_rect(renderer, box, color, output->transform_matrix);
@@ -274,6 +291,8 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   struct render_data *rdata = data;
   struct tbx_view *view = rdata->view;
   struct wlr_output *output = rdata->output;
+
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->backend);
 
   double ox = 0, oy = 0;
   wlr_output_layout_output_coords(
@@ -345,12 +364,12 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   render_rect(output, &box, color);
   memcpy(&view->hotspots[HS_TITLEBAR], &box, sizeof(struct wlr_box));
 
+
   box.x += border_thickness;
   box.y += border_thickness;
   box.width -= (border_thickness*2);
   box.height -= (border_thickness*2);
   render_texture(output, &box, textCache[tx_window_title_focus + focusTextureOffset]);
-
   // label
   box.x += border_thickness;
   box.y += border_thickness;
@@ -359,6 +378,9 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   render_texture(output, &box, textCache[tx_window_label_focus + focusTextureOffset]);
 
   if (view->title) {
+    box.width -= 4;
+    scissor_output(output, box);
+
     box.x += 2;
     box.y += 2;
     box.width = view->title_box.width;
@@ -369,6 +391,8 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
     } else {
       render_texture(output, &box, view->title_unfocused);
     }
+
+    wlr_renderer_scissor(renderer, NULL);
   }
 
   // handle
@@ -494,6 +518,7 @@ static void output_frame(struct wl_listener *listener, void *data) {
 
     render_view_frame((struct wlr_surface *)view->xdg_surface, 0, 0, &rdata);
 
+    // if (view != output->server->grabbed_view)
     wlr_xdg_surface_for_each_surface(view->xdg_surface,
         render_view_content, &rdata);
   }
@@ -510,6 +535,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
    * on-screen. */
   wlr_renderer_end(renderer);
   wlr_output_commit(output->wlr_output);
+
+  output->last_render = now;
 }
 
 static void server_new_output(struct wl_listener *listener, void *data) {

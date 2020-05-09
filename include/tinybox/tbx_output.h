@@ -23,6 +23,7 @@ struct tbx_output {
   struct tbx_server *server;
   struct wlr_output *wlr_output;
   struct wl_listener frame;
+  struct timespec last_render;
 };
 
 struct tbx_view {

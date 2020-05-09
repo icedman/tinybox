@@ -191,6 +191,8 @@ bool view_at(struct tbx_view *view,
     return true;
   }
 
+  // TODO: check multiple outputs
+
   // printf("------------\n%d %d %d %d\n", (int)lx, (int)ly, (int)*sx, (int)*sy);
   const int resizeEdges[] = {
     WLR_EDGE_TOP,
