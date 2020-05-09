@@ -80,6 +80,12 @@ static void xdg_toplevel_request_resize(
   begin_interactive(view, TBX_CURSOR_RESIZE, event->edges);
 }
 
+static void handle_set_title(struct wl_listener *listener, void *data) {
+  struct tbx_view *view =
+    wl_container_of(listener, view, set_title);
+  view->title_dirty = true;
+}
+
 int offset = 0;
 static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   /* This event is raised when wlr_xdg_shell receives a new xdg surface from a
@@ -114,6 +120,10 @@ static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   wl_signal_add(&toplevel->events.request_move, &view->request_move);
   view->request_resize.notify = xdg_toplevel_request_resize;
   wl_signal_add(&toplevel->events.request_resize, &view->request_resize);
+
+  /* title */
+  view->set_title.notify = handle_set_title;
+  wl_signal_add(&toplevel->events.set_title, &view->set_title);
 
   /* Add it to the list of views. */
   wl_list_insert(&server->views, &view->link);
@@ -237,5 +247,6 @@ void init_xdg_shell() {
   server.new_xdg_surface.notify = server_new_xdg_surface;
   wl_signal_add(&server.xdg_shell->events.new_surface,
       &server.new_xdg_surface);
+
 }
 

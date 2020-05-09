@@ -35,4 +35,5 @@ void init_server()
   wlr_server_decoration_manager_set_default_mode(
     server.server_decoration,
     WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
+  
 }

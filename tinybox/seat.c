@@ -199,5 +199,6 @@ void init_seat() {
       &server.request_cursor);
   server.request_set_selection.notify = seat_request_set_selection;
   wl_signal_add(&server.seat->events.request_set_selection,
-      &server.request_set_selection);  
+      &server.request_set_selection);
+  
 }

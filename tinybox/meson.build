@@ -1,5 +1,6 @@
 tinybox_src = files(
   'main.c',
+  'cairo.c',
   'cursor.c',
   'seat.c',
   'server.c',
@@ -7,6 +8,7 @@ tinybox_src = files(
   'style.c',
   'output.c',
   'util.c',
+  'pango.c',
   'xdg_shell.c'
   )
 

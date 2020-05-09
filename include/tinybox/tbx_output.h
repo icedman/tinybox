@@ -13,6 +13,11 @@ enum {
   HS_COUNT
 };
 
+enum tbx_view_prop {
+  VIEW_PROP_APP_ID,
+  VIEW_PROP_TITLE
+};
+
 struct tbx_output {
   struct wl_list link;
   struct tbx_server *server;
@@ -29,6 +34,8 @@ struct tbx_view {
   struct wl_listener destroy;
   struct wl_listener request_move;
   struct wl_listener request_resize;
+  struct wl_listener set_title;
+
   bool mapped;
   int x, y;
 
@@ -36,8 +43,17 @@ struct tbx_view {
   struct wlr_box hotspots[HS_COUNT];
   int hotspot;
   int hotspot_edges;
+
+  struct wlr_texture *title;
+  struct wlr_texture *title_unfocused;
+  struct wlr_box title_box;
+  bool title_dirty;
 };
 
 void init_output();
+const char *get_string_prop(struct tbx_view *view,
+    enum tbx_view_prop prop);
+
+void view_update_title(struct tbx_output *output, struct tbx_view *view);
 
 #endif //  TBX_OUTPUT_H

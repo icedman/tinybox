@@ -7,7 +7,11 @@
 #include <wlr/render/gles2.h>
 #include <wlr/render/wlr_renderer.h>
 #include <GLES2/gl2.h>
-#include <cairo.h>
+#include <cairo/cairo.h>
+#include <pango/pangocairo.h>
+
+#include "tinybox/cairo.h"
+#include "tinybox/pango.h"
 
 /* Used to move all of the data necessary to render a surface from the top-level
  * frame handler to the per-surface render function. */
@@ -51,7 +55,7 @@ static void generate_texture(struct wlr_renderer *renderer, int idx, int flags, 
   }
   
   cairo_surface_t *surf = cairo_image_surface_create(
-      CAIRO_FORMAT_ARGB32, w, h); // numbers pulled from ass
+      CAIRO_FORMAT_ARGB32, w, h);
   cairo_t *cx = cairo_create(surf);
 
   draw_gradient_rect(cx, flags, w, h, color, colorTo);
@@ -127,6 +131,118 @@ static void generate_textures(struct wlr_renderer *renderer, bool forced) {
   generate_texture(renderer, tx_window_grip_unfocus, flags, 30, 16, color, colorTo);
 }
 
+//--------------------
+// move to view
+//--------------------
+const char *get_string_prop(struct tbx_view *view,
+    enum tbx_view_prop prop) {
+  switch (prop) {
+  case VIEW_PROP_TITLE:
+    return view->xdg_surface->toplevel->title;
+  case VIEW_PROP_APP_ID:
+    return view->xdg_surface->toplevel->app_id;
+  default:
+    return NULL;
+  }
+}
+
+void generate_view_title_texture(struct tbx_output *output, struct tbx_view *view)
+{
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+
+  if (view->title) {
+    wlr_texture_destroy(view->title);
+    wlr_texture_destroy(view->title_unfocused);
+  }
+
+  const char *font = "monospace 10";
+
+  char title[128];
+  char appId[64];
+  sprintf(title, "%s", get_string_prop(view, VIEW_PROP_TITLE));
+  sprintf(appId, "%s", get_string_prop(view, VIEW_PROP_APP_ID));
+
+  float scale = 1.0f;
+  int w = 400;
+  int h = 32;
+
+  // We must use a non-nil cairo_t for cairo_set_font_options to work.
+  // Therefore, we cannot use cairo_create(NULL).
+  cairo_surface_t *dummy_surface = cairo_image_surface_create(
+      WL_SHM_FORMAT_ARGB8888, 0, 0);
+  cairo_t *c = cairo_create(dummy_surface);
+  cairo_set_antialias(c, CAIRO_ANTIALIAS_BEST);
+  cairo_font_options_t *fo = cairo_font_options_create();
+  cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_FULL);
+  if (output->wlr_output->subpixel == WL_OUTPUT_SUBPIXEL_NONE) {
+    cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_GRAY);
+  } else {
+    cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
+    
+    // cairo.c
+    cairo_font_options_set_subpixel_order(fo,
+      to_cairo_subpixel_order(output->wlr_output->subpixel));
+  }
+
+  float color[4];
+
+  cairo_set_font_options(c, fo);
+  get_text_size(c, font, &w, NULL, NULL, scale, true, "%s", title);
+  cairo_surface_destroy(dummy_surface);
+  cairo_destroy(c);
+
+
+  cairo_surface_t *surf = cairo_image_surface_create(
+      WL_SHM_FORMAT_ARGB8888, w, h);
+  cairo_t *cx = cairo_create(surf);
+
+  cairo_set_font_options(cx, fo);
+  cairo_font_options_destroy(fo);
+
+  PangoContext *pango = pango_cairo_create_context(cx);
+  cairo_move_to(cx, 0, 0);
+
+  color_to_rgba(color, server.style.window_label_focus_textColor);
+  cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
+  pango_printf(cx, font, scale, true,
+      "%s", title);
+
+  unsigned char *data = cairo_image_surface_get_data(surf);
+  // int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, w);
+
+  view->title = wlr_texture_from_pixels(renderer,
+      WL_SHM_FORMAT_ARGB8888,
+      cairo_image_surface_get_stride(surf),
+      w, h, data);
+
+  // printf("stride: %d height: %d\n", stride, h);
+
+  // clear
+
+  color_to_rgba(color, server.style.window_label_unfocus_textColor);
+  cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
+  pango_printf(cx, font, scale, true,
+      "%s", title);
+
+  data = cairo_image_surface_get_data(surf);
+  view->title_unfocused = wlr_texture_from_pixels(renderer,
+      WL_SHM_FORMAT_ARGB8888,
+      cairo_image_surface_get_stride(surf),
+      w, h, data);
+
+  view->title_box.width = w;
+  view->title_box.height = h;
+  view->title_dirty = false;
+
+  // char fname[255] = "";
+  // sprintf(fname, "/tmp/text_%s.png", appId);
+  // cairo_surface_write_to_png(surf, fname);
+
+  g_object_unref(pango);
+  cairo_destroy(cx);
+  cairo_surface_destroy(surf);
+}
+
 static void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4]) {
   struct wlr_renderer *renderer = wlr_backend_get_renderer(output->backend);
   wlr_render_rect(renderer, box, color, output->transform_matrix);
@@ -159,12 +275,6 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   struct tbx_view *view = rdata->view;
   struct wlr_output *output = rdata->output;
 
-  // struct wlr_renderer *renderer = wlr_backend_get_renderer(output->backend);
-
-  /* The view has a position in layout coordinates. If you have two displays,
-   * one next to the other, both 1080p, a view on the rightmost display might
-   * have layout coordinates of 2000,100. We need to translate that to
-   * output-local coordinates, or (2000 - 1920). */
   double ox = 0, oy = 0;
   wlr_output_layout_output_coords(
       view->server->output_layout, output, &ox, &oy);
@@ -186,7 +296,7 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   memcpy(&base_box, &box, sizeof(struct wlr_box));
 
   // struct tbx_view *active_view = server.active_view;
-  int focusTextureOffset = 0; // (active_view == view) ? 0 : 1;
+  int focusTextureOffset = !(view->xdg_surface->surface == server.seat->keyboard_state.focused_surface);
 
   float color[4];
   color_to_rgba(color, server.style.borderColor);
@@ -218,11 +328,11 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
 
   // make hotspot edges tolerant
   int hs_thickness = 4;
-  view->hotspots[HS_EDGE_TOP].y -= (title_bar_height + hs_thickness);
+  view->hotspots[HS_EDGE_TOP].y -= (title_bar_height + hs_thickness - border_thickness);
   view->hotspots[HS_EDGE_TOP].height += hs_thickness;
-  view->hotspots[HS_EDGE_BOTTOM].y += footer_height;
-  view->hotspots[HS_EDGE_BOTTOM].height += hs_thickness;
-  view->hotspots[HS_EDGE_LEFT].x -= hs_thickness;
+  // view->hotspots[HS_EDGE_BOTTOM].y += ;
+  view->hotspots[HS_EDGE_BOTTOM].height += (footer_height + hs_thickness);
+  view->hotspots[HS_EDGE_LEFT].x -= (hs_thickness - border_thickness);
   view->hotspots[HS_EDGE_LEFT].width += hs_thickness;
   view->hotspots[HS_EDGE_RIGHT].width += hs_thickness;
 
@@ -248,6 +358,19 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   box.height -= (border_thickness*2);
   render_texture(output, &box, textCache[tx_window_label_focus + focusTextureOffset]);
 
+  if (view->title) {
+    box.x += 2;
+    box.y += 2;
+    box.width = view->title_box.width;
+    box.height = view->title_box.height;
+
+    if (!focusTextureOffset) {
+      render_texture(output, &box, view->title);
+    } else {
+      render_texture(output, &box, view->title_unfocused);
+    }
+  }
+
   // handle
   memcpy(&box, &base_box, sizeof(struct wlr_box));
   box.y = box.y + box.height;
@@ -262,7 +385,7 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   render_texture(output, &box, textCache[tx_window_handle_focus + focusTextureOffset]);
 }
 
-static void render_surface(struct wlr_surface *surface,
+static void render_view_content(struct wlr_surface *surface,
     int sx, int sy, void *data) {
   /* This function is called for every surface that needs to be rendered. */
   struct render_data *rdata = data;
@@ -365,11 +488,14 @@ static void output_frame(struct wl_listener *listener, void *data) {
     /* This calls our render_surface function for each surface among the
      * xdg_surface's toplevel and popups. */
 
+    if (view->title_dirty) {
+        generate_view_title_texture(output, view);
+    }
+
     render_view_frame((struct wlr_surface *)view->xdg_surface, 0, 0, &rdata);
-    // render_view_frame(struct wlr_surface *surface, int sx, int sy, void *data)
 
     wlr_xdg_surface_for_each_surface(view->xdg_surface,
-        render_surface, &rdata);
+        render_view_content, &rdata);
   }
 
   /* Hardware cursors are rendered by the GPU on a separate plane, and can be
@@ -440,3 +566,4 @@ void init_output() {
   server.new_output.notify = server_new_output;
   wl_signal_add(&server.backend->events.new_output, &server.new_output);
 }
+

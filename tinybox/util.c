@@ -142,6 +142,8 @@ float parse_float(const char *value) {
 void draw_gradient_rect(cairo_t *cx, int flags, int w, int h, float color[static 4], float colorTo[static 4]) {
     cairo_pattern_t *pat = 0;
 
+    cairo_set_antialias(cx, CAIRO_ANTIALIAS_BEST);
+
     if (flags & sf_gradient) {
         if (flags & sf_diagonal) {
             pat = cairo_pattern_create_linear(0.0, 0.0, w, h);

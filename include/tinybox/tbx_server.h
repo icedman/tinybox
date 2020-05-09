@@ -39,6 +39,7 @@ struct tbx_server {
   struct wlr_xdg_shell *xdg_shell;
   struct wl_listener new_xdg_surface;
   struct wl_list views;
+  struct wl_listener set_title;
 
   struct wlr_cursor *cursor;
   struct wlr_xcursor_manager *cursor_mgr;
@@ -58,9 +59,9 @@ struct tbx_server {
   double grab_x, grab_y;
   struct wlr_box grab_geobox;
   uint32_t resize_edges;
-
-  struct wlr_server_decoration_manager *server_decoration;
   
+  struct wlr_server_decoration_manager *server_decoration;
+
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;
   struct wl_listener new_output;
