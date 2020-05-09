@@ -2,6 +2,8 @@
 #include "tinybox/tbx_cursor.h"
 
 const char * cursor_images[] = {
+    "bottom_left_corner",// HS_EDGE_BOTTOM,
+    "bottom_right_corner",// HS_EDGE_BOTTOM,
     "top_side",// HS_EDGE_TOP,
     "bottom_side",// HS_EDGE_BOTTOM,
     "left_side",// HS_EDGE_LEFT,

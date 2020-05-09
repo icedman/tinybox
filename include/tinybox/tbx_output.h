@@ -2,14 +2,14 @@
 #define TBX_OUTPUT_H
 
 enum {
+  HS_GRIP_LEFT,
+  HS_GRIP_RIGHT,
   HS_EDGE_TOP,
   HS_EDGE_BOTTOM,
   HS_EDGE_LEFT,
   HS_EDGE_RIGHT,
   HS_TITLEBAR,
   HS_HANDLE,
-  HS_GRIP_LEFT,
-  HS_GRIP_RIGHT,
   HS_COUNT
 };
 
@@ -23,6 +23,7 @@ struct tbx_output {
   struct tbx_server *server;
   struct wlr_output *wlr_output;
   struct wl_listener frame;
+  struct timespec last_render;
 };
 
 struct tbx_view {
