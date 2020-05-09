@@ -55,6 +55,4 @@ void init_output();
 const char *get_string_prop(struct tbx_view *view,
     enum tbx_view_prop prop);
 
-void view_update_title(struct tbx_output *output, struct tbx_view *view);
-
 #endif //  TBX_OUTPUT_H

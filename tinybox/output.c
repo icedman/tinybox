@@ -39,7 +39,7 @@ enum {
   tx_window_handle_focus,
   tx_window_handle_unfocus,
   tx_window_grip_focus,
-  tx_window_grip_unfocus,
+  tx_window_grip_unfocus
 };
 
 static void generate_texture(struct wlr_renderer *renderer, int idx, int flags, int w, int h, float color[static 4], float colorTo[static 4]) {
@@ -146,7 +146,7 @@ const char *get_string_prop(struct tbx_view *view,
   }
 }
 
-void generate_view_title_texture(struct tbx_output *output, struct tbx_view *view)
+static void generate_view_title_texture(struct tbx_output *output, struct tbx_view *view)
 {
   struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
 
@@ -216,8 +216,6 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
       w, h, data);
 
   // printf("stride: %d height: %d\n", stride, h);
-
-  // clear
 
   color_to_rgba(color, server.style.window_label_unfocus_textColor);
   cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
@@ -349,7 +347,6 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   int hs_thickness = 4;
   view->hotspots[HS_EDGE_TOP].y -= (title_bar_height + hs_thickness - border_thickness);
   view->hotspots[HS_EDGE_TOP].height += hs_thickness;
-  // view->hotspots[HS_EDGE_BOTTOM].y += ;
   view->hotspots[HS_EDGE_BOTTOM].height += (footer_height + hs_thickness);
   view->hotspots[HS_EDGE_LEFT].x -= (hs_thickness - border_thickness);
   view->hotspots[HS_EDGE_LEFT].width += hs_thickness;

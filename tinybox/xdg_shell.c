@@ -18,6 +18,12 @@ static void xdg_surface_unmap(struct wl_listener *listener, void *data) {
 static void xdg_surface_destroy(struct wl_listener *listener, void *data) {
   /* Called when the surface is destroyed and should never be shown again. */
   struct tbx_view *view = wl_container_of(listener, view, destroy);
+
+  if (view->title) {
+    wlr_texture_destroy(view->title);
+    wlr_texture_destroy(view->title_unfocused);
+  }
+
   wl_list_remove(&view->link);
   free(view);
 }
