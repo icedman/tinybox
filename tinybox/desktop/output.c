@@ -568,6 +568,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
     assign_server_workspace();
   }
 
+  // console_log("o: %s", output->wlr_output->name);
+
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -583,7 +585,6 @@ static void output_frame(struct wl_listener *listener, void *data) {
 
   float color[4] = {0.3, 0.3, 0.3, 1.0};
   wlr_renderer_clear(renderer, color);
-
 
   if (output->server->console.dirty) {
     console_render(output);
@@ -613,9 +614,13 @@ static void output_frame(struct wl_listener *listener, void *data) {
       assign_view_workspace(view);
     }
 
-    if (view->workspace != output->server->active_workspace) {
-      continue;
-    }
+    // if (output->server->main_output == output) {
+      if (view->workspace != output->server->active_workspace) {
+        continue;
+      }
+    // }
+
+    // console_log("w: %s", view->xdg_surface->toplevel->title);
 
     struct render_data rdata = {
       .output = output->wlr_output,
@@ -698,6 +703,11 @@ static void server_new_output(struct wl_listener *listener, void *data) {
    * output (such as DPI, scale factor, manufacturer, etc).
    */
   wlr_output_layout_add_auto(server->output_layout, wlr_output);
+
+
+  if (!server->main_output) {
+    server->main_output = output;
+  }
 }
 
 void output_init() {

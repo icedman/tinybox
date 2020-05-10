@@ -2,7 +2,7 @@
 #define CONSOLE_H
 
 #define CONSOLE_LINES 24
-#define CONSOLE_WIDTH 400
+#define CONSOLE_WIDTH 800
 #define CONSOLE_HEIGHT 400
 
 struct tbx_console {

@@ -49,9 +49,6 @@ static void server_new_input(struct wl_listener *listener, void *data) {
     cursor_attach(server, device);
     break;
   case WLR_INPUT_DEVICE_TOUCH:
-
-    console_log("touch device!");
-
     break;
   default:
     break;

@@ -122,7 +122,8 @@ void server_print() {
       if (view->workspace) {
         wksp = view->workspace->id;
       }
-      console_log("w:%d ~ %d %s\n", wksp, view->workspace_id, view->xdg_surface->toplevel->title);
+      console_log("w:%d ~ %d %s\n", wksp, view->workspace_id,
+          view->xdg_surface->toplevel->title);
     }
 
     struct tbx_workspace *workspace;

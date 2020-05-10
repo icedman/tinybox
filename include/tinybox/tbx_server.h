@@ -78,6 +78,7 @@ struct tbx_server {
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;
   struct wl_listener new_output;
+  struct tbx_output *main_output;
 
   struct wl_list workspaces;
   struct tbx_workspace *active_workspace;

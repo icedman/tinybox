@@ -362,11 +362,10 @@ static bool reset_libinput_touch(struct libinput_device *device,
 }
 
 void reset_libinput_device(struct tbx_input_device *device) {
-
-    console_log("device %s %d!", device->identifier, device->wlr_device->type);
+    // console_log("device %s %d!", device->identifier, device->wlr_device->type);
 
     if (!wlr_input_device_is_libinput(device->wlr_device)) {
-        console_log("not a libinput device");
+        // console_log("not a libinput device");
         return;
     }
 
