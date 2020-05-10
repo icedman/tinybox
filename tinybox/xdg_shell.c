@@ -258,12 +258,14 @@ struct tbx_view *desktop_view_at(
   // console_log("vx:%d vy:%d", (int)view->x, (int)view->y);
 
     if (view_at(view, lx, ly, surface, sx, sy)) {
+      view->hotspot = -1;
+      server->grabbed_view = NULL;
       return view;
     }
 
-      if (hotspot_at(view, lx, ly, surface, sx, sy)) {
-        return view;
-      }
+    if (hotspot_at(view, lx, ly, surface, sx, sy)) {
+      return view;
+    }
       
   }
   return NULL;

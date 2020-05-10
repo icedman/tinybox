@@ -6,6 +6,7 @@ tinybox_src = files(
   'desktop/seat.c',
   'input/cursor.c',
   'input/keyboard.c',
+  'input/libinput.c',
   
   'cairo.c',
   'decoration.c',
@@ -23,6 +24,7 @@ tinybox_dep = [
   cairo,
   pango,
   pangocairo,
+  libinput,
   glesv2,
   wlroots,
   xkbcommon,

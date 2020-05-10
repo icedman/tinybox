@@ -1,7 +1,39 @@
+#define _POSIX_C_SOURCE 200809L
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "tinybox/tbx_server.h"
 #include "tinybox/tbx_seat.h"
 #include "tinybox/tbx_cursor.h"
 #include "tinybox/tbx_keyboard.h"
+#include "tinybox/stringop.h"
+
+char *input_device_get_identifier(struct wlr_input_device *device) {
+  int vendor = device->vendor;
+  int product = device->product;
+  char *name = strdup(device->name ? device->name : "");
+  strip_whitespace(name);
+
+  char *p = name;
+  for (; *p; ++p) {
+    if (*p == ' ') {
+      *p = '_';
+    }
+  }
+
+  const char *fmt = "%d:%d:%s";
+  int len = snprintf(NULL, 0, fmt, vendor, product, name) + 1;
+  char *identifier = malloc(len);
+  if (!identifier) {
+    // sway_log(SWAY_ERROR, "Unable to allocate unique input device name");
+    return NULL;
+  }
+
+  snprintf(identifier, len, fmt, vendor, product, name);
+  free(name);
+  return identifier;
+}
 
 static void server_new_input(struct wl_listener *listener, void *data) {
   /* This event is raised by the backend when a new input device becomes
@@ -27,6 +59,11 @@ static void server_new_input(struct wl_listener *listener, void *data) {
     caps |= WL_SEAT_CAPABILITY_KEYBOARD;
   }
   wlr_seat_set_capabilities(server->seat, caps);
+
+  struct tbx_input_device tbx_device;
+  tbx_device.identifier = input_device_get_identifier(device);
+  tbx_device.wlr_device = device;
+  reset_libinput_device(&tbx_device);  
 }
 
 static void seat_request_cursor(struct wl_listener *listener, void *data) {
