@@ -29,6 +29,7 @@ struct tbx_output {
 struct tbx_view {
   struct wl_list link;
   struct tbx_server *server;
+  struct wlr_surface *surface; // NULL for unmapped views
   struct wlr_xdg_surface *xdg_surface;
   struct wl_listener map;
   struct wl_listener unmap;
@@ -45,15 +46,22 @@ struct tbx_view {
   int hotspot;
   int hotspot_edges;
 
+  // title
   struct wlr_texture *title;
   struct wlr_texture *title_unfocused;
   struct wlr_box title_box;
   bool title_dirty;
+
+  // decoration
+  // struct tbx_xdg_decoration *xdg_decoration;
+  bool csd;
 };
 
 void output_init();
 
 const char *get_string_prop(struct tbx_view *view,
     enum tbx_view_prop prop);
+
+struct tbx_view *view_from_wlr_surface(struct wlr_surface *wlr_surface);
 
 #endif //  TBX_OUTPUT_H

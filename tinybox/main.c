@@ -24,11 +24,11 @@ int main(int argc, char *argv[]) {
         startup_cmd = argv[i + 1];
       } else if ((!strcmp("--style", argv[i]) || !strcmp("-s", argv[i])) && i < argc) {
         style_path = argv[i + 1];
-      } else if (!strcmp("--version", argv[i]) || !strcmp("-V", argv[i])) {
-        // printf(PACKAGE_NAME " " PACKAGE_VERSION "\n");
+      } else if (!strcmp("--version", argv[i]) || !strcmp("-v", argv[i])) {
+        printf(PACKAGE_NAME " " PACKAGE_VERSION "\n");
         return 0;
       } else if (argv[i][0] == '-') {
-        printf("Usage: %s [--help] [--style STYLE] [--startup CMD]\n", argv[0]);
+        printf("Usage: %s [--help] --version [--style STYLE] [--startup CMD]\n", argv[0]);
         return strcmp("--help", argv[i]) != 0 && strcmp("-h", argv[i]) != 0;
       }
     }

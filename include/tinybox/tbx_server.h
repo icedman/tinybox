@@ -61,7 +61,14 @@ struct tbx_server {
   struct wlr_box grab_geobox;
   uint32_t resize_edges;
   
-  struct wlr_server_decoration_manager *server_decoration;
+  struct wlr_server_decoration_manager *server_decoration_manager;
+  struct wl_listener server_decoration;
+  struct wl_list decorations; // tbx_server_decoration::link
+
+  struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager;
+  struct wl_listener xdg_decoration;
+  struct wl_list xdg_decorations; // tbx_xdg_decoration::link
+
 
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;

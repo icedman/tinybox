@@ -8,6 +8,8 @@ tinybox_src = files(
   'input/keyboard.c',
   
   'cairo.c',
+  'decoration.c',
+  'xdg_decoration.c',
   'server.c',
   'stringop.c',
   'style.c',

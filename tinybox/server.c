@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "tinybox/tbx_server.h"
+#include "tinybox/tbx_decoration.h"
 #include "tinybox/console.h"
 
 bool server_create()
@@ -48,12 +49,9 @@ bool server_create()
   wlr_compositor_create(server.wl_display, server.renderer);
   wlr_data_device_manager_create(server.wl_display);
 
-  server.server_decoration = wlr_server_decoration_manager_create(server.wl_display);
-
-  wlr_server_decoration_manager_set_default_mode(
-    server.server_decoration,
-    WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
-
+  server_decoration_init();
+  xdg_decoration_init();
+  
   output_init();
   xdg_shell_init();
   cursor_init();
@@ -104,8 +102,9 @@ void server_destroy() {
 
 }
 
+const char *header = "-------------\n%s\n";
 void server_print() {
-    console_log("tinybox\nversion 0.1");
+    console_log("%s\nv%s", PACKAGE_NAME, PACKAGE_VERSION);
 
     // struct tbx_view *view;
     // printf(header_format, "views");
@@ -114,12 +113,11 @@ void server_print() {
     // }
 
     // struct tbx_output *output;
-    // console_log("outputs");
+    // console_log(header, "outputs");
     // wl_list_for_each(output, &server.outputs, link) {
-        // double ox = 0, oy = 0;
-        // wlr_output_layout_output_coords(
-        //     server.output_layout, output->wlr_output, &ox, &oy);
-        // printf("%s %f %f\n", output->wlr_output->name, ox, oy);
-        // console_log(output->wlr_output->name);
+    //     double ox = 0, oy = 0;
+    //     wlr_output_layout_output_coords(
+    //         server.output_layout, output->wlr_output, &ox, &oy);
+    //     console_log("%s (%d, %d)", output->wlr_output->name, (int)ox, (int)oy);
     // } 
 }

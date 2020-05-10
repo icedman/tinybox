@@ -315,10 +315,6 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   int footer_height = view->server->style.handleWidth + (view->server->style.borderWidth * 2);
   int title_bar_height = 28;
 
-  if (!view->title) {
-    title_bar_height = footer_height + view->server->style.borderWidth;
-  }
-
   struct wlr_box box;
   wlr_xdg_surface_get_geometry((struct wlr_xdg_surface*)surface, &box);
   box.x += (ox - border_thickness) * output->scale;
@@ -383,32 +379,30 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   box.width -= (border_thickness*2);
   box.height -= (border_thickness*2);
   render_texture(output, &box, textCache[tx_window_title_focus + focusTextureOffset]);
+  
   // label
   box.x += border_thickness;
   box.y += border_thickness;
   box.width -= (border_thickness*2);
   box.height -= (border_thickness*2);
-  
-  if (view->title) {
-    render_texture(output, &box, textCache[tx_window_label_focus + focusTextureOffset]);
+  render_texture(output, &box, textCache[tx_window_label_focus + focusTextureOffset]);
 
-    box.width -= 4;
-    scissor_output(output, box);
+  box.width -= 4;
+  scissor_output(output, box);
 
-    box.x += 2;
-    box.y += 2;
-    box.width = view->title_box.width;
-    box.height = view->title_box.height;
+  box.x += 2;
+  box.y += 2;
+  box.width = view->title_box.width;
+  box.height = view->title_box.height;
 
-    if (!focusTextureOffset) {
-      render_texture(output, &box, view->title);
-    } else {
-      render_texture(output, &box, view->title_unfocused);
-    }
-
-    wlr_renderer_scissor(renderer, NULL);
+  if (!focusTextureOffset) {
+    render_texture(output, &box, view->title);
+  } else {
+    render_texture(output, &box, view->title_unfocused);
   }
 
+  wlr_renderer_scissor(renderer, NULL);
+  
   // handle
   memcpy(&box, &base_box, sizeof(struct wlr_box));
   box.y = box.y + box.height;
@@ -575,12 +569,15 @@ static void output_frame(struct wl_listener *listener, void *data) {
       .renderer = renderer,
       .when = &now,
     };
+
     if (view->title_dirty) {
         generate_view_title_texture(output, view);
     }
 
-    render_view_frame((struct wlr_surface *)view->xdg_surface, 0, 0, &rdata);
-    // wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_frame, &rdata);
+    if (!view->csd) {
+      render_view_frame((struct wlr_surface *)view->xdg_surface, 0, 0, &rdata);
+      // wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_frame, &rdata);
+    }
 
     /* This calls our render_surface function for each surface among the
      * xdg_surface's toplevel and popups. */
@@ -658,4 +655,3 @@ void output_init() {
   server.new_output.notify = server_new_output;
   wl_signal_add(&server.backend->events.new_output, &server.new_output);
 }
-
