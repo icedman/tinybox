@@ -187,7 +187,7 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
 
     if (view && view->hotspot_edges != WLR_EDGE_NONE) {
         int title_bar_height = 28;
-        int footer_height = view->server->style.handleWidth + (view->server->style.borderWidth * 2);
+        int footer_height = server->style.handleWidth + (server->style.borderWidth * 2);
         server->cursor_mode = TBX_CURSOR_RESIZE;
         server->grabbed_view = view;
         server->resize_edges = view->hotspot_edges;
@@ -287,4 +287,13 @@ void cursor_init()
   wl_signal_add(&server.cursor->events.axis, &server.cursor_axis);
   server.cursor_frame.notify = server_cursor_frame;
   wl_signal_add(&server.cursor->events.frame, &server.cursor_frame);
+}
+
+void cursor_attach(struct tbx_server *server,
+    struct wlr_input_device *device) {
+  /* We don't do anything special with pointers. All of our pointer handling
+   * is proxied through wlr_cursor. On another compositor, you might take this
+   * opportunity to do libinput configuration on the device to set
+   * acceleration, etc. */
+  wlr_cursor_attach_input_device(server->cursor, device);
 }

@@ -75,3 +75,5 @@ void draw_gradient_rect(cairo_t *cx, int flags, int w, int h, float color[static
         cairo_fill (cx);
     }
 };
+
+

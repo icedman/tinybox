@@ -27,9 +27,10 @@
 #include "tinybox/tbx_cursor.h"
 #include "tinybox/tbx_output.h"
 #include "tinybox/tbx_seat.h"
-#include "tinybox/xdg_shell.h"
 #include "tinybox/tbx_server.h"
+#include "tinybox/xdg_shell.h"
 #include "tinybox/style.h"
+#include "tinybox/console.h"
 
 struct tbx_server {
   struct wl_display *wl_display;
@@ -67,11 +68,15 @@ struct tbx_server {
   struct wl_listener new_output;
 
   struct tbx_style style;
+
+  struct tbx_console console;
 };
 
 extern struct tbx_server server;
 extern void server_print();
 
-void init_server();
+bool server_create();
+bool server_start();
+void server_destroy();
 
 #endif //  TBX_SERVER_H
