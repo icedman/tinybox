@@ -614,11 +614,11 @@ static void output_frame(struct wl_listener *listener, void *data) {
       assign_view_workspace(view);
     }
 
-    // if (output->server->main_output == output) {
+    if (output->server->main_output == output) {
       if (view->workspace != output->server->active_workspace) {
         continue;
       }
-    // }
+    }
 
     // console_log("w: %s", view->xdg_surface->toplevel->title);
 

@@ -45,6 +45,9 @@ static void begin_interactive(struct tbx_view *view,
   server->grabbed_view = view;
   server->cursor_mode = mode;
 
+  view->workspace = server->active_workspace;
+  view->workspace_id = server->active_workspace_id;
+
   if (mode == TBX_CURSOR_MOVE) {
     server->grab_x = server->cursor->x - view->x;
     server->grab_y = server->cursor->y - view->y;
@@ -250,12 +253,25 @@ struct tbx_view *desktop_view_at(
    * cursor. This relies on server->views being ordered from top-to-bottom. */
   struct tbx_view *view;
 
+
+
+  struct wlr_box *main_box = wlr_output_layout_get_box(
+      server->output_layout, server->main_output->wlr_output);
+
+  bool in_main_display = (
+      (lx >= main_box->x && lx <= main_box->x + main_box->width) &&
+      (ly >= main_box->y && ly <= main_box->y + main_box->height)
+    );
+
   // console_clear();
   // console_log("lx:%d ly:%d", (int)lx,(int)ly);
+  // console_log("(%d, %d) - (%d, %d) ",
+  //     (int)main_box->x,(int)main_box->y,
+  //     (int)main_box->width,(int)main_box->height);
 
   wl_list_for_each(view, &server->views, link) {
 
-    if (view->workspace != server->active_workspace) {
+    if (in_main_display && view->workspace != server->active_workspace) {
       continue;
     }
 

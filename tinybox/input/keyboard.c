@@ -69,7 +69,6 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
       current_view->workspace_id = current_view->workspace_id + 1;
       current_view->workspace = NULL;
     }
-    server_print();
     break;
   }
 
@@ -77,9 +76,13 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
   {
       server->active_workspace_id = server->active_workspace_id + 1;
       server->active_workspace = NULL;
-    server_print();
     break;
   }
+
+  case XKB_KEY_z:
+
+    server_print();
+    break;
 
   default:
     return false;

@@ -181,6 +181,7 @@ static bool begin_resize_or_drag(struct tbx_server *server, struct tbx_view *vie
   if (!view) {
     return false;
   }
+
   if (view->hotspot_edges != WLR_EDGE_NONE) {
       int title_bar_height = 28;
       int footer_height = server->style.handleWidth + (server->style.borderWidth * 2);
@@ -202,6 +203,11 @@ static bool begin_resize_or_drag(struct tbx_server *server, struct tbx_view *vie
       server->grab_geobox.y = view->y;
       view->hotspot = -1;
       view->hotspot_edges = WLR_EDGE_NONE;
+
+      // move to active workspace  
+      view->workspace = server->active_workspace;
+      view->workspace_id = server->active_workspace_id;
+
       return true;
   }
 
@@ -215,6 +221,11 @@ static bool begin_resize_or_drag(struct tbx_server *server, struct tbx_view *vie
       server->grab_geobox.y = view->y;
       view->hotspot = -1;
       view->hotspot_edges = WLR_EDGE_NONE;
+
+      // move to active workspace  
+      view->workspace = server->active_workspace;
+      view->workspace_id = server->active_workspace_id;
+
       return true;
   }
 
