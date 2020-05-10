@@ -71,6 +71,11 @@ static void process_cursor_resize(struct tbx_server *server, uint32_t time) {
   int new_width = new_right - new_left;
   int new_height = new_bottom - new_top;
   wlr_xdg_toplevel_set_size(view->xdg_surface, new_width, new_height);
+
+  view->pending_box.x = view->x;
+  view->pending_box.y = view->y;
+  view->pending_box.width = new_width;
+  view->pending_box.height = new_height;
 }
 
 static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
@@ -161,9 +166,9 @@ static void server_cursor_motion_absolute(
   process_cursor_motion(server, event->time_msec);
 }
 
-static void begin_resize_or_drag(struct tbx_server *server, struct tbx_view *view) {
+static bool begin_resize_or_drag(struct tbx_server *server, struct tbx_view *view) {
   if (!view) {
-    return;
+    return false;
   }
   if (view->hotspot_edges != WLR_EDGE_NONE) {
       int title_bar_height = 28;
@@ -186,7 +191,7 @@ static void begin_resize_or_drag(struct tbx_server *server, struct tbx_view *vie
       server->grab_geobox.y = view->y;
       view->hotspot = -1;
       view->hotspot_edges = WLR_EDGE_NONE;
-      return;
+      return true;
   }
 
   if (view->hotspot == HS_TITLEBAR) {
@@ -199,8 +204,10 @@ static void begin_resize_or_drag(struct tbx_server *server, struct tbx_view *vie
       server->grab_geobox.y = view->y;
       view->hotspot = -1;
       view->hotspot_edges = WLR_EDGE_NONE;
-      return;
+      return true;
   }
+
+  return false;
 }
 
 static void server_cursor_button(struct wl_listener *listener, void *data) {
@@ -219,9 +226,9 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
   if (event->state == WLR_BUTTON_RELEASED) {
     /* If you released any buttons, we exit interactive move/resize mode. */
     server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
+    server->resize_edges = WLR_EDGE_NONE;
       wlr_xcursor_manager_set_cursor_image(
         server->cursor_mgr, "left_ptr", server->cursor);
-    server->resize_edges = WLR_EDGE_NONE;
     
   } else {
     /* Focus that client if the button was _pressed_ */
@@ -259,14 +266,23 @@ static void server_cursor_swipe_begin(struct wl_listener *listener, void *data) 
 
   struct wlr_event_pointer_swipe_begin *event = data;
 
-  if (event->fingers == 3) {
     double sx, sy;
     struct wlr_surface *surface;
     struct tbx_view *view = desktop_view_at(server,
         server->cursor->x, server->cursor->y, &surface, &sx, &sy);
 
+  if (event->fingers == 3) {
     focus_view(view, surface);
-    begin_resize_or_drag(server, view);
+
+    if (!begin_resize_or_drag(server, view)) {
+      server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
+      server->resize_edges = WLR_EDGE_NONE;
+        wlr_xcursor_manager_set_cursor_image(
+          server->cursor_mgr, "left_ptr", server->cursor);
+
+        wlr_seat_pointer_notify_button(server->seat,
+          event->time_msec, 0, WLR_BUTTON_PRESSED);
+    }
   }
 }
 
@@ -278,6 +294,7 @@ static void server_cursor_swipe_update(struct wl_listener *listener, void *data)
 
   wlr_cursor_move(server->cursor, event->device,
       event->dx, event->dy);
+
   process_cursor_motion(server, event->time_msec);
 }
 
@@ -285,14 +302,12 @@ static void server_cursor_swipe_end(struct wl_listener *listener, void *data) {
   struct tbx_server *server =
     wl_container_of(listener, server, cursor_swipe_end);
 
-  // struct wlr_event_pointer_swipe_end *event = data;
-  // server->grabbed_view = NULL;
-
-  if (server) {
+  // if (server) {
     server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
+    server->resize_edges = WLR_EDGE_NONE;
     wlr_xcursor_manager_set_cursor_image(
         server->cursor_mgr, "left_ptr", server->cursor);
-  }
+  // }
 }
 
 void cursor_init()

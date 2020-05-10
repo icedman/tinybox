@@ -41,6 +41,9 @@ struct tbx_view {
   bool mapped;
   int x, y;
 
+  // pending geometry
+  struct wlr_box pending_box;
+
   // hotspots
   struct wlr_box hotspots[HS_COUNT];
   int hotspot;

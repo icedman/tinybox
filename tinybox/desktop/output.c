@@ -304,6 +304,19 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
 
   struct wlr_renderer *renderer = wlr_backend_get_renderer(output->backend);
 
+  struct wlr_box box;
+  wlr_xdg_surface_get_geometry((struct wlr_xdg_surface*)surface, &box);
+
+  // fixed janky resize
+  if ((view->server->resize_edges & WLR_EDGE_LEFT ||
+      view->server->resize_edges & WLR_EDGE_TOP) &&
+      (view->pending_box.width > 20 && view->pending_box.height > 20) && 
+      (view->pending_box.width != box.width ||
+      view->pending_box.height != box.height)) {
+    box.width = view->pending_box.width;
+    box.height = view->pending_box.height;
+  }
+
   double ox = 0, oy = 0;
   wlr_output_layout_output_coords(
       view->server->output_layout, output, &ox, &oy);
@@ -315,8 +328,6 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   int footer_height = view->server->style.handleWidth + (view->server->style.borderWidth * 2);
   int title_bar_height = 28;
 
-  struct wlr_box box;
-  wlr_xdg_surface_get_geometry((struct wlr_xdg_surface*)surface, &box);
   box.x += (ox - border_thickness) * output->scale;
   box.y += (oy - border_thickness) * output->scale;
   box.width = (box.width + border_thickness * 2) * output->scale;
@@ -496,6 +507,15 @@ static void render_view_content(struct wlr_surface *surface,
     .width = surface->current.width * output->scale,
     .height = surface->current.height * output->scale,
   };
+
+  if ((view->server->resize_edges & WLR_EDGE_LEFT ||
+      view->server->resize_edges & WLR_EDGE_TOP) && 
+      (view->pending_box.width > 20 && view->pending_box.height > 20) &&
+      (view->pending_box.width != box.width ||
+      view->pending_box.height != box.height)) {
+    box.width = view->pending_box.width;
+    box.height = view->pending_box.height;
+  }
 
   /*
    * Those familiar with OpenGL are also familiar with the role of matricies
