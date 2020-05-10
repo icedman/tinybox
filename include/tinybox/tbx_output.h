@@ -54,6 +54,7 @@ struct tbx_view {
 
   // decoration
   // struct tbx_xdg_decoration *xdg_decoration;
+  bool shaded;
   bool csd;
 };
 

@@ -35,7 +35,6 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
     wl_display_terminate(server->wl_display);
     break;
 
-
   case XKB_KEY_F3:
     server_print();
     break;
@@ -44,10 +43,12 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
   case XKB_KEY_F2:
     if (fork() == 0) {
       execl("/bin/sh", "/bin/sh", "-c", "termite 2>/dev/null", (char *) NULL);
+      // execl("/bin/sh", "/bin/sh", "-c", "(obrun || bemenu-run || synapse || gmrun || gnome-do || dmenu_run) 2>/dev/null", (char *) NULL);
     }
     break;
 
   case XKB_KEY_F1:
+  {
     /* Cycle to the next view */
     if (wl_list_length(&server->views) < 2) {
       break;
@@ -63,6 +64,26 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
     wl_list_remove(&current_view->link);
     wl_list_insert(server->views.prev, &current_view->link);
     break;
+  }
+  
+  case XKB_KEY_F4:
+  {
+    /* Cycle to the next view */
+    if (wl_list_length(&server->views) < 1) {
+      break;
+    }
+    struct tbx_view *current_view = wl_container_of(
+      server->views.next, current_view, link);
+    struct tbx_view *next_view = wl_container_of(
+      current_view->link.next, next_view, link);
+    
+    if (current_view) {
+      current_view->shaded = !current_view->shaded;
+    }
+
+    break;
+  }
+
   default:
     return false;
   }

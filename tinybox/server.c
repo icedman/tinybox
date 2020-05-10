@@ -104,6 +104,7 @@ void server_destroy() {
 
 const char *header = "-------------\n%s\n";
 void server_print() {
+    console_clear();
     console_log("%s\nv%s", PACKAGE_NAME, PACKAGE_VERSION);
 
     // struct tbx_view *view;

@@ -335,26 +335,28 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   // --------------
   // borders
   // --------------
-  // top
-  box.height = border_thickness * output->scale;
-  render_rect(output, &box, color);
-  memcpy(&view->hotspots[HS_EDGE_TOP], &box, sizeof(struct wlr_box));
+  if (!view->shaded) {
+    // top
+    box.height = border_thickness * output->scale;
+    render_rect(output, &box, color);
+    memcpy(&view->hotspots[HS_EDGE_TOP], &box, sizeof(struct wlr_box));
 
-  // bottom
-  box.y = base_box.y + base_box.height - border_thickness;
-  render_rect(output, &box, color);
-  memcpy(&view->hotspots[HS_EDGE_BOTTOM], &box, sizeof(struct wlr_box));
+    // bottom
+    box.y = base_box.y + base_box.height - border_thickness;
+    render_rect(output, &box, color);
+    memcpy(&view->hotspots[HS_EDGE_BOTTOM], &box, sizeof(struct wlr_box));
 
-  // left
-  memcpy(&box, &base_box, sizeof(struct wlr_box));
-  box.width = border_thickness;
-  render_rect(output, &box, color);
-  memcpy(&view->hotspots[HS_EDGE_LEFT], &box, sizeof(struct wlr_box));
-  
-  // right
-  box.x += base_box.width - border_thickness;
-  render_rect(output, &box, color);
-  memcpy(&view->hotspots[HS_EDGE_RIGHT], &box, sizeof(struct wlr_box));
+    // left
+    memcpy(&box, &base_box, sizeof(struct wlr_box));
+    box.width = border_thickness;
+    render_rect(output, &box, color);
+    memcpy(&view->hotspots[HS_EDGE_LEFT], &box, sizeof(struct wlr_box));
+    
+    // right
+    box.x += base_box.width - border_thickness;
+    render_rect(output, &box, color);
+    memcpy(&view->hotspots[HS_EDGE_RIGHT], &box, sizeof(struct wlr_box));
+  }
 
   // make hotspot edges tolerant
   int hs_thickness = 4;
@@ -403,51 +405,58 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
 
   wlr_renderer_scissor(renderer, NULL);
   
-  // handle
-  memcpy(&box, &base_box, sizeof(struct wlr_box));
-  box.y = box.y + box.height;
-  box.height = footer_height + border_thickness;
-  render_rect(output, &box, color);
-  memcpy(&view->hotspots[HS_HANDLE], &box, sizeof(struct wlr_box));
+  if (!view->shaded) {
+    // handle
+    memcpy(&box, &base_box, sizeof(struct wlr_box));
+    box.y = box.y + box.height;
+    box.height = footer_height + border_thickness;
+    render_rect(output, &box, color);
+    memcpy(&view->hotspots[HS_HANDLE], &box, sizeof(struct wlr_box));
 
-  int grip_width = 32;
-  box.x += grip_width;
-  box.width -= (grip_width * 2);
+    int grip_width = 32;
+    box.x += grip_width;
+    box.width -= (grip_width * 2);
 
-  box.x += border_thickness;
-  box.y += border_thickness;
-  box.width -= (border_thickness * 2);
-  box.height -= (border_thickness * 2);
-  render_texture(output, &box, textCache[tx_window_handle_focus + focusTextureOffset]);
+    box.x += border_thickness;
+    box.y += border_thickness;
+    box.width -= (border_thickness * 2);
+    box.height -= (border_thickness * 2);
+    render_texture(output, &box, textCache[tx_window_handle_focus + focusTextureOffset]);
 
-  // grips
-  memcpy(&box, &base_box, sizeof(struct wlr_box));
-  box.x += border_thickness;
-  box.width = grip_width - border_thickness;
-  box.y = box.y + box.height + border_thickness;
-  box.height = footer_height - border_thickness;
-  render_texture(output, &box, textCache[tx_window_grip_focus + focusTextureOffset]);
-  memcpy(&view->hotspots[HS_GRIP_LEFT], &box, sizeof(struct wlr_box));
+    // grips
+    memcpy(&box, &base_box, sizeof(struct wlr_box));
+    box.x += border_thickness;
+    box.width = grip_width - border_thickness;
+    box.y = box.y + box.height + border_thickness;
+    box.height = footer_height - border_thickness;
+    render_texture(output, &box, textCache[tx_window_grip_focus + focusTextureOffset]);
+    memcpy(&view->hotspots[HS_GRIP_LEFT], &box, sizeof(struct wlr_box));
 
-  memcpy(&box, &base_box, sizeof(struct wlr_box));
-  box.x += box.width - grip_width;
-  box.width = grip_width - border_thickness;
-  box.y = box.y + box.height + border_thickness;
-  box.height = footer_height - border_thickness;
-  render_texture(output, &box, textCache[tx_window_grip_focus + focusTextureOffset]);
-  memcpy(&view->hotspots[HS_GRIP_RIGHT], &box, sizeof(struct wlr_box));
+    memcpy(&box, &base_box, sizeof(struct wlr_box));
+    box.x += box.width - grip_width;
+    box.width = grip_width - border_thickness;
+    box.y = box.y + box.height + border_thickness;
+    box.height = footer_height - border_thickness;
+    render_texture(output, &box, textCache[tx_window_grip_focus + focusTextureOffset]);
+    memcpy(&view->hotspots[HS_GRIP_RIGHT], &box, sizeof(struct wlr_box));
 
-  view->hotspots[HS_GRIP_LEFT].x -= hs_thickness;
-  view->hotspots[HS_GRIP_LEFT].width += hs_thickness;
-  view->hotspots[HS_GRIP_LEFT].y -= hs_thickness;
-  view->hotspots[HS_GRIP_LEFT].height += hs_thickness * 2;
-  view->hotspots[HS_GRIP_RIGHT].width += hs_thickness;
-  view->hotspots[HS_GRIP_RIGHT].y -= hs_thickness;
-  view->hotspots[HS_GRIP_RIGHT].height += hs_thickness * 2;
+    view->hotspots[HS_GRIP_LEFT].x -= hs_thickness;
+    view->hotspots[HS_GRIP_LEFT].width += hs_thickness;
+    view->hotspots[HS_GRIP_LEFT].y -= hs_thickness;
+    view->hotspots[HS_GRIP_LEFT].height += hs_thickness * 2;
+    view->hotspots[HS_GRIP_RIGHT].width += hs_thickness;
+    view->hotspots[HS_GRIP_RIGHT].y -= hs_thickness;
+    view->hotspots[HS_GRIP_RIGHT].height += hs_thickness * 2;
+  }
 
   for(int i=0; i<HS_COUNT;i++) {
     view->hotspots[i].x -= oox;
     view->hotspots[i].y -= ooy;
+
+    if (view->shaded && i != HS_TITLEBAR) {
+      view->hotspots[i].width = 0;
+      view->hotspots[i].height = 0;
+    }
   }
 
   // adjust hotspots to output layout
@@ -581,8 +590,11 @@ static void output_frame(struct wl_listener *listener, void *data) {
 
     /* This calls our render_surface function for each surface among the
      * xdg_surface's toplevel and popups. */
-    wlr_xdg_surface_for_each_surface(view->xdg_surface,
+
+    if (!view->shaded) {
+      wlr_xdg_surface_for_each_surface(view->xdg_surface,
         render_view_content, &rdata);
+    }
   }
 
   /* Hardware cursors are rendered by the GPU on a separate plane, and can be

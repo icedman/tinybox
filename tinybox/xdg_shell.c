@@ -255,9 +255,7 @@ struct tbx_view *desktop_view_at(
 
   wl_list_for_each(view, &server->views, link) {
 
-  // console_log("vx:%d vy:%d", (int)view->x, (int)view->y);
-
-    if (view_at(view, lx, ly, surface, sx, sy)) {
+    if (!view->shaded && view_at(view, lx, ly, surface, sx, sy)) {
       view->hotspot = -1;
       server->grabbed_view = NULL;
       return view;
