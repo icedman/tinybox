@@ -89,8 +89,7 @@ bool server_start() {
     return false;
   }
 
-
-  server_print();
+  // server_print();
   return true;
 }
 

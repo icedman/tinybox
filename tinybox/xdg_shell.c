@@ -110,8 +110,8 @@ static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   view->server = server;
   view->xdg_surface = xdg_surface;
 
-  view->x = 4 + (offset*20);
-  view->y = 32 + (offset*20);
+  view->x = 4 + (offset*40);
+  view->y = 32 + (offset*40);
   offset = (offset+1)%8;
 
   /* Listen to the various events it can emit */

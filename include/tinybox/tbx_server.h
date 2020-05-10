@@ -49,6 +49,9 @@ struct tbx_server {
   struct wl_listener cursor_button;
   struct wl_listener cursor_axis;
   struct wl_listener cursor_frame;
+  struct wl_listener cursor_swipe_begin;
+  struct wl_listener cursor_swipe_update;
+  struct wl_listener cursor_swipe_end;
 
   struct wlr_seat *seat;
   struct wl_listener new_input;

@@ -1,7 +1,7 @@
 #include "tinybox/tbx_server.h"
 #include "tinybox/tbx_cursor.h"
 
-const char * cursor_images[] = {
+const char *cursor_images[] = {
     "bottom_left_corner",// HS_EDGE_BOTTOM,
     "bottom_right_corner",// HS_EDGE_BOTTOM,
     "top_side",// HS_EDGE_TOP,
@@ -161,6 +161,48 @@ static void server_cursor_motion_absolute(
   process_cursor_motion(server, event->time_msec);
 }
 
+static void begin_resize_or_drag(struct tbx_server *server, struct tbx_view *view) {
+  if (!view) {
+    return;
+  }
+  if (view->hotspot_edges != WLR_EDGE_NONE) {
+      int title_bar_height = 28;
+      int footer_height = server->style.handleWidth + (server->style.borderWidth * 2);
+      server->cursor_mode = TBX_CURSOR_RESIZE;
+      server->grabbed_view = view;
+      server->resize_edges = view->hotspot_edges;
+      server->grab_x = 0;
+      server->grab_y = 0;
+
+      if (view->hotspot_edges & WLR_EDGE_TOP) {
+        server->grab_y -= title_bar_height;
+      }
+      if (view->hotspot_edges & WLR_EDGE_BOTTOM) {
+        server->grab_y += footer_height;
+      }
+
+      wlr_xdg_surface_get_geometry(view->xdg_surface, &server->grab_geobox);
+      server->grab_geobox.x = view->x;
+      server->grab_geobox.y = view->y;
+      view->hotspot = -1;
+      view->hotspot_edges = WLR_EDGE_NONE;
+      return;
+  }
+
+  if (view->hotspot == HS_TITLEBAR) {
+      server->cursor_mode = TBX_CURSOR_MOVE;
+      server->grabbed_view = view;
+      server->grab_x = server->cursor->x - view->x;
+      server->grab_y = server->cursor->y - view->y;
+      wlr_xdg_surface_get_geometry(view->xdg_surface, &server->grab_geobox);
+      server->grab_geobox.x = view->x;
+      server->grab_geobox.y = view->y;
+      view->hotspot = -1;
+      view->hotspot_edges = WLR_EDGE_NONE;
+      return;
+  }
+}
+
 static void server_cursor_button(struct wl_listener *listener, void *data) {
   /* This event is forwarded by the cursor when a pointer emits a button
    * event. */
@@ -184,44 +226,7 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
   } else {
     /* Focus that client if the button was _pressed_ */
     focus_view(view, surface);
-
-    if (view && view->hotspot_edges != WLR_EDGE_NONE) {
-        int title_bar_height = 28;
-        int footer_height = server->style.handleWidth + (server->style.borderWidth * 2);
-        server->cursor_mode = TBX_CURSOR_RESIZE;
-        server->grabbed_view = view;
-        server->resize_edges = view->hotspot_edges;
-        server->grab_x = 0;
-        server->grab_y = 0;
-
-        if (view->hotspot_edges & WLR_EDGE_TOP) {
-          server->grab_y -= title_bar_height;
-        }
-        if (view->hotspot_edges & WLR_EDGE_BOTTOM) {
-          server->grab_y += footer_height;
-        }
-
-        wlr_xdg_surface_get_geometry(view->xdg_surface, &server->grab_geobox);
-        server->grab_geobox.x = view->x;
-        server->grab_geobox.y = view->y;
-        view->hotspot = -1;
-        view->hotspot_edges = WLR_EDGE_NONE;
-        return;
-    }
-
-    if (view && view->hotspot == HS_TITLEBAR) {
-        server->cursor_mode = TBX_CURSOR_MOVE;
-        server->grabbed_view = view;
-        server->grab_x = server->cursor->x - view->x;
-        server->grab_y = server->cursor->y - view->y;
-        wlr_xdg_surface_get_geometry(view->xdg_surface, &server->grab_geobox);
-        server->grab_geobox.x = view->x;
-        server->grab_geobox.y = view->y;
-        view->hotspot = -1;
-        view->hotspot_edges = WLR_EDGE_NONE;
-        return;
-    }
-    
+    begin_resize_or_drag(server, view);
   }
 }
 
@@ -246,6 +251,48 @@ static void server_cursor_frame(struct wl_listener *listener, void *data) {
     wl_container_of(listener, server, cursor_frame);
   /* Notify the client with pointer focus of the frame event. */
   wlr_seat_pointer_notify_frame(server->seat);
+}
+
+static void server_cursor_swipe_begin(struct wl_listener *listener, void *data) {
+  struct tbx_server *server =
+    wl_container_of(listener, server, cursor_swipe_begin);
+
+  struct wlr_event_pointer_swipe_begin *event = data;
+
+  if (event->fingers == 3) {
+    double sx, sy;
+    struct wlr_surface *surface;
+    struct tbx_view *view = desktop_view_at(server,
+        server->cursor->x, server->cursor->y, &surface, &sx, &sy);
+
+    focus_view(view, surface);
+    begin_resize_or_drag(server, view);
+  }
+}
+
+static void server_cursor_swipe_update(struct wl_listener *listener, void *data) {
+  struct tbx_server *server =
+    wl_container_of(listener, server, cursor_swipe_update);
+
+  struct wlr_event_pointer_swipe_update *event = data;
+
+  wlr_cursor_move(server->cursor, event->device,
+      event->dx, event->dy);
+  process_cursor_motion(server, event->time_msec);
+}
+
+static void server_cursor_swipe_end(struct wl_listener *listener, void *data) {
+  struct tbx_server *server =
+    wl_container_of(listener, server, cursor_swipe_end);
+
+  // struct wlr_event_pointer_swipe_end *event = data;
+  // server->grabbed_view = NULL;
+
+  if (server) {
+    server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
+    wlr_xcursor_manager_set_cursor_image(
+        server->cursor_mgr, "left_ptr", server->cursor);
+  }
 }
 
 void cursor_init()
@@ -287,6 +334,13 @@ void cursor_init()
   wl_signal_add(&server.cursor->events.axis, &server.cursor_axis);
   server.cursor_frame.notify = server_cursor_frame;
   wl_signal_add(&server.cursor->events.frame, &server.cursor_frame);
+
+  server.cursor_swipe_begin.notify = server_cursor_swipe_begin;
+  wl_signal_add(&server.cursor->events.swipe_begin, &server.cursor_swipe_begin);
+  server.cursor_swipe_update.notify = server_cursor_swipe_update;
+  wl_signal_add(&server.cursor->events.swipe_update, &server.cursor_swipe_update);
+  server.cursor_swipe_end.notify = server_cursor_swipe_end;
+  wl_signal_add(&server.cursor->events.swipe_end, &server.cursor_swipe_end);
 }
 
 void cursor_attach(struct tbx_server *server,
