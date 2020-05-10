@@ -564,6 +564,10 @@ static void output_frame(struct wl_listener *listener, void *data) {
 
   generate_textures(renderer, false);
 
+  if (!server.active_workspace) {
+    assign_server_workspace();
+  }
+
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -604,6 +608,15 @@ static void output_frame(struct wl_listener *listener, void *data) {
       /* An unmapped view should not be rendered. */
       continue;
     }
+
+    if (!view->workspace) {
+      assign_view_workspace(view);
+    }
+
+    if (view->workspace != output->server->active_workspace) {
+      continue;
+    }
+
     struct render_data rdata = {
       .output = output->wlr_output,
       .view = view,

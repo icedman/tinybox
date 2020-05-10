@@ -8,6 +8,7 @@
 
 #include "tinybox/tbx_server.h"
 #include "tinybox/tbx_decoration.h"
+#include "tinybox/tbx_workspace.h"
 #include "tinybox/console.h"
 
 bool server_create()
@@ -56,9 +57,9 @@ bool server_create()
   xdg_shell_init();
   cursor_init();
   seat_init();
+  workspace_init();
 
   console_init();
-
   return true;
 }
 
@@ -106,18 +107,36 @@ void server_print() {
     console_clear();
     console_log("%s\nv%s", PACKAGE_NAME, PACKAGE_VERSION);
 
-    // struct tbx_view *view;
-    // printf(header_format, "views");
-    // wl_list_for_each_reverse(view, &server.views, link) {
-    //     console_log("%s\n", view->xdg_surface->toplevel->title);
-    // }
+    {
+    int wksp = -1;
+    if (server.active_workspace) {
+      wksp = server.active_workspace->id;
+    }
+      console_log("workspace: %d", wksp);
+    }
 
-    // struct tbx_output *output;
-    // console_log(header, "outputs");
-    // wl_list_for_each(output, &server.outputs, link) {
-    //     double ox = 0, oy = 0;
-    //     wlr_output_layout_output_coords(
-    //         server.output_layout, output->wlr_output, &ox, &oy);
-    //     console_log("%s (%d, %d)", output->wlr_output->name, (int)ox, (int)oy);
-    // } 
+    struct tbx_view *view;
+    console_log(header, "views");
+    wl_list_for_each_reverse(view, &server.views, link) {
+      int wksp = -1;
+      if (view->workspace) {
+        wksp = view->workspace->id;
+      }
+      console_log("w:%d ~ %d %s\n", wksp, view->workspace_id, view->xdg_surface->toplevel->title);
+    }
+
+    struct tbx_workspace *workspace;
+    console_log(header, "workspaces");
+    wl_list_for_each(workspace, &server.workspaces, link) {
+      console_log("ws: %d", workspace->id);
+    }
+
+    struct tbx_output *output;
+    console_log(header, "outputs");
+    wl_list_for_each(output, &server.outputs, link) {
+        double ox = 0, oy = 0;
+        wlr_output_layout_output_coords(
+            server.output_layout, output->wlr_output, &ox, &oy);
+        console_log("(%d, %d)", (int)ox, (int)oy);
+    }
 }

@@ -60,6 +60,9 @@ struct tbx_view {
   // struct tbx_xdg_decoration *xdg_decoration;
   bool shaded;
   bool csd;
+
+  struct tbx_workspace *workspace;
+  int workspace_id;
 };
 
 void output_init();

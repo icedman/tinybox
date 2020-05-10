@@ -255,6 +255,10 @@ struct tbx_view *desktop_view_at(
 
   wl_list_for_each(view, &server->views, link) {
 
+    if (view->workspace != server->active_workspace) {
+      continue;
+    }
+
     if (!view->shaded && view_at(view, lx, ly, surface, sx, sy)) {
       view->hotspot = -1;
       server->grabbed_view = NULL;

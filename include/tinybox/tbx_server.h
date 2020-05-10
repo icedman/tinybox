@@ -27,6 +27,7 @@
 #include "tinybox/tbx_cursor.h"
 #include "tinybox/tbx_output.h"
 #include "tinybox/tbx_seat.h"
+#include "tinybox/tbx_workspace.h"
 #include "tinybox/tbx_server.h"
 #include "tinybox/xdg_shell.h"
 #include "tinybox/style.h"
@@ -74,13 +75,15 @@ struct tbx_server {
   struct wl_listener xdg_decoration;
   struct wl_list xdg_decorations; // tbx_xdg_decoration::link
 
-
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;
   struct wl_listener new_output;
 
-  struct tbx_style style;
+  struct wl_list workspaces;
+  struct tbx_workspace *active_workspace;
+  int active_workspace_id;
 
+  struct tbx_style style;
   struct tbx_console console;
 };
 

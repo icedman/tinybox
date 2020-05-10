@@ -7,6 +7,7 @@ tinybox_src = files(
   'input/cursor.c',
   'input/keyboard.c',
   'input/libinput.c',
+  'workspace.c',
   
   'cairo.c',
   'decoration.c',
