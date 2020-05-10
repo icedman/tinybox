@@ -137,6 +137,6 @@ void server_print() {
         double ox = 0, oy = 0;
         wlr_output_layout_output_coords(
             server.output_layout, output->wlr_output, &ox, &oy);
-        console_log("(%d, %d)", (int)ox, (int)oy);
+        console_log("%s (%d, %d)", output->wlr_output->name, (int)ox, (int)oy);
     }
 }

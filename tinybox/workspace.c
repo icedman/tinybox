@@ -18,21 +18,16 @@ void workspace_destroy(struct tbx_workspace *destroy) {
 }
 
 static struct tbx_workspace *find_workspace(int idx) {
-
-    console_log("idx %d", idx);
     int i = 0;
     struct tbx_workspace *workspaces[24];
     struct tbx_workspace *workspace;
     wl_list_for_each(workspace, &server.workspaces, link) {
-        console_log("%d?", i);
       workspace->id = i;
       workspaces[i++] = workspace;
       if (i == 24) break;
     }
 
     idx = idx % i;
-
-    console_log("idx x%d", idx);
     return workspaces[idx];
 }
 
@@ -60,6 +55,6 @@ void workspace_init() {
 
     workspace_create();
     workspace_create();
-    workspace_create();
-    workspace_create();
+    // workspace_create();
+    // workspace_create();
 }
