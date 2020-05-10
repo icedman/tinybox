@@ -43,6 +43,7 @@ struct tbx_view {
 
   // pending geometry
   struct wlr_box pending_box;
+  int pending_wait;
 
   // hotspots
   struct wlr_box hotspots[HS_COUNT];

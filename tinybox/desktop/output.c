@@ -490,6 +490,17 @@ static void render_view_content(struct wlr_surface *surface,
     return;
   }
 
+  if (view->pending_wait > 0 &&
+     view->pending_box.x != 0 && view->pending_box.y != 0) {
+    view->pending_wait -= 1;
+    if (view->pending_wait == 0) {
+      view->x = view->pending_box.x;
+      view->y = view->pending_box.y;
+      view->pending_box.x = 0;
+      view->pending_box.y = 0;
+    }
+  }
+
   /* The view has a position in layout coordinates. If you have two displays,
    * one next to the other, both 1080p, a view on the rightmost display might
    * have layout coordinates of 2000,100. We need to translate that to

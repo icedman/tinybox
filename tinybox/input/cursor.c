@@ -17,8 +17,15 @@ const char *cursor_images[] = {
 
 static void process_cursor_move(struct tbx_server *server, uint32_t time) {
   /* Move the grabbed view to the new position. */
-  server->grabbed_view->x = server->cursor->x - server->grab_x;
-  server->grabbed_view->y = server->cursor->y - server->grab_y;
+  struct tbx_view *grabbed_view = server->grabbed_view;
+  double s = 0.4;
+  double tx = server->cursor->x - server->grab_x;
+  double ty = server->cursor->y - server->grab_y;
+  grabbed_view->x += (tx - grabbed_view->x) * s;
+  grabbed_view->y += (ty - grabbed_view->y) * s;
+  grabbed_view->pending_box.x = tx;
+  grabbed_view->pending_box.y = ty;
+  grabbed_view->pending_wait = 4; // output frames
 }
 
 static void process_cursor_resize(struct tbx_server *server, uint32_t time) {
@@ -84,7 +91,7 @@ static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
     process_cursor_move(server, time);
 
         wlr_xcursor_manager_set_cursor_image(
-          server->cursor_mgr, "grabbing", server->cursor);
+          server->cursor_manager, "grabbing", server->cursor);
 
     return;
   } else if (server->cursor_mode == TBX_CURSOR_RESIZE) {
@@ -103,13 +110,13 @@ static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
      * default. This is what makes the cursor image appear when you move it
      * around the screen, not over any views. */
     wlr_xcursor_manager_set_cursor_image(
-        server->cursor_mgr, "left_ptr", server->cursor);
+        server->cursor_manager, "left_ptr", server->cursor);
   }
 
   if (view && view->hotspot != -1 && view->hotspot < HS_COUNT) { 
     // view->hotspot_edges != WLR_EDGE_NONE) {
     wlr_xcursor_manager_set_cursor_image(
-        server->cursor_mgr, cursor_images[view->hotspot], server->cursor);
+        server->cursor_manager, cursor_images[view->hotspot], server->cursor);
   }
 
   if (surface) {
@@ -228,7 +235,7 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
     server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
     server->resize_edges = WLR_EDGE_NONE;
       wlr_xcursor_manager_set_cursor_image(
-        server->cursor_mgr, "left_ptr", server->cursor);
+        server->cursor_manager, "left_ptr", server->cursor);
     
   } else {
     /* Focus that client if the button was _pressed_ */
@@ -271,6 +278,12 @@ static void server_cursor_swipe_begin(struct wl_listener *listener, void *data) 
     struct tbx_view *view = desktop_view_at(server,
         server->cursor->x, server->cursor->y, &surface, &sx, &sy);
 
+  if (event->fingers > 3) {
+    server->swipe_begin_x = server->cursor->x;
+    server->swipe_begin_y = server->cursor->y;
+    server->swipe_fingers = event->fingers;
+  }
+
   if (event->fingers == 3) {
     focus_view(view, surface);
 
@@ -278,7 +291,7 @@ static void server_cursor_swipe_begin(struct wl_listener *listener, void *data) 
       server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
       server->resize_edges = WLR_EDGE_NONE;
         wlr_xcursor_manager_set_cursor_image(
-          server->cursor_mgr, "left_ptr", server->cursor);
+          server->cursor_manager, "left_ptr", server->cursor);
 
         wlr_seat_pointer_notify_button(server->seat,
           event->time_msec, 0, WLR_BUTTON_PRESSED);
@@ -306,7 +319,7 @@ static void server_cursor_swipe_end(struct wl_listener *listener, void *data) {
     server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
     server->resize_edges = WLR_EDGE_NONE;
     wlr_xcursor_manager_set_cursor_image(
-        server->cursor_mgr, "left_ptr", server->cursor);
+        server->cursor_manager, "left_ptr", server->cursor);
   // }
 }
 
@@ -323,8 +336,8 @@ void cursor_init()
    * Xcursor themes to source cursor images from and makes sure that cursor
    * images are available at all scale factors on the screen (necessary for
    * HiDPI support). We add a cursor theme at scale factor 1 to begin with. */
-  server.cursor_mgr = wlr_xcursor_manager_create(NULL, 24);
-  wlr_xcursor_manager_load(server.cursor_mgr, 1);
+  server.cursor_manager = wlr_xcursor_manager_create(NULL, 24);
+  wlr_xcursor_manager_load(server.cursor_manager, 1);
 
   /*
    * wlr_cursor *only* displays an image on screen. It does not move around
