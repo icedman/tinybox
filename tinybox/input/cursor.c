@@ -15,17 +15,19 @@ const char *cursor_images[] = {
     // HS_COUNT
 };
 
+static void smooth_move_view(struct tbx_view *view, double tx, double ty, double s) {
+  view->x += (tx - view->x) * s;
+  view->y += (ty - view->y) * s;
+  view->pending_box.x = tx;
+  view->pending_box.y = ty;
+  view->pending_wait = 4; // output frames
+}
+
 static void process_cursor_move(struct tbx_server *server, uint32_t time) {
   /* Move the grabbed view to the new position. */
-  struct tbx_view *grabbed_view = server->grabbed_view;
-  double s = 0.4;
   double tx = server->cursor->x - server->grab_x;
   double ty = server->cursor->y - server->grab_y;
-  grabbed_view->x += (tx - grabbed_view->x) * s;
-  grabbed_view->y += (ty - grabbed_view->y) * s;
-  grabbed_view->pending_box.x = tx;
-  grabbed_view->pending_box.y = ty;
-  grabbed_view->pending_wait = 4; // output frames
+  smooth_move_view(server->grabbed_view, tx, ty, 0.4);
 }
 
 static void process_cursor_resize(struct tbx_server *server, uint32_t time) {
@@ -74,6 +76,8 @@ static void process_cursor_resize(struct tbx_server *server, uint32_t time) {
   wlr_xdg_surface_get_geometry(view->xdg_surface, &geo_box);
   view->x = new_left - geo_box.x;
   view->y = new_top - geo_box.y;
+
+  // smooth_move_view(view, new_left - geo_box.x, new_top - geo_box.y, 0.4);
 
   int new_width = new_right - new_left;
   int new_height = new_bottom - new_top;

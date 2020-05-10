@@ -491,9 +491,10 @@ static void render_view_content(struct wlr_surface *surface,
   }
 
   if (view->pending_wait > 0 &&
-     view->pending_box.x != 0 && view->pending_box.y != 0) {
-    view->pending_wait -= 1;
-    if (view->pending_wait == 0) {
+     view->pending_box.x != 0 &&
+     view->pending_box.y != 0)
+  {
+    if (--view->pending_wait == 0) {
       view->x = view->pending_box.x;
       view->y = view->pending_box.y;
       view->pending_box.x = 0;
