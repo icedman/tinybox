@@ -74,10 +74,10 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym, uint3
           current_view->workspace_id = current_view->workspace_id + 1;
           current_view->workspace = NULL;
         }
+      } else {
+        server->active_workspace_id = wk;
+        server->active_workspace = NULL;
       }
-
-      server->active_workspace_id = wk;
-      server->active_workspace = NULL;
       break;
   }
 

@@ -294,11 +294,12 @@ static void server_cursor_swipe_begin(struct wl_listener *listener, void *data) 
       server->cursor->x, server->cursor->y, &surface, &sx, &sy);
 
   server->swipe_fingers = event->fingers;
+  server->swipe_x = server->cursor->x;
+  server->swipe_y = server->cursor->y;
+  server->swipe_begin_x = server->swipe_x;
+  server->swipe_begin_y = server->swipe_y;
 
-  if (event->fingers > 3) {
-    server->swipe_begin_x = server->cursor->x;
-    server->swipe_begin_y = server->cursor->y;
-  }
+  // console_log("begin %d", (int)server->swipe_begin_x);
 
   if (event->fingers == 3) {
     focus_view(view, surface);
@@ -320,6 +321,15 @@ static void server_cursor_swipe_update(struct wl_listener *listener, void *data)
     wl_container_of(listener, server, cursor_swipe_update);
 
   struct wlr_event_pointer_swipe_update *event = data;
+  server->swipe_x += event->dx;
+  server->swipe_y += event->dy;
+
+  if (server->swipe_fingers == 4) {
+    double d = server->swipe_x - server->swipe_begin_x;
+    server->offset_x = d;
+  }
+
+  // console_log("update %d %d", (int)server->swipe_begin_x, (int)server->swipe_x);
 
   if (server->swipe_fingers == 3) {
     wlr_cursor_move(server->cursor, event->device,
@@ -331,13 +341,33 @@ static void server_cursor_swipe_update(struct wl_listener *listener, void *data)
 static void server_cursor_swipe_end(struct wl_listener *listener, void *data) {
   struct tbx_server *server =
     wl_container_of(listener, server, cursor_swipe_end);
+  
+  // console_log("end %d %d", (int)server->swipe_begin_x, (int)server->swipe_x);
 
-  // if (server) {
-    server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
-    server->resize_edges = WLR_EDGE_NONE;
-    wlr_xcursor_manager_set_cursor_image(
-        server->cursor_manager, "left_ptr", server->cursor);
-  // }
+  wlr_xcursor_manager_set_cursor_image(
+      server->cursor_manager, "left_ptr", server->cursor);
+
+  if (server->swipe_fingers == 4) {
+    double d = server->swipe_x - server->swipe_begin_x;
+    int prevId = server->active_workspace_id;
+    if (d < -100) {
+      server->active_workspace_id ++;
+      server->active_workspace = NULL;
+    } else if (d > 100) {
+      server->active_workspace_id --;
+      server->active_workspace = NULL;
+    }
+
+    assign_server_workspace();
+    if (server->active_workspace_id != prevId) {
+      server->offset_x = -d;
+    }
+    // console_log("%d %d %d\n", (int)d, (int)server->swipe_x, (int)server->swipe_begin_x);
+  }
+
+  server->cursor_mode = TBX_CURSOR_PASSTHROUGH;
+  server->resize_edges = WLR_EDGE_NONE;
+  server->swipe_fingers = 0;
 }
 
 void cursor_init()

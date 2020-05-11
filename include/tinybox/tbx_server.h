@@ -54,8 +54,12 @@ struct tbx_server {
   struct wl_listener cursor_swipe_update;
   struct wl_listener cursor_swipe_end;
   struct tbx_view *grabbed_view;
+  
   double swipe_begin_x, swipe_begin_y;
+  double swipe_x, swipe_y;
+  double offset_x, offset_y;
   int swipe_fingers;
+
   double grab_x, grab_y;
   struct wlr_box grab_geobox;
   uint32_t resize_edges;

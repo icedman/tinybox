@@ -324,6 +324,12 @@ static void render_view_frame(struct wlr_surface *surface, int sx, int sy, void 
   double ooy = oy;
   ox += view->x + sx, oy += view->y + sy;
 
+  // if (view->server->swipe_fingers == 4) {
+  //   double d = view->server->swipe_x - view->server->swipe_begin_x;
+  //   ox += d;
+  // }
+  ox += view->server->offset_x;
+
   int border_thickness = view->server->style.borderWidth;
   int footer_height = view->server->style.handleWidth + (view->server->style.borderWidth * 2);
   int title_bar_height = 28;
@@ -511,6 +517,12 @@ static void render_view_content(struct wlr_surface *surface,
       view->server->output_layout, output, &ox, &oy);
   ox += view->x + sx, oy += view->y + sy;
 
+  // if (view->server->swipe_fingers == 4) {
+  //   double d = view->server->swipe_x - view->server->swipe_begin_x;
+  //   ox += d;
+  // }
+  ox += view->server->offset_x;
+
   /* We also have to apply the scale factor for HiDPI outputs. This is only
    * part of the puzzle, TinyWL does not fully support HiDPI. */
   struct wlr_box box = {
@@ -564,8 +576,12 @@ static void output_frame(struct wl_listener *listener, void *data) {
 
   generate_textures(renderer, false);
 
-  if (!server.active_workspace) {
+  if (!output->server->active_workspace) {
     assign_server_workspace();
+  }
+
+  if (output->server->swipe_fingers == 0) {
+    output->server->offset_x *= 0.8; 
   }
 
   // console_log("o: %s", output->wlr_output->name);

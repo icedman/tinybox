@@ -26,8 +26,12 @@ static struct tbx_workspace *find_workspace(int idx) {
       workspaces[i++] = workspace;
       if (i == 24) break;
     }
-
-    idx = idx % i;
+    if (idx < 0) {
+        idx = 0;
+    }
+    if (idx >= i-1) {
+        idx = i-1;
+    }
     return workspaces[idx];
 }
 
@@ -57,6 +61,6 @@ void workspace_init() {
 
     workspace_create();
     workspace_create();
-    // workspace_create();
-    // workspace_create();
+    workspace_create();
+    workspace_create();
 }
