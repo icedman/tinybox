@@ -117,6 +117,10 @@ static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   view->y = 32 + (offset*40);
   offset = (offset+1)%8;
 
+  // open at current active workspace
+  view->workspace = server->active_workspace;
+  view->workspace_id = server->active_workspace_id;
+
   /* Listen to the various events it can emit */
   view->map.notify = xdg_surface_map;
   wl_signal_add(&xdg_surface->events.map, &view->map);
@@ -224,10 +228,6 @@ bool hotspot_at(struct tbx_view *view,
   view->hotspot_edges = WLR_EDGE_NONE;
   for(int i=0; i<(int)HS_COUNT;i++) {
     struct wlr_box *box = &view->hotspots[i];
-
-    // if (i == HS_TITLEBAR) {
-    //   console_log("hs: x:%d y:%d w:%d h:%d", box->x, box->y, box->width, box->height);
-    // }
 
     if (!box->width || !box->height) {
       continue;

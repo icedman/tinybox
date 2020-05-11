@@ -21,7 +21,7 @@ static void keyboard_handle_modifiers(
     &keyboard->device->keyboard->modifiers);
 }
 
-static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
+static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym, uint32_t modifiers) {
   /*
    * Here we handle compositor keybindings. This is when the compositor is
    * processing keys, rather than passing them on to the client for its own
@@ -35,7 +35,7 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
     wl_display_terminate(server->wl_display);
     break;
 
-  case XKB_KEY_F1:
+  case XKB_KEY_Tab:
   {
     /* Cycle to the next view */
     if (wl_list_length(&server->views) < 2) {
@@ -54,29 +54,31 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym) {
     break;
   }
 
-  case XKB_KEY_F2:
+  case XKB_KEY_Return:
     if (fork() == 0) {
       execl("/bin/sh", "/bin/sh", "-c", "termite 2>/dev/null", (char *) NULL);
       // execl("/bin/sh", "/bin/sh", "-c", "(obrun || bemenu-run || synapse || gmrun || gnome-do || dmenu_run) 2>/dev/null", (char *) NULL);
     }
     break;
   
-  case XKB_KEY_w:
+  case XKB_KEY_1:
+  case XKB_KEY_2:
+  case XKB_KEY_3:
+  case XKB_KEY_4:
   {
-    struct tbx_view *current_view = wl_container_of(
-      server->views.next, current_view, link);
-    if (current_view) {
-      current_view->workspace_id = current_view->workspace_id + 1;
-      current_view->workspace = NULL;
-    }
-    break;
-  }
+      int wk = sym - XKB_KEY_1;
+      if (modifiers & WLR_MODIFIER_CTRL) {
+        struct tbx_view *current_view = wl_container_of(
+          server->views.next, current_view, link);
+        if (current_view) {
+          current_view->workspace_id = current_view->workspace_id + 1;
+          current_view->workspace = NULL;
+        }
+      }
 
-  case XKB_KEY_o:
-  {
-      server->active_workspace_id = server->active_workspace_id + 1;
+      server->active_workspace_id = wk;
       server->active_workspace = NULL;
-    break;
+      break;
   }
 
   case XKB_KEY_z:
@@ -108,11 +110,12 @@ static void keyboard_handle_key(
 
   bool handled = false;
   uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
+
   if ((modifiers & WLR_MODIFIER_ALT) && event->state == WLR_KEY_PRESSED) {
     /* If alt is held down and this button was _pressed_, we attempt to
      * process it as a compositor keybinding. */
     for (int i = 0; i < nsyms; i++) {
-      handled = handle_keybinding(server, syms[i]);
+      handled = handle_keybinding(server, syms[i], modifiers);
     }
   }
 

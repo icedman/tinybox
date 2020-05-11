@@ -47,6 +47,8 @@ void assign_server_workspace()
     }
     server.active_workspace = find_workspace(server.active_workspace_id);
     server.active_workspace_id = server.active_workspace->id;
+    console_clear();
+    console_log("w:%d", server.active_workspace_id);
 }
 
 

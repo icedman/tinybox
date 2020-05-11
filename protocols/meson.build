@@ -16,6 +16,7 @@ protocols = [
 	[wl_protocol_dir, 'unstable/pointer-constraints/pointer-constraints-unstable-v1.xml'],
 	[wl_protocol_dir, 'unstable/tablet/tablet-unstable-v2.xml'],
 	['wlr-layer-shell-unstable-v1.xml'],
+	['server-decoration.xml'],
 	['idle.xml'],
 	['wlr-input-inhibitor-unstable-v1.xml'],
 	['wlr-output-power-management-unstable-v1.xml'],
@@ -25,6 +26,7 @@ client_protocols = [
 	[wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
 	[wl_protocol_dir, 'unstable/xdg-output/xdg-output-unstable-v1.xml'],
 	['wlr-layer-shell-unstable-v1.xml'],
+	['server-decoration.xml'],
 	['wlr-input-inhibitor-unstable-v1.xml'],
 ]
 
