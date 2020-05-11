@@ -288,15 +288,16 @@ static void server_cursor_swipe_begin(struct wl_listener *listener, void *data) 
 
   struct wlr_event_pointer_swipe_begin *event = data;
 
-    double sx, sy;
-    struct wlr_surface *surface;
-    struct tbx_view *view = desktop_view_at(server,
-        server->cursor->x, server->cursor->y, &surface, &sx, &sy);
+  double sx, sy;
+  struct wlr_surface *surface;
+  struct tbx_view *view = desktop_view_at(server,
+      server->cursor->x, server->cursor->y, &surface, &sx, &sy);
+
+  server->swipe_fingers = event->fingers;
 
   if (event->fingers > 3) {
     server->swipe_begin_x = server->cursor->x;
     server->swipe_begin_y = server->cursor->y;
-    server->swipe_fingers = event->fingers;
   }
 
   if (event->fingers == 3) {
@@ -320,10 +321,11 @@ static void server_cursor_swipe_update(struct wl_listener *listener, void *data)
 
   struct wlr_event_pointer_swipe_update *event = data;
 
-  wlr_cursor_move(server->cursor, event->device,
-      event->dx, event->dy);
-
-  process_cursor_motion(server, event->time_msec);
+  if (server->swipe_fingers == 3) {
+    wlr_cursor_move(server->cursor, event->device,
+        event->dx, event->dy);
+    process_cursor_motion(server, event->time_msec);
+  }
 }
 
 static void server_cursor_swipe_end(struct wl_listener *listener, void *data) {
