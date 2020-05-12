@@ -1,0 +1,4 @@
+#ifndef TINYBOX_DESKTOP_H
+#define TINYBOX_DESKTOP_H
+
+#endif // TINYBOX_DESKTOP_H

@@ -1,7 +1,7 @@
 project(
   'tinybox',
   'c',
-  version: '0.0.1',
+  version: '0.0.2',
   license: 'MIT',
   meson_version: '>=0.43.0',
   default_options: [
@@ -25,9 +25,9 @@ add_project_arguments(
   language: 'c',
 )
 
-cc = meson.get_compiler('c')
-
 tinybox_inc = include_directories('include')
+
+cc = meson.get_compiler('c')
 
 wayland_server = dependency('wayland-server')
 wayland_cursor = dependency('wayland-cursor')
@@ -45,4 +45,3 @@ wlroots = dependency('wlroots', version: '>=0.10.0')
 
 subdir('protocols')
 subdir('tinybox')
-subdir('menu')

@@ -1,23 +1,11 @@
 tinybox_src = files(
   'main.c',
-  
-  'desktop/console.c',
-  'desktop/output.c',
-  'desktop/seat.c',
+  'stringop.c',
   'input/cursor.c',
   'input/keyboard.c',
-  'input/libinput.c',
-  'workspace.c',
-  
-  'cairo.c',
-  'decoration.c',
-  'xdg_decoration.c',
-  'server.c',
-  'stringop.c',
-  'style.c',
-  'util.c',
-  'pango.c',
-  'xdg_shell.c'
+  'input/seat.c',
+  'output/output.c',
+  'server/server.c',
   )
 
 tinybox_dep = [

@@ -1,0 +1,4 @@
+#ifndef TINYBOX_CONFIG_H
+#define TINYBOX_CONFIG_H
+
+#endif // TINYBOX_CONFIG_H

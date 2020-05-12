@@ -8,7 +8,7 @@
 #include <wordexp.h>
 // #include "list.h"
 // #include "log.h"
-#include "tinybox/stringop.h"
+#include "common/stringop.h"
 
 static const char whitespace[] = " \f\n\r\t\v";
 

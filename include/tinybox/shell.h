@@ -1,0 +1,4 @@
+#ifndef TINYBOX_SHELL_H
+#define TINYBOX_SHELL_H
+
+#endif // TINYBOX_SHELL_H
