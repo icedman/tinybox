@@ -748,6 +748,8 @@ static void server_new_output(struct wl_listener *listener, void *data) {
   }
 }
 
+void server_new_output() {}
+
 void output_init() {
 
   /* Creates an output layout, which a wlroots utility for working with an
