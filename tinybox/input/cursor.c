@@ -8,7 +8,6 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
-
 static void process_cursor_move(struct tbx_server *server, uint32_t time) {
   /* Move the grabbed view to the new position. */
   struct tbx_cursor *cursor = server->cursor;
@@ -59,7 +58,6 @@ static void process_cursor_resize(struct tbx_server *server, uint32_t time) {
       new_right = new_left + 1;
     }
   }
-
 
   struct wlr_box geo_box;
   wlr_xdg_surface_get_geometry(view->xdg_surface, &geo_box);
@@ -185,10 +183,9 @@ static void server_cursor_axis(struct wl_listener *listener, void *data) {
 
   struct wlr_event_pointer_axis *event = data;
   /* Notify the client with pointer focus of the axis event. */
-  wlr_seat_pointer_notify_axis(server->seat->seat,
-      event->time_msec, event->orientation, event->delta,
-      event->delta_discrete, event->source);
-
+  wlr_seat_pointer_notify_axis(server->seat->seat, event->time_msec,
+                               event->orientation, event->delta,
+                               event->delta_discrete, event->source);
 }
 
 static void server_cursor_frame(struct wl_listener *listener, void *data) {

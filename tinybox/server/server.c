@@ -2,6 +2,7 @@
 
 #include "tinybox/server.h"
 #include "tinybox/cursor.h"
+#include "tinybox/decoration.h"
 #include "tinybox/output.h"
 #include "tinybox/seat.h"
 #include "tinybox/shell.h"
@@ -38,6 +39,7 @@ bool tbx_server_setup(struct tbx_server *server) {
   xdg_shell_setup(server);
   cursor_setup(server);
   seat_setup(server);
+  decoration_setup(server);
 
   return true;
 }

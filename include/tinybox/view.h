@@ -18,6 +18,9 @@ struct tbx_view {
 
   bool mapped;
   int x, y;
+
+  // bool shaded;
+  bool csd;
 };
 
 struct tbx_view *desktop_view_at(struct tbx_server *server, double lx,

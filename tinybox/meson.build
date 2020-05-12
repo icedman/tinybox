@@ -6,6 +6,7 @@ tinybox_src = files(
   'input/seat.c',
   'input/libinput.c',
   'desktop/view.c',
+  'decoration/decoration.c',
   'output/output.c',
   'output/render.c',
   'server/server.c',
