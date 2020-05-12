@@ -1,13 +1,13 @@
 #ifndef TINYBOX_SERVER_H
 #define TINYBOX_SERVER_H
 
-#include <wayland-server-core.h>
 #include <stdbool.h>
+#include <wayland-server-core.h>
 
 #include "tinybox/cursor.h"
 #include "tinybox/seat.h"
 
-struct tbx_server{
+struct tbx_server {
   struct wl_display *wl_display;
   struct wlr_backend *backend;
   struct wlr_renderer *renderer;

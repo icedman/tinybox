@@ -1,0 +1,4 @@
+#ifndef TINYBOX_RENDER_H
+#define TINYBOX_RENDER_H
+
+#endif // TINYBOX_RENDER_H

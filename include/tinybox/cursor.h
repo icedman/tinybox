@@ -1,6 +1,9 @@
 #ifndef TINYBOX_CURSOR_H
 #define TINYBOX_CURSOR_H
 
+#include "tinybox/server.h"
+#include <wlr/render/wlr_renderer.h>
+
 struct tbx_server;
 struct wlr_cursor;
 struct wlr_input_device;
@@ -12,9 +15,9 @@ enum tbx_cursor_mode {
 };
 
 struct tbx_cursor {
-    enum tbx_cursor_mode mode;
-    struct wlr_cursor *cursor;
-    struct wlr_xcursor_manager *xcursor_manager;
+  enum tbx_cursor_mode mode;
+  struct wlr_cursor *cursor;
+  struct wlr_xcursor_manager *xcursor_manager;
 
   struct wl_listener cursor_motion;
   struct wl_listener cursor_motion_absolute;
@@ -24,6 +27,15 @@ struct tbx_cursor {
   struct wl_listener cursor_swipe_begin;
   struct wl_listener cursor_swipe_update;
   struct wl_listener cursor_swipe_end;
+
+  double swipe_begin_x, swipe_begin_y;
+  double swipe_x, swipe_y;
+  int swipe_fingers;
+
+  struct tbx_view *grab_view;
+  double grab_x, grab_y;
+  struct wlr_box grab_box;
+  uint32_t resize_edges;
 
   struct tbx_server *server;
 };

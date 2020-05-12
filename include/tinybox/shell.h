@@ -6,7 +6,7 @@
 struct tbx_xdg_shell {
   struct wlr_xdg_shell *wlr_xdg_shell;
   struct wl_listener new_xdg_surface;
-struct tbx_server *server;
+  struct tbx_server *server;
 };
 
 bool xdg_shell_setup(struct tbx_server *server);

@@ -1,8 +1,8 @@
 #ifndef TINYBOX_OUTPUT_H
 #define TINYBOX_OUTPUT_H
 
-#include <wayland-server-core.h>
 #include <stdbool.h>
+#include <wayland-server-core.h>
 
 struct tbx_output {
   struct wl_list link;

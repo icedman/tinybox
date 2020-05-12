@@ -4,7 +4,10 @@ tinybox_src = files(
   'input/cursor.c',
   'input/keyboard.c',
   'input/seat.c',
+  'input/libinput.c',
+  'desktop/view.c',
   'output/output.c',
+  'output/render.c',
   'server/server.c',
   'shell/xdg_shell.c',
   )

@@ -1,9 +1,9 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include "tinybox/server.h"
-#include "tinybox/seat.h"
 #include "tinybox/cursor.h"
 #include "tinybox/output.h"
+#include "tinybox/seat.h"
 #include "tinybox/shell.h"
 
 #include <getopt.h>
@@ -16,41 +16,39 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/util/log.h>
 
-bool tbx_server_setup(struct tbx_server *server)
-{
-    server->wl_display = wl_display_create();
+bool tbx_server_setup(struct tbx_server *server) {
+  server->wl_display = wl_display_create();
 
-    if (!server->wl_display) {
-        return false;
-    }
+  if (!server->wl_display) {
+    return false;
+  }
 
-    server->backend = wlr_backend_autocreate(server->wl_display, NULL);
-    if (!server->backend) {
-        return false;
-    }
+  server->backend = wlr_backend_autocreate(server->wl_display, NULL);
+  if (!server->backend) {
+    return false;
+  }
 
-    server->renderer = wlr_backend_get_renderer(server->backend);
-    wlr_renderer_init_wl_display(server->renderer, server->wl_display);
-    wlr_compositor_create(server->wl_display, server->renderer);
+  server->renderer = wlr_backend_get_renderer(server->backend);
+  wlr_renderer_init_wl_display(server->renderer, server->wl_display);
+  wlr_compositor_create(server->wl_display, server->renderer);
 
-    wlr_data_device_manager_create(server->wl_display);
+  wlr_data_device_manager_create(server->wl_display);
 
-    output_setup(server);
-    xdg_shell_setup(server);
-    cursor_setup(server);
-    seat_setup(server);
+  output_setup(server);
+  xdg_shell_setup(server);
+  cursor_setup(server);
+  seat_setup(server);
 
-    return true;
+  return true;
 }
 
-bool tbx_server_start(struct tbx_server *server)
-{
+bool tbx_server_start(struct tbx_server *server) {
   const char *socket = wl_display_add_socket_auto(server->wl_display);
   if (!socket) {
     wlr_backend_destroy(server->backend);
     return false;
   }
-  
+
   /* Set the WAYLAND_DISPLAY environment variable to our socket and run the
    * startup command if requested. */
   setenv("WAYLAND_DISPLAY", socket, true);
@@ -59,8 +57,7 @@ bool tbx_server_start(struct tbx_server *server)
    * compositor. Starting the backend rigged up all of the necessary event
    * loop configuration to listen to libinput events, DRM events, generate
    * frame events at the refresh rate, and so on. */
-  wlr_log(WLR_INFO, "Running Wayland compositor on WAYLAND_DISPLAY=%s",
-      socket);
+  wlr_log(WLR_INFO, "Running Wayland compositor on WAYLAND_DISPLAY=%s", socket);
 
   /* Start the backend. This will enumerate outputs and inputs, become the DRM
    * master, etc */
@@ -72,12 +69,11 @@ bool tbx_server_start(struct tbx_server *server)
   return true;
 }
 
-void tbx_server_terminate(struct tbx_server *server)
-{
+void tbx_server_terminate(struct tbx_server *server) {
   // destroy seats
   // destroy cursor
   // destroy xdg_shell
 
   wlr_backend_destroy(server->backend);
-  wl_display_destroy(server->wl_display);  
+  wl_display_destroy(server->wl_display);
 }
