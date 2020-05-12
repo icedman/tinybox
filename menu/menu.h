@@ -50,6 +50,7 @@ struct tinybox_window {
     struct wl_surface *surface;
     struct xdg_surface *xdg_surface;
     struct xdg_toplevel *xdg_toplevel;
+    struct xdg_popup *xdg_popup;
     struct org_kde_kwin_server_decoration *client_decoration;
 
     int width;
@@ -68,6 +69,7 @@ struct tinybox_menu {
     struct org_kde_kwin_server_decoration_manager *server_decoration;
     
     struct wl_list windows;
+    struct tinybox_window *root;
 };
 
 bool menu_setup(struct tinybox_menu *);

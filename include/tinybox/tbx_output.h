@@ -61,6 +61,7 @@ struct tbx_view {
   bool shaded;
   bool csd;
 
+  bool in_main_display;
   struct tbx_workspace *workspace;
   int workspace_id;
 };

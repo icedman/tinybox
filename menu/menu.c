@@ -8,7 +8,7 @@ static struct wlr_egl egl;
 static void nop() {}
 
 static int window_id = 0;
-void window_create(struct tinybox_menu *menu);
+struct tinybox_window *window_create(struct tinybox_menu *menu);
 void window_destroy(struct tinybox_window *window);
 
 static void draw(struct tinybox_window *window) {
@@ -18,7 +18,7 @@ static void draw(struct tinybox_window *window) {
 
     eglMakeCurrent(egl.display, window->egl_surface, window->egl_surface, egl.context);
 
-    float color[] = {1.0, 1.0, 0.0, 1.0};
+    float color[] = {1.0 * ((window->window_id + 1) * 50 /255), 1.0, 0.0, 1.0};
 
     glViewport(0, 0, window->width, window->height);
     glClearColor(color[0], color[1], color[2], 1.0);
@@ -31,7 +31,8 @@ static void pointer_handle_button(void *data, struct wl_pointer *pointer, uint32
                                   uint32_t time, uint32_t button, uint32_t state_w) {
     struct tinybox_menu *menu = data;
     if (state_w == WLR_BUTTON_RELEASED) {
-        window_create(menu);
+        window_create(menu); // create popup
+       // xdg_toplevel_destroy(menu->root->xdg_toplevel);
     }
 }
 
@@ -71,6 +72,8 @@ static void xdg_surface_handle_configure(void *data,
     wl_egl_window_resize(window->egl_window, window->width, window->height, 0, 0);
     
     window->configured = true;
+
+    printf("configured %d\n", window->window_id);
     draw(window);
 }
 
@@ -79,11 +82,11 @@ static const struct xdg_surface_listener xdg_surface_listener = {
 };
 
 static void xdg_toplevel_handle_configure(void *data,
-        struct xdg_toplevel *xdg_toplevel, int32_t w, int32_t h,
+        struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height,
         struct wl_array *states) {
     struct tinybox_window *window = data;
-    window->width = w;
-    window->height = h;
+    window->width = width;
+    window->height = height;
 }
 
 static void xdg_toplevel_handle_close(void *data,
@@ -95,6 +98,32 @@ static void xdg_toplevel_handle_close(void *data,
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {
     .configure = xdg_toplevel_handle_configure,
     .close = xdg_toplevel_handle_close,
+};
+
+static void xdg_poup_handle_configure(void *data,
+              struct xdg_popup *xdg_popup,
+              int32_t x,
+              int32_t y,
+              int32_t width,
+              int32_t height)
+{
+    struct tinybox_window *window = data;
+    window->width = width;
+    window->height = height;
+}
+
+static void xdg_popup_handle_done(void *data,
+               struct xdg_popup *xdg_popup)
+{
+    struct tinybox_window *window = data;
+    printf("popup done\n");
+    window_destroy(window);
+}
+
+static const struct xdg_popup_listener xdg_popup_listener = {
+    xdg_poup_handle_configure,
+    xdg_popup_handle_done,
+    nop
 };
 
 static void deco_client_mode(void *data,
@@ -137,7 +166,7 @@ static const struct wl_registry_listener registry_listener = {
     .global_remove = handle_global_remove,
 };
 
-void window_create(struct tinybox_menu *menu) {
+struct tinybox_window* window_create(struct tinybox_menu *menu) {
     struct tinybox_window *window = calloc(1, sizeof(struct tinybox_window));
     window->window_id = window_id++;
     window->menu = menu;
@@ -145,12 +174,28 @@ void window_create(struct tinybox_menu *menu) {
 
     window->surface = wl_compositor_create_surface(menu->compositor);
     window->xdg_surface = xdg_wm_base_get_xdg_surface(menu->wm_base, window->surface);
-    window->xdg_toplevel = xdg_surface_get_toplevel(window->xdg_surface);
-    window->client_decoration = org_kde_kwin_server_decoration_manager_create(menu->server_decoration, window->surface);
-    org_kde_kwin_server_decoration_add_listener(window->client_decoration, &deco_client_listener, window);
-
     xdg_surface_add_listener(window->xdg_surface, &xdg_surface_listener, window);
-    xdg_toplevel_add_listener(window->xdg_toplevel, &xdg_toplevel_listener, window);
+
+    if (menu->root && 0) {
+
+        struct xdg_positioner *positioner = xdg_wm_base_create_positioner(menu->wm_base);
+        window->xdg_popup = xdg_surface_get_popup(window->xdg_surface, menu->root->xdg_surface, positioner);
+        xdg_popup_add_listener(window->xdg_popup, &xdg_popup_listener, window);
+
+    } else {
+        window->xdg_toplevel = xdg_surface_get_toplevel(window->xdg_surface);
+    }
+
+    // xdg_popup_interface
+
+    if (window->xdg_toplevel) {
+        xdg_toplevel_add_listener(window->xdg_toplevel, &xdg_toplevel_listener, window);
+    }
+
+    if (menu->server_decoration) {
+        window->client_decoration = org_kde_kwin_server_decoration_manager_create(menu->server_decoration, window->surface);
+        org_kde_kwin_server_decoration_add_listener(window->client_decoration, &deco_client_listener, window);
+    }
 
     wl_surface_commit(window->surface);
 
@@ -159,13 +204,20 @@ void window_create(struct tinybox_menu *menu) {
     window->egl_surface = wlr_egl_create_surface(&egl, window->egl_window);
     
     wl_list_insert(&menu->windows, &window->link);
+
+    return window;
 }
 
 void window_destroy(struct tinybox_window *window) {
 
+    printf("x:%d\n", window->window_id);
     wl_list_remove(&window->link);
     wl_egl_window_destroy(window->egl_window);
     wlr_egl_destroy_surface(&egl, window->egl_surface);
+
+    if (window->menu->root == window) {
+        window->menu->root = NULL;
+    }
 
     free(window);
 }
@@ -199,8 +251,7 @@ bool menu_setup(struct tinybox_menu *menu)
     wlr_egl_init(&egl, EGL_PLATFORM_WAYLAND_EXT, menu->display, NULL,
                  WL_SHM_FORMAT_ARGB8888);
 
-    window_create(menu);
-    // window_create(menu);
+    menu->root = window_create(menu);
 
     wl_display_roundtrip(menu->display);
 
