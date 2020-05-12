@@ -6,6 +6,7 @@ tinybox_src = files(
   'input/seat.c',
   'output/output.c',
   'server/server.c',
+  'shell/xdg_shell.c',
   )
 
 tinybox_dep = [

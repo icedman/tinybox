@@ -8,6 +8,8 @@
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_seat.h>
 
+#include <xkbcommon/xkbcommon.h>
+
 static void keyboard_handle_modifiers(struct wl_listener *listener, void *data) {
     printf("modifiers\n");
 }

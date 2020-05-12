@@ -18,13 +18,21 @@ struct tbx_server{
   struct wl_listener new_output;
   struct tbx_output *main_output;
 
+  // shell
+  struct tbx_xdg_shell *xdg_shell;
+
+  // views
+  struct wl_list views;
+
+  // workspaces
+
   // input
   struct tbx_cursor *cursor;
   struct tbx_seat *seat;
 };
 
 bool tbx_server_setup(struct tbx_server *server);
-bool tbx_server_run(struct tbx_server *server);
+bool tbx_server_start(struct tbx_server *server);
 void tbx_server_terminate(struct tbx_server *server);
 
 #endif // TINYBOX_SERVER_H
