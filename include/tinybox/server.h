@@ -4,12 +4,14 @@
 #include <stdbool.h>
 #include <wayland-server-core.h>
 
+#include "tinybox/console.h"
 #include "tinybox/cursor.h"
 #include "tinybox/seat.h"
 #include "tinybox/style.h"
-#include "tinybox/console.h"
 
 struct tbx_server_decoration_manager;
+struct tbx_command;
+;
 
 struct tbx_server {
   struct wl_display *wl_display;
@@ -24,18 +26,17 @@ struct tbx_server {
 
   // shell
   struct tbx_xdg_shell *xdg_shell;
+  struct tbx_decoration_manager *decoration_manager;
 
   // views
   struct wl_list views;
 
   // workspaces
 
-  // decorations
-  struct tbx_decoration_manager *decoration_manager;
-
   // input
   struct tbx_cursor *cursor;
   struct tbx_seat *seat;
+  struct tbx_command *command;
 
   struct tbx_style style;
   struct tbx_console *console;

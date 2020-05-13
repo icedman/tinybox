@@ -4,6 +4,11 @@ tinybox_src = files(
   'common/pango.c',
   'common/stringop.c',
   'common/util.c',
+
+  'command/command.c',
+  'command/commands/input.c',
+  
+  'config/config.c',
   'input/cursor.c',
   'input/keyboard.c',
   'input/seat.c',

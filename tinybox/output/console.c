@@ -1,30 +1,29 @@
-#include "tinybox/server.h"
-#include "tinybox/output.h"
 #include "tinybox/console.h"
 #include "common/cairo.h"
 #include "common/util.h"
+#include "tinybox/output.h"
+#include "tinybox/server.h"
 
-#include <wlr/types/wlr_output.h>
-#include <wlr/render/wlr_renderer.h>
 #include <GLES2/gl2.h>
 #include <cairo/cairo.h>
+#include <wlr/render/wlr_renderer.h>
+#include <wlr/types/wlr_output.h>
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
-static struct tbx_console theConsole = { 0 };
+static struct tbx_console theConsole = {0};
 
 cairo_surface_t *console_surface = NULL;
 
-void console_setup(struct tbx_server *server) { 
-    server->console = &theConsole;
+void console_setup(struct tbx_server *server) {
+  server->console = &theConsole;
 
   int w = CONSOLE_WIDTH;
   int h = CONSOLE_HEIGHT;
-  
-  console_surface = cairo_image_surface_create(
-      CAIRO_FORMAT_ARGB32, w, h);
+
+  console_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
 
   console_clear();
 }
@@ -44,27 +43,27 @@ void console_log(const char *format, ...) {
   char string[255] = "Hello! We are learning about strtok";
 
   va_list args;
-  va_start (args, format);
-  vsnprintf (string, 255, format, args);
-  va_end (args);
+  va_start(args, format);
+  vsnprintf(string, 255, format, args);
+  va_end(args);
 
-   char * token = strtok(string, "\n");
-   while( token != NULL ) {
-      strcpy(console->lines[console->inputIdx % CONSOLE_LINES], token);
-      console->inputIdx++;
-      if (console->inputIdx >= CONSOLE_LINES) {
-        console->renderIdx = (console->inputIdx + 1) % CONSOLE_LINES;
-      }
-      token = strtok(NULL, "\n");
-   }
+  char *token = strtok(string, "\n");
+  while (token != NULL) {
+    strcpy(console->lines[console->inputIdx % CONSOLE_LINES], token);
+    console->inputIdx++;
+    if (console->inputIdx >= CONSOLE_LINES) {
+      console->renderIdx = (console->inputIdx + 1) % CONSOLE_LINES;
+    }
+    token = strtok(NULL, "\n");
+  }
 
   console->dirty = true;
 }
 
-void console_render(struct tbx_output *output)
-{ 
+void console_render(struct tbx_output *output) {
   struct tbx_console *console = &theConsole;
-  struct tbx_server *server = output->server;;
+  struct tbx_server *server = output->server;
+  ;
   struct wlr_renderer *renderer = output->server->renderer;
 
   if (console->texture) {
@@ -76,8 +75,8 @@ void console_render(struct tbx_output *output)
 
   // We must use a non-nil cairo_t for cairo_set_font_options to work.
   // Therefore, we cannot use cairo_create(NULL).
-  cairo_surface_t *dummy_surface = cairo_image_surface_create(
-      WL_SHM_FORMAT_ARGB8888, 0, 0);
+  cairo_surface_t *dummy_surface =
+      cairo_image_surface_create(WL_SHM_FORMAT_ARGB8888, 0, 0);
   cairo_t *c = cairo_create(dummy_surface);
   cairo_set_antialias(c, CAIRO_ANTIALIAS_BEST);
   cairo_font_options_t *fo = cairo_font_options_create();
@@ -86,10 +85,10 @@ void console_render(struct tbx_output *output)
     cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_GRAY);
   } else {
     cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
-    
+
     // cairo.c
-    cairo_font_options_set_subpixel_order(fo,
-      to_cairo_subpixel_order(output->wlr_output->subpixel));
+    cairo_font_options_set_subpixel_order(
+        fo, to_cairo_subpixel_order(output->wlr_output->subpixel));
   }
   cairo_set_font_options(c, fo);
   cairo_surface_destroy(dummy_surface);
@@ -108,17 +107,17 @@ void console_render(struct tbx_output *output)
 
   cairo_move_to(cx, 0, 0);
 
-  float color [4];
+  float color[4];
   color_to_rgba(color, server->style.window_label_focus_textColor);
   cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
 
   cairo_select_font_face(cx, font, 0, 0);
   cairo_set_font_size(cx, 12);
 
-  for(int i=0; i<CONSOLE_LINES; i++) {
+  for (int i = 0; i < CONSOLE_LINES; i++) {
     int idx = (console->renderIdx + i) % CONSOLE_LINES;
     cairo_move_to(cx, 0, 14 + (14 * i));
-    cairo_show_text(cx, console->lines[idx]);  
+    cairo_show_text(cx, console->lines[idx]);
   }
 
   // char fname[255] = "";
@@ -126,11 +125,10 @@ void console_render(struct tbx_output *output)
   // cairo_surface_write_to_png(surf, fname);
 
   unsigned char *data = cairo_image_surface_get_data(console_surface);
-  console->texture = wlr_texture_from_pixels(renderer,
-      WL_SHM_FORMAT_ARGB8888,
-      cairo_image_surface_get_stride(console_surface),
-      CONSOLE_WIDTH, CONSOLE_HEIGHT, data);
-
+  console->texture =
+      wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+                              cairo_image_surface_get_stride(console_surface),
+                              CONSOLE_WIDTH, CONSOLE_HEIGHT, data);
 
   cairo_destroy(cx);
   console->dirty = false;

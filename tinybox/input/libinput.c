@@ -21,7 +21,7 @@ static bool set_send_events(struct libinput_device *device, uint32_t mode) {
   return true;
 }
 
-static bool set_tap(struct libinput_device *device,
+bool set_tap(struct libinput_device *device,
                     enum libinput_config_tap_state tap) {
   if (libinput_device_config_tap_get_finger_count(device) <= 0 ||
       libinput_device_config_tap_get_enabled(device) == tap) {

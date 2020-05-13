@@ -324,8 +324,8 @@ static void server_cursor_swipe_begin(struct wl_listener *listener,
 
   double sx, sy;
   struct wlr_surface *surface;
-  struct tbx_view *view = desktop_view_at(server,
-      cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
+  struct tbx_view *view = desktop_view_at(
+      server, cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
 
   cursor->swipe_fingers = event->fingers;
   cursor->swipe_x = cursor->cursor->x;
@@ -341,11 +341,11 @@ static void server_cursor_swipe_begin(struct wl_listener *listener,
     if (!begin_interactive_sd(server, view)) {
       cursor->mode = TBX_CURSOR_PASSTHROUGH;
       cursor->resize_edges = WLR_EDGE_NONE;
-        wlr_xcursor_manager_set_cursor_image(
-          cursor->xcursor_manager, "left_ptr", cursor->cursor);
+      wlr_xcursor_manager_set_cursor_image(cursor->xcursor_manager, "left_ptr",
+                                           cursor->cursor);
 
-        wlr_seat_pointer_notify_button(server->seat->seat,
-          event->time_msec, 0, WLR_BUTTON_PRESSED);
+      wlr_seat_pointer_notify_button(server->seat->seat, event->time_msec, 0,
+                                     WLR_BUTTON_PRESSED);
     }
   }
 }
@@ -355,14 +355,13 @@ static void server_cursor_swipe_update(struct wl_listener *listener,
   struct tbx_cursor *cursor =
       wl_container_of(listener, cursor, cursor_swipe_update);
   struct tbx_server *server = cursor->server;
-  
+
   struct wlr_event_pointer_swipe_update *event = data;
   cursor->swipe_x += event->dx;
   cursor->swipe_y += event->dy;
 
   if (cursor->swipe_fingers == 3) {
-    wlr_cursor_move(cursor->cursor, event->device,
-        event->dx, event->dy);
+    wlr_cursor_move(cursor->cursor, event->device, event->dx, event->dy);
     process_cursor_motion(server, event->time_msec);
   }
 }
@@ -371,9 +370,9 @@ static void server_cursor_swipe_end(struct wl_listener *listener, void *data) {
   struct tbx_cursor *cursor =
       wl_container_of(listener, cursor, cursor_swipe_end);
   // struct tbx_server *server = cursor->server;
-  
-  wlr_xcursor_manager_set_cursor_image(
-      cursor->xcursor_manager, "left_ptr", cursor->cursor);
+
+  wlr_xcursor_manager_set_cursor_image(cursor->xcursor_manager, "left_ptr",
+                                       cursor->cursor);
 
   cursor->mode = TBX_CURSOR_PASSTHROUGH;
   cursor->resize_edges = WLR_EDGE_NONE;

@@ -5,8 +5,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "tinybox/server.h"
 #include <wlr/util/log.h>
+
+#include "tinybox/config.h"
+#include "tinybox/server.h"
 
 struct tbx_server theServer = {0};
 
@@ -41,6 +43,8 @@ int main(int argc, char **argv) {
     printf("unable to start\n");
     return 0;
   }
+
+  load_config(&theServer, "/home/iceman/.tinybox/config");
 
   // read style
   if (style_path) {

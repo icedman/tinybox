@@ -55,14 +55,19 @@ static void server_new_input(struct wl_listener *listener, void *data) {
 
   struct wlr_input_device *device = data;
 
+  bool add_to_devices = false;
+
   switch (device->type) {
   case WLR_INPUT_DEVICE_KEYBOARD:
+    add_to_devices = true;
     keyboard_attach(server, device);
     break;
   case WLR_INPUT_DEVICE_POINTER:
+    add_to_devices = true;
     cursor_attach(server, device);
     break;
   case WLR_INPUT_DEVICE_TOUCH:
+    add_to_devices = true;
     break;
   default:
     break;
@@ -77,12 +82,15 @@ static void server_new_input(struct wl_listener *listener, void *data) {
   }
   wlr_seat_set_capabilities(server->seat->seat, caps);
 
-  struct tbx_input_device tbx_device;
-  tbx_device.identifier = input_device_get_identifier(device);
-  tbx_device.wlr_device = device;
+  if (add_to_devices) {
+    struct tbx_input_device *input_device = calloc(1, sizeof(struct tbx_input_device));
+    input_device->identifier = input_device_get_identifier(device);
+    input_device->wlr_device = device;
+    wl_list_insert(&seat->input_devices, &input_device->link);
 
-  printf("%s\n", tbx_device.identifier);
-  reset_libinput_device(&tbx_device);
+    // todo add listen to destroy
+    reset_libinput_device(input_device);
+  }
 }
 
 static void seat_request_cursor(struct wl_listener *listener, void *data) {

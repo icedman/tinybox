@@ -1,12 +1,13 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include "tinybox/server.h"
+#include "tinybox/console.h"
 #include "tinybox/cursor.h"
+#include "tinybox/command.h"
 #include "tinybox/decoration.h"
 #include "tinybox/output.h"
 #include "tinybox/seat.h"
 #include "tinybox/shell.h"
-#include "tinybox/console.h"
 
 #include <getopt.h>
 #include <stdlib.h>
@@ -47,6 +48,7 @@ bool tbx_server_setup(struct tbx_server *server) {
   decoration_setup(server);
 
   console_setup(server);
+  command_setup(server);
 
   console_log("%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
   return true;

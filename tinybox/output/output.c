@@ -26,17 +26,16 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-static void scissor_output(struct wlr_output *wlr_output,
-    struct wlr_box box) {
+static void scissor_output(struct wlr_output *wlr_output, struct wlr_box box) {
   struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
 
-  //assert(renderer);
+  // assert(renderer);
 
   int ow, oh;
   wlr_output_transformed_resolution(wlr_output, &ow, &oh);
 
   enum wl_output_transform transform =
-    wlr_output_transform_invert(wlr_output->transform);
+      wlr_output_transform_invert(wlr_output->transform);
   wlr_box_transform(&box, &box, transform, ow, oh);
 
   wlr_renderer_scissor(renderer, &box);
@@ -190,12 +189,12 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     box.y += margin;
 
     struct wlr_box sc_box = {
-      .x = box.x,
-      .y = box.y,
-      .width = box.width - (margin*4),
-      .height = box.height,
+        .x = box.x,
+        .y = box.y,
+        .width = box.width - (margin * 4),
+        .height = box.height,
     };
-    
+
     box.width = view->title_box.width;
     box.height = view->title_box.height;
 
@@ -208,7 +207,6 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     }
 
     wlr_renderer_scissor(rdata->renderer, NULL);
-
   }
 
   // ----------------------
@@ -457,12 +455,9 @@ static void output_frame(struct wl_listener *listener, void *data) {
   // console
   if (output->server->console->texture) {
     struct wlr_box console_box = {
-      .x = 10,
-      .y = 10,
-      .width = CONSOLE_WIDTH,
-      .height = CONSOLE_HEIGHT
-    };
-    render_texture(output->wlr_output, &console_box, output->server->console->texture, output->wlr_output->scale);
+        .x = 10, .y = 10, .width = CONSOLE_WIDTH, .height = CONSOLE_HEIGHT};
+    render_texture(output->wlr_output, &console_box,
+                   output->server->console->texture, output->wlr_output->scale);
   }
 
   // render all views!

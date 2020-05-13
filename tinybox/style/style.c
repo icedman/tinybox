@@ -32,19 +32,19 @@ static size_t fnv1a_hash(const char *cp) {
 
 typedef void parse_func(int argc, char **argv, int *target);
 
-typedef struct {
+struct style_property {
   char *name;
   parse_func *cmd;
-} styleProperty;
+};
 
-typedef struct {
+struct style_flag {
   char *name;
   int flag;
-} styleFlag;
+};
 
-int getPropertyIndex(styleProperty *props, char *name) {
+int getPropertyIndex(struct style_property *props, char *name) {
   for (int i = 0;; i++) {
-    styleProperty *p = &props[i];
+    struct style_property *p = &props[i];
     if (p->name == 0) {
       break;
     }
@@ -57,21 +57,21 @@ int getPropertyIndex(styleProperty *props, char *name) {
 
 void parseValue(int argc, char **argv, int *target) {
 
-  styleFlag flagMap[] = {{"solid", (int)sf_solid},
-                         {"flat", (int)sf_flat},
-                         {"raised", (int)sf_raised},
-                         {"diagonal", (int)sf_diagonal},
-                         {"crossdiagonal", (int)sf_crossdiagonal},
-                         {"border", (int)sf_border},
-                         {"bevel", (int)sf_bevel},
-                         {"bevel1", (int)sf_bevel1},
-                         {"bevel2", (int)sf_bevel2},
-                         {"gradient", (int)sf_gradient},
-                         {"interlaced", (int)sf_interlaced},
-                         {"sunken", (int)sf_sunken},
-                         {"vertical", (int)sf_vertical},
-                         {"horizontal", (int)sf_horizontal},
-                         {0, 0}};
+  struct style_flag flagMap[] = {{"solid", (int)sf_solid},
+                                 {"flat", (int)sf_flat},
+                                 {"raised", (int)sf_raised},
+                                 {"diagonal", (int)sf_diagonal},
+                                 {"crossdiagonal", (int)sf_crossdiagonal},
+                                 {"border", (int)sf_border},
+                                 {"bevel", (int)sf_bevel},
+                                 {"bevel1", (int)sf_bevel1},
+                                 {"bevel2", (int)sf_bevel2},
+                                 {"gradient", (int)sf_gradient},
+                                 {"interlaced", (int)sf_interlaced},
+                                 {"sunken", (int)sf_sunken},
+                                 {"vertical", (int)sf_vertical},
+                                 {"horizontal", (int)sf_horizontal},
+                                 {0, 0}};
 
   int flags = 0;
   char lowered[255];
@@ -125,7 +125,7 @@ void load_style(struct tbx_server *server, const char *path) {
 
   style.hash = fnv1a_hash(path);
 
-  styleProperty pointerMap[] = {
+  struct style_property pointerMap[] = {
 #include "style.inc.h"
       {0, 0}};
 
@@ -143,11 +143,14 @@ void load_style(struct tbx_server *server, const char *path) {
     if (argc > 0) {
       int idx = getPropertyIndex(pointerMap, argv[0]);
       if (idx == -1) {
+        free_argv(argc, argv);
         continue;
       }
 
       pointerMap[idx].cmd(argc, argv, &styleFirstProp[idx]);
     }
+
+    free_argv(argc, argv);
   }
 
   fclose(f);
