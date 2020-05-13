@@ -86,7 +86,7 @@ static bool set_accel_profile(struct libinput_device *device,
   return true;
 }
 
-static bool set_natural_scroll(struct libinput_device *d, bool n) {
+bool set_natural_scroll(struct libinput_device *d, bool n) {
   if (!libinput_device_config_scroll_has_natural_scroll(d) ||
       libinput_device_config_scroll_get_natural_scroll_enabled(d) == n) {
     return false;

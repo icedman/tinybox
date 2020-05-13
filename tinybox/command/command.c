@@ -9,7 +9,7 @@
 void register_input_commands(struct tbx_server* server);
 
 static void exec_test(struct tbx_command *cmd, int argc, char **argv) {
-  printf("exec<< test! %d %s\n", argc, argv[0]);
+  printf("executed test %d %s\n", argc, argv[0]);
 }
 
 static struct tbx_command *context_create(struct tbx_server *server) {
