@@ -1,9 +1,9 @@
 #ifndef TINYBOX_UTIL_H
 #define TINYBOX_UTIL_H
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <cairo.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 // #include <wayland-server-protocol.h>
 
@@ -35,7 +35,8 @@ bool parse_boolean(const char *boolean, bool current);
  */
 float parse_float(const char *value);
 
-// const char *sway_wl_output_subpixel_to_string(enum wl_output_subpixel subpixel);
+// const char *sway_wl_output_subpixel_to_string(enum wl_output_subpixel
+// subpixel);
 
 // bool sway_set_cloexec(int fd, bool cloexec);
 

@@ -125,9 +125,9 @@ static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   view->xdg_surface = xdg_surface;
   view->server = server;
 
-  xdg_shell->create_offset = (xdg_shell->create_offset+1) % 8;
-  view->x = 4 + (xdg_shell->create_offset*40);
-  view->y = 32 + (xdg_shell->create_offset*40);
+  xdg_shell->create_offset = (xdg_shell->create_offset + 1) % 8;
+  view->x = 4 + (xdg_shell->create_offset * 40);
+  view->y = 32 + (xdg_shell->create_offset * 40);
 
   /* Listen to the various events it can emit */
   view->map.notify = xdg_surface_map;

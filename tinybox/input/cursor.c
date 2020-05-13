@@ -9,20 +9,29 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 const char *cursor_images[] = {
-    "bottom_left_corner",// HS_EDGE_BOTTOM,
-    "bottom_right_corner",// HS_EDGE_BOTTOM,
-    "top_side",// HS_EDGE_TOP,
-    "bottom_side",// HS_EDGE_BOTTOM,
-    "left_side",// HS_EDGE_LEFT,
-    "right_side",// HS_EDGE_RIGHT,
-    "left_ptr",// HS_TITLEBAR,
-    "left_ptr",// HS_HANDLE,
-    "left_ptr",// HS_GRIP_LEFT,
-    "left_ptr",// HS_GRIP_RIGHT,
-    // HS_COUNT
+    "bottom_left_corner",  // HS_EDGE_BOTTOM,
+    "bottom_right_corner", // HS_EDGE_BOTTOM,
+    "top_side",            // HS_EDGE_TOP,
+    "bottom_side",         // HS_EDGE_BOTTOM,
+    "left_side",           // HS_EDGE_LEFT,
+    "right_side",          // HS_EDGE_RIGHT,
+    "left_ptr",            // HS_TITLEBAR,
+    "left_ptr",            // HS_HANDLE,
+    "left_ptr",            // HS_GRIP_LEFT,
+    "left_ptr",            // HS_GRIP_RIGHT,
+                           // HS_COUNT
 };
 
-static bool begin_interactive_sd(struct tbx_server *server, struct tbx_view *view) {
+static void smooth_move_view(struct tbx_view *view, double tx, double ty, double s) {
+  view->x += (tx - view->x) * s;
+  view->y += (ty - view->y) * s;
+  view->request_box.x = tx;
+  view->request_box.y = ty;
+  view->request_wait = 4; // wait output frames to commit render
+}
+
+static bool begin_interactive_sd(struct tbx_server *server,
+                                 struct tbx_view *view) {
   /* server side decoration initiated resize or move */
 
   if (!view) {
@@ -32,50 +41,53 @@ static bool begin_interactive_sd(struct tbx_server *server, struct tbx_view *vie
   struct tbx_cursor *cursor = server->cursor;
 
   if (view->hotspot_edges != WLR_EDGE_NONE) {
-      cursor->mode = TBX_CURSOR_RESIZE;
-      cursor->grab_view = view;
-      cursor->resize_edges = view->hotspot_edges;
-      cursor->grab_x = 0;
-      cursor->grab_y = 0;
+    cursor->mode = TBX_CURSOR_RESIZE;
+    cursor->grab_view = view;
+    cursor->resize_edges = view->hotspot_edges;
+    cursor->grab_x = 0;
+    cursor->grab_y = 0;
 
-      // int title_bar_height = 28;
-      // int footer_height = server->style.handleWidth + (server->style.borderWidth * 2);
-      // if (view->hotspot_edges & WLR_EDGE_TOP) {
-      //   cursor->grab_y -= title_bar_height;
-      // }
-      // if (view->hotspot_edges & WLR_EDGE_BOTTOM) {
-      //   cursor->grab_y += footer_height;
-      // }
+    int titlebarHeight = view->hotspots[HS_TITLEBAR].height;
+    int handleWidth = view->hotspots[HS_HANDLE].height;
 
-      wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
-      cursor->grab_box.x = view->x;
-      cursor->grab_box.y = view->y;
-      view->hotspot = -1;
-      view->hotspot_edges = WLR_EDGE_NONE;
+    if (view->hotspot_edges & WLR_EDGE_TOP) {
+      cursor->grab_y -= titlebarHeight;
+    }
 
-      // move to active workspace  
-      // view->workspace = server->active_workspace;
-      // view->workspace_id = server->active_workspace_id;
+    if (view->hotspot_edges & WLR_EDGE_BOTTOM) {
+      cursor->grab_y += handleWidth;
+    }
 
-      return true;
+    wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
+
+    cursor->grab_box.x = view->x;
+    cursor->grab_box.y = view->y;
+    view->hotspot = HS_NONE;
+    view->hotspot_edges = WLR_EDGE_NONE;
+
+    // move to active workspace
+    // view->workspace = server->active_workspace;
+    // view->workspace_id = server->active_workspace_id;
+
+    return true;
   }
 
-  if (view->hotspot == HS_TITLEBAR) {
-      cursor->mode = TBX_CURSOR_MOVE;
-      cursor->grab_view = view;
-      cursor->grab_x = cursor->cursor->x - view->x;
-      cursor->grab_y = cursor->cursor->y - view->y;
-      wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
-      cursor->grab_box.x = view->x;
-      cursor->grab_box.y = view->y;
-      view->hotspot = -1;
-      view->hotspot_edges = WLR_EDGE_NONE;
+  if (view->hotspot == HS_TITLEBAR || view->hotspot == HS_HANDLE) {
+    cursor->mode = TBX_CURSOR_MOVE;
+    cursor->grab_view = view;
+    cursor->grab_x = cursor->cursor->x - view->x;
+    cursor->grab_y = cursor->cursor->y - view->y;
+    wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
+    cursor->grab_box.x = view->x;
+    cursor->grab_box.y = view->y;
+    view->hotspot = -1;
+    view->hotspot_edges = WLR_EDGE_NONE;
 
-      // // move to active workspace  
-      // view->workspace = server->active_workspace;
-      // view->workspace_id = server->active_workspace_id;
+    // // move to active workspace
+    // view->workspace = server->active_workspace;
+    // view->workspace_id = server->active_workspace_id;
 
-      return true;
+    return true;
   }
 
   return false;
@@ -84,8 +96,12 @@ static bool begin_interactive_sd(struct tbx_server *server, struct tbx_view *vie
 static void process_cursor_move(struct tbx_server *server, uint32_t time) {
   /* Move the grabbed view to the new position. */
   struct tbx_cursor *cursor = server->cursor;
-  cursor->grab_view->x = cursor->cursor->x - cursor->grab_x;
-  cursor->grab_view->y = cursor->cursor->y - cursor->grab_y;
+  // cursor->grab_view->x = cursor->cursor->x - cursor->grab_x;
+  // cursor->grab_view->y = cursor->cursor->y - cursor->grab_y;
+
+  double tx = cursor->cursor->x - cursor->grab_x;
+  double ty = cursor->cursor->y - cursor->grab_y;
+  smooth_move_view(cursor->grab_view, tx, ty, 0.4);
 }
 
 static void process_cursor_resize(struct tbx_server *server, uint32_t time) {
@@ -140,6 +156,11 @@ static void process_cursor_resize(struct tbx_server *server, uint32_t time) {
   int new_width = new_right - new_left;
   int new_height = new_bottom - new_top;
   wlr_xdg_toplevel_set_size(view->xdg_surface, new_width, new_height);
+
+  view->request_box.x = view->x;
+  view->request_box.y = view->y;
+  view->request_box.width = new_width;
+  view->request_box.height = new_height;
 }
 
 static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
@@ -169,10 +190,11 @@ static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
                                          cursor->cursor);
   }
 
-  if (view && view->hotspot >= 0 && view->hotspot < HS_COUNT) { 
+  if (view && view->hotspot >= 0 && view->hotspot < HS_COUNT) {
     // view->hotspot_edges != WLR_EDGE_NONE) {
-    wlr_xcursor_manager_set_cursor_image(
-        server->cursor->xcursor_manager, cursor_images[view->hotspot], cursor->cursor);
+    wlr_xcursor_manager_set_cursor_image(server->cursor->xcursor_manager,
+                                         cursor_images[view->hotspot],
+                                         cursor->cursor);
   }
 
   if (surface) {

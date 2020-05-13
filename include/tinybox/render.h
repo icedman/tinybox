@@ -15,8 +15,10 @@ struct render_data {
   struct timespec *when;
 };
 
-void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4], float scale);
+void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4],
+                 float scale);
 
-void render_texture(struct wlr_output *output, struct wlr_box *box, struct wlr_texture *texture, float scale);
+void render_texture(struct wlr_output *output, struct wlr_box *box,
+                    struct wlr_texture *texture, float scale);
 
 #endif // TINYBOX_RENDER_H

@@ -46,7 +46,8 @@ static void handle_server_decoration(struct wl_listener *listener, void *data) {
     return;
   }
 
-  struct tbx_decoration_manager *deco_mgr = wl_container_of(listener, deco_mgr, server_decoration);
+  struct tbx_decoration_manager *deco_mgr =
+      wl_container_of(listener, deco_mgr, server_decoration);
   deco->wlr_server_decoration = wlr_deco;
   deco->server = deco_mgr->server;
 
@@ -68,11 +69,12 @@ bool decoration_setup(struct tbx_server *server) {
   server->decoration_manager->server_decoration_manager =
       wlr_server_decoration_manager_create(server->wl_display);
 
-   wlr_server_decoration_manager_set_default_mode(
-     server->decoration_manager->server_decoration_manager,
-     WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
+  wlr_server_decoration_manager_set_default_mode(
+      server->decoration_manager->server_decoration_manager,
+      WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 
-  server->decoration_manager->server_decoration.notify = handle_server_decoration;
+  server->decoration_manager->server_decoration.notify =
+      handle_server_decoration;
   wl_signal_add(&server->decoration_manager->server_decoration_manager->events
                      .new_decoration,
                 &server->decoration_manager->server_decoration);

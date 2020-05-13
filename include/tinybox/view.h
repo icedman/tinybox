@@ -37,8 +37,11 @@ struct tbx_view {
 
   // hotspots
   struct wlr_box hotspots[HS_COUNT];
-  enum tbx_view_hotspot hotspot; 
+  enum tbx_view_hotspot hotspot;
   uint32_t hotspot_edges;
+
+  struct wlr_box request_box;
+  int request_wait;
 };
 
 struct tbx_view *desktop_view_at(struct tbx_server *server, double lx,
@@ -50,8 +53,7 @@ bool view_at(struct tbx_view *view, double lx, double ly,
 
 void focus_view(struct tbx_view *view, struct wlr_surface *surface);
 
-bool hotspot_at(struct tbx_view *view,
-    double lx, double ly, struct wlr_surface **surface,
-    double *sx, double *sy);
+bool hotspot_at(struct tbx_view *view, double lx, double ly,
+                struct wlr_surface **surface, double *sx, double *sy);
 
 #endif // TINYBOX_DESKTOP_H
