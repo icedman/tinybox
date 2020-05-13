@@ -81,6 +81,10 @@ void console_dump() {
   struct tbx_output *output;
   console_log(header, "outputs");
   wl_list_for_each(output, &server->outputs, link) {
+    if (!output->enabled) {
+      console_log("idle %d", output->last_frame.tv_nsec/1000000);
+      continue;
+    }
     double ox = 0, oy = 0;
     wlr_output_layout_output_coords(server->output_layout, output->wlr_output,
                                     &ox, &oy);
@@ -93,8 +97,9 @@ void console_dump() {
       main = '*';
     }
 
-    console_log("%s%c (%d, %d) - (%d %d)", output->wlr_output->name, main,
-                (int)ox, (int)oy, (int)box->width, (int)box->height);
+    console_log("%s%c (%d, %d) - (%d %d) %d", output->wlr_output->name, main,
+                (int)ox, (int)oy, (int)box->width, (int)box->height, 
+                output->last_frame.tv_nsec/1000000);
   }
 }
 

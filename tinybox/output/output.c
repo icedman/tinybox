@@ -428,6 +428,9 @@ static void output_frame(struct wl_listener *listener, void *data) {
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
 
+  // uint32_t elapsed = (now.tv_nsec - output->last_frame.tv_nsec)/1000000;
+  // output->run_time += elapsed;
+
   /* wlr_output_attach_render makes the OpenGL context current. */
   if (!wlr_output_attach_render(output->wlr_output, NULL)) {
     return;
@@ -522,12 +525,12 @@ static void output_handle_destroy(struct wl_listener *listener, void *data) {
   }
 
   // remove from layout
-  wlr_output_layout_remove(server->output_layout, output->wlr_output);
+  // wlr_output_layout_remove(server->output_layout, output->wlr_output);
   // console_log("removed from layout");
 
   output->enabled = false;
-  wl_list_remove(&output->link);
-  free(output);
+  // wl_list_remove(&output->link);
+  // free(output);
 }
 
 static void server_new_output(struct wl_listener *listener, void *data) {

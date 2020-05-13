@@ -17,6 +17,7 @@ struct tbx_output {
   struct wl_listener destroy;
 
   struct timespec last_frame;
+  long run_time;
 
   bool enabled;
 };
