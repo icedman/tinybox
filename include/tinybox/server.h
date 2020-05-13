@@ -6,7 +6,7 @@
 
 #include "tinybox/cursor.h"
 #include "tinybox/seat.h"
-// #include "tinybox/decoration.h"
+#include "tinybox/style.h"
 
 struct tbx_server_decoration_manager;
 
@@ -35,6 +35,9 @@ struct tbx_server {
   // input
   struct tbx_cursor *cursor;
   struct tbx_seat *seat;
+
+  // style
+  struct tbx_style style;
 };
 
 bool tbx_server_setup(struct tbx_server *server);

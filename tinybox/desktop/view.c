@@ -2,6 +2,7 @@
 
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/types/wlr_xcursor_manager.h>
 
 void focus_view(struct tbx_view *view, struct wlr_surface *surface) {
   /* Note: this function only deals with keyboard focus. */
@@ -78,8 +79,47 @@ struct tbx_view *desktop_view_at(struct tbx_server *server, double lx,
 
   wl_list_for_each(view, &server->views, link) {
     if (view_at(view, lx, ly, surface, sx, sy)) {
+      view->hotspot = HS_NONE;
+      return view;
+    }
+
+    if (hotspot_at(view, lx, ly, surface, sx, sy)) {
       return view;
     }
   }
   return NULL;
+}
+
+bool hotspot_at(struct tbx_view *view,
+    double lx, double ly, struct wlr_surface **surface,
+    double *sx, double *sy) {
+
+  const int resizeEdges[] = {
+    WLR_EDGE_BOTTOM | WLR_EDGE_LEFT,
+    WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT,
+    WLR_EDGE_TOP,
+    WLR_EDGE_BOTTOM,
+    WLR_EDGE_LEFT,
+    WLR_EDGE_RIGHT
+  };
+
+  view->hotspot = HS_NONE;
+  view->hotspot_edges = WLR_EDGE_NONE;
+  for(int i=0; i<(int)HS_COUNT;i++) {
+    struct wlr_box *box = &view->hotspots[i];
+
+    if (!box->width || !box->height) {
+      continue;
+    }
+    if (lx >= box->x && lx <= box->x + box->width &&
+        ly >= box->y && ly <= box->y + box->height) {
+      view->hotspot = i;
+      if (i<=HS_EDGE_RIGHT) {
+        view->hotspot_edges = resizeEdges[i];
+      }
+      return true;
+    }
+  }
+
+  return false;
 }

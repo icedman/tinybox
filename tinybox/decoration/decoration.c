@@ -67,9 +67,10 @@ bool decoration_setup(struct tbx_server *server) {
 
   server->decoration_manager->server_decoration_manager =
       wlr_server_decoration_manager_create(server->wl_display);
-  wlr_server_decoration_manager_set_default_mode(
-      server->decoration_manager->server_decoration_manager,
-      WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
+
+   wlr_server_decoration_manager_set_default_mode(
+     server->decoration_manager->server_decoration_manager,
+     WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 
   server->decoration_manager->server_decoration.notify = handle_server_decoration;
   wl_signal_add(&server->decoration_manager->server_decoration_manager->events

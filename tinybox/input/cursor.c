@@ -8,6 +8,79 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
+const char *cursor_images[] = {
+    "bottom_left_corner",// HS_EDGE_BOTTOM,
+    "bottom_right_corner",// HS_EDGE_BOTTOM,
+    "top_side",// HS_EDGE_TOP,
+    "bottom_side",// HS_EDGE_BOTTOM,
+    "left_side",// HS_EDGE_LEFT,
+    "right_side",// HS_EDGE_RIGHT,
+    "left_ptr",// HS_TITLEBAR,
+    "left_ptr",// HS_HANDLE,
+    "left_ptr",// HS_GRIP_LEFT,
+    "left_ptr",// HS_GRIP_RIGHT,
+    // HS_COUNT
+};
+
+static bool begin_interactive_sd(struct tbx_server *server, struct tbx_view *view) {
+  /* server side decoration initiated resize or move */
+
+  if (!view) {
+    return false;
+  }
+
+  struct tbx_cursor *cursor = server->cursor;
+
+  if (view->hotspot_edges != WLR_EDGE_NONE) {
+      cursor->mode = TBX_CURSOR_RESIZE;
+      cursor->grab_view = view;
+      cursor->resize_edges = view->hotspot_edges;
+      cursor->grab_x = 0;
+      cursor->grab_y = 0;
+
+      // int title_bar_height = 28;
+      // int footer_height = server->style.handleWidth + (server->style.borderWidth * 2);
+      // if (view->hotspot_edges & WLR_EDGE_TOP) {
+      //   cursor->grab_y -= title_bar_height;
+      // }
+      // if (view->hotspot_edges & WLR_EDGE_BOTTOM) {
+      //   cursor->grab_y += footer_height;
+      // }
+
+      wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
+      cursor->grab_box.x = view->x;
+      cursor->grab_box.y = view->y;
+      view->hotspot = -1;
+      view->hotspot_edges = WLR_EDGE_NONE;
+
+      // move to active workspace  
+      // view->workspace = server->active_workspace;
+      // view->workspace_id = server->active_workspace_id;
+
+      return true;
+  }
+
+  if (view->hotspot == HS_TITLEBAR) {
+      cursor->mode = TBX_CURSOR_MOVE;
+      cursor->grab_view = view;
+      cursor->grab_x = cursor->cursor->x - view->x;
+      cursor->grab_y = cursor->cursor->y - view->y;
+      wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
+      cursor->grab_box.x = view->x;
+      cursor->grab_box.y = view->y;
+      view->hotspot = -1;
+      view->hotspot_edges = WLR_EDGE_NONE;
+
+      // // move to active workspace  
+      // view->workspace = server->active_workspace;
+      // view->workspace_id = server->active_workspace_id;
+
+      return true;
+  }
+
+  return false;
+}
+
 static void process_cursor_move(struct tbx_server *server, uint32_t time) {
   /* Move the grabbed view to the new position. */
   struct tbx_cursor *cursor = server->cursor;
@@ -96,6 +169,12 @@ static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
                                          cursor->cursor);
   }
 
+  if (view && view->hotspot >= 0 && view->hotspot < HS_COUNT) { 
+    // view->hotspot_edges != WLR_EDGE_NONE) {
+    wlr_xcursor_manager_set_cursor_image(
+        server->cursor->xcursor_manager, cursor_images[view->hotspot], cursor->cursor);
+  }
+
   if (surface) {
     bool focus_changed = seat->pointer_state.focused_surface != surface;
     /*
@@ -170,7 +249,7 @@ static void server_cursor_button(struct wl_listener *listener, void *data) {
   } else {
     /* Focus that client if the button was _pressed_ */
     focus_view(view, surface);
-    // begin_resize_or_drag(server, view);
+    begin_interactive_sd(server, view);
   }
 }
 

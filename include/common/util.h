@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <cairo.h>
 
 // #include <wayland-server-protocol.h>
 
@@ -38,5 +37,6 @@ float parse_float(const char *value);
 // const char *sway_wl_output_subpixel_to_string(enum wl_output_subpixel subpixel);
 
 // bool sway_set_cloexec(int fd, bool cloexec);
+
 
 #endif // TINYBOX_UTIL_H

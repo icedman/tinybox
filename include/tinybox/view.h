@@ -3,6 +3,19 @@
 
 #include "tinybox/server.h"
 
+enum tbx_view_hotspot {
+  HS_GRIP_LEFT,
+  HS_GRIP_RIGHT,
+  HS_EDGE_TOP,
+  HS_EDGE_BOTTOM,
+  HS_EDGE_LEFT,
+  HS_EDGE_RIGHT,
+  HS_TITLEBAR,
+  HS_HANDLE,
+  HS_COUNT,
+  HS_NONE = -1
+};
+
 struct tbx_view {
   struct wl_list link;
   struct tbx_server *server;
@@ -21,6 +34,11 @@ struct tbx_view {
 
   // bool shaded;
   bool csd;
+
+  // hotspots
+  struct wlr_box hotspots[HS_COUNT];
+  enum tbx_view_hotspot hotspot; 
+  uint32_t hotspot_edges;
 };
 
 struct tbx_view *desktop_view_at(struct tbx_server *server, double lx,
@@ -31,5 +49,9 @@ bool view_at(struct tbx_view *view, double lx, double ly,
              struct wlr_surface **surface, double *sx, double *sy);
 
 void focus_view(struct tbx_view *view, struct wlr_surface *surface);
+
+bool hotspot_at(struct tbx_view *view,
+    double lx, double ly, struct wlr_surface **surface,
+    double *sx, double *sy);
 
 #endif // TINYBOX_DESKTOP_H
