@@ -3,8 +3,9 @@
 #include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
-#include "tinybox/util.h"
 #include "tinybox/view.h"
+#include "common/util.h"
+#include "common/cairo.h"
 
 #include <time.h>
 #include <unistd.h>
@@ -22,6 +23,117 @@
 #include <cairo/cairo.h>
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
+
+struct wlr_texture *textCache[16] = {
+  NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL
+};
+
+static int lastCacheHash = 0;
+
+enum {
+  tx_window_title_focus,
+  tx_window_title_unfocus,
+  tx_window_label_focus,
+  tx_window_label_unfocus,
+  tx_window_handle_focus,
+  tx_window_handle_unfocus,
+  tx_window_grip_focus,
+  tx_window_grip_unfocus
+};
+
+static void generate_texture(struct wlr_renderer *renderer, int idx, int flags, int w, int h, float color[static 4], float colorTo[static 4]) {
+  // printf("generate texture %d\n", idx);
+
+  if (textCache[idx]) {
+    wlr_texture_destroy(textCache[idx]);
+    textCache[idx] = NULL;
+  }
+
+  if (flags == 0) {
+    return;
+  }
+  
+  cairo_surface_t *surf = cairo_image_surface_create(
+      CAIRO_FORMAT_ARGB32, w, h);
+  cairo_t *cx = cairo_create(surf);
+
+  draw_gradient_rect(cx, flags, w, h, color, colorTo);
+
+  unsigned char *data = cairo_image_surface_get_data(surf);
+  textCache[idx] = wlr_texture_from_pixels(renderer,
+      WL_SHM_FORMAT_ARGB8888,
+      cairo_image_surface_get_stride(surf),
+      w, h, data);
+
+  // char fname[255] = "";
+  // sprintf(fname, "/tmp/text_%d.png", idx);
+  // cairo_surface_write_to_png(surf, fname);
+
+  cairo_destroy(cx);
+  cairo_surface_destroy(surf);
+};
+
+void generate_textures(struct tbx_output *output, bool forced) {
+  struct tbx_style *style = &output->server->style;
+  struct wlr_renderer *renderer = output->server->renderer;
+
+  if (textCache[0] != NULL && !(forced || lastCacheHash != style->hash)) {
+    return;
+  }
+
+  lastCacheHash = style->hash;
+
+  float color[4];
+  float colorTo[4];
+  int flags;
+
+  // titlebar
+  color_to_rgba(color, style->window_title_focus_color);
+  color_to_rgba(colorTo, style->window_title_focus_colorTo);
+  flags = style->window_title_focus;
+  generate_texture(renderer, tx_window_title_focus, flags, 512, 16, color, colorTo);
+
+  color_to_rgba(color, style->window_title_unfocus_color);
+  color_to_rgba(colorTo, style->window_title_unfocus_colorTo);
+  flags = style->window_title_unfocus;
+  generate_texture(renderer, tx_window_title_unfocus, flags, 512, 16, color, colorTo);
+
+  // titlebar/label
+  color_to_rgba(color, style->window_label_focus_color);
+  color_to_rgba(colorTo, style->window_label_focus_colorTo);
+  flags = style->window_label_focus;
+  generate_texture(renderer, tx_window_label_focus, flags, 512, 16, color, colorTo);
+
+  color_to_rgba(color, style->window_label_unfocus_color);
+  color_to_rgba(colorTo, style->window_label_unfocus_colorTo);
+  flags = style->window_label_unfocus;
+  generate_texture(renderer, tx_window_label_unfocus, flags, 512, 16, color, colorTo);
+
+  // handle
+  color_to_rgba(color, style->window_handle_focus_color);
+  color_to_rgba(colorTo, style->window_handle_focus_colorTo);
+  flags = style->window_handle_focus;
+  generate_texture(renderer, tx_window_handle_focus, flags, 512, 16, color, colorTo);
+
+  color_to_rgba(color, style->window_handle_unfocus_color);
+  color_to_rgba(colorTo, style->window_handle_unfocus_colorTo);
+  flags = style->window_handle_unfocus;
+  generate_texture(renderer, tx_window_handle_unfocus, flags, 512, 16, color, colorTo);
+
+  // grip
+  color_to_rgba(color, style->window_grip_focus_color);
+  color_to_rgba(colorTo, style->window_grip_focus_colorTo);
+  flags = style->window_grip_focus;
+  generate_texture(renderer, tx_window_grip_focus, flags, 30, 16, color, colorTo);
+
+  color_to_rgba(color, style->window_grip_unfocus_color);
+  color_to_rgba(colorTo, style->window_grip_unfocus_colorTo);
+  flags = style->window_grip_unfocus;
+  generate_texture(renderer, tx_window_grip_unfocus, flags, 30, 16, color, colorTo);
+}
 
 void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4],
                  float scale) {

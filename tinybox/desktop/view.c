@@ -1,5 +1,7 @@
 #include "tinybox/view.h"
 
+#include <stdlib.h>
+
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
@@ -119,4 +121,15 @@ bool hotspot_at(struct tbx_view *view, double lx, double ly,
   }
 
   return false;
+}
+
+void view_destroy(struct tbx_view *view)
+{
+  // if (view->title) {
+  //   wlr_texture_destroy(view->title);
+  //   wlr_texture_destroy(view->title_unfocused);
+  // }
+
+  wl_list_remove(&view->link);
+  free(view);
 }

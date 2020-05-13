@@ -56,4 +56,6 @@ void focus_view(struct tbx_view *view, struct wlr_surface *surface);
 bool hotspot_at(struct tbx_view *view, double lx, double ly,
                 struct wlr_surface **surface, double *sx, double *sy);
 
+void view_destroy(struct tbx_view *view);
+
 #endif // TINYBOX_DESKTOP_H

@@ -5,8 +5,8 @@
 #include "tinybox/render.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
-#include "tinybox/util.h"
 #include "tinybox/view.h"
+#include "common/util.h"
 
 #include <time.h>
 #include <unistd.h>
@@ -51,7 +51,7 @@ static void grow_box_lrtb(struct wlr_box *box, int l, int r, int t, int b) {
   box->height += t + b;
 }
 
-static void grow_box_vh(struct wlr_box *box, int h, int v) {
+static void grow_box_hv(struct wlr_box *box, int h, int v) {
   grow_box_lrtb(box, h, h, v, v);
 }
 
@@ -83,10 +83,6 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   wlr_xdg_surface_get_geometry((struct wlr_xdg_surface *)surface,
                                &view_geometry);
 
-  /* The view has a position in layout coordinates. If you have two displays,
-   * one next to the other, both 1080p, a view on the rightmost display might
-   * have layout coordinates of 2000,100. We need to translate that to
-   * output-local coordinates, or (2000 - 1920). */
   double ox = 0, oy = 0;
   wlr_output_layout_output_coords(view->server->output_layout, output, &ox,
                                   &oy);
@@ -106,7 +102,6 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     view_geometry.height = view->request_box.height * output->scale;
   }
 
-
   int frameWidth = 2;
   int gripWidth = 28;
   int borderWidth = 3;
@@ -119,17 +114,17 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   // render frame
   // ----------------------
   if (frameWidth > 0) {
-    color_to_rgba(color, style->borderColor);
+    color_to_rgba(color, style->window_frame_focusColor);
 
     // left
     memcpy(&box, &view_geometry, sizeof(struct wlr_box));
     box.x -= frameWidth;
     box.width = frameWidth;
-    render_rect(output, &box, colorDebug2, output->scale);
+    render_rect(output, &box, color, output->scale);
 
     // right
     box.x += view_geometry.width + frameWidth;
-    render_rect(output, &box, colorDebug2, output->scale);
+    render_rect(output, &box, color, output->scale);
 
     // top
     memcpy(&box, &view_geometry, sizeof(struct wlr_box));
@@ -137,56 +132,76 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     box.y -= frameWidth;
     box.width += (frameWidth * 2);
     box.height = frameWidth;
-    render_rect(output, &box, colorDebug2, output->scale);
+    render_rect(output, &box, color, output->scale);
 
     // bottom
     box.y += view_geometry.height + frameWidth;
-    render_rect(output, &box, colorDebug2, output->scale);
+    render_rect(output, &box, color, output->scale);
   }
 
   // ----------------------
   // render titlebar
   // ----------------------
   if (titlebarHeight) {
+    color_to_rgba(color, style->borderColor);
+
     memcpy(&box, &view_geometry, sizeof(struct wlr_box));
     box.x -= (frameWidth + borderWidth);
     box.width += ((frameWidth + borderWidth) * 2);
     box.y -= (frameWidth + borderWidth + titlebarHeight);
     box.height = titlebarHeight + borderWidth;
-    render_rect(output, &box, colorDebug3, output->scale);
+    render_rect(output, &box, color, output->scale);
 
     memcpy(&view->hotspots[HS_TITLEBAR], &box, sizeof(struct wlr_box));
+
+    // render the texture
+    grow_box_hv(&box, -borderWidth, -borderWidth);
+    render_rect(output, &box, colorDebug2, output->scale);
+
+    // label
+    grow_box_hv(&box, -frameWidth, -frameWidth);
+    render_rect(output, &box, colorDebug3, output->scale);
+
   }
 
   // ----------------------
   // render handle
   // ----------------------
   if (handleWidth) {
+    color_to_rgba(color, style->borderColor);
+
     memcpy(&box, &view_geometry, sizeof(struct wlr_box));
     box.x -= (frameWidth + borderWidth);
     box.width += ((frameWidth + borderWidth) * 2);
     box.y += view_geometry.height + frameWidth;
     box.height = handleWidth + borderWidth;
-    render_rect(output, &box, colorDebug3, output->scale);
-
+    render_rect(output, &box, color, output->scale);
     memcpy(&view->hotspots[HS_HANDLE], &box, sizeof(struct wlr_box));
+
+    // render the texture
+    grow_box_hv(&box, -borderWidth, -borderWidth);
+    if (gripWidth) {
+      grow_box_hv(&box, -(gripWidth + (borderWidth*2) + 1), 0);
+    }
+
+    render_rect(output, &box, colorDebug2, output->scale);
 
     // grips
     if (gripWidth) {
-      box.x = view_geometry.x;
+      box.x = view_geometry.x - frameWidth;
       box.y = view_geometry.y + view_geometry.height + frameWidth + borderWidth;
-      box.width = gripWidth;
-      box.height = handleWidth;
+      box.width = gripWidth + (frameWidth * 2);
+      box.height = handleWidth - borderWidth;
       render_rect(output, &box, colorDebug4, output->scale);
 
       memcpy(&view->hotspots[HS_GRIP_LEFT], &box, sizeof(struct wlr_box));
-      grow_box_vh(&view->hotspots[HS_GRIP_LEFT], borderWidth, borderWidth);
+      grow_box_hv(&view->hotspots[HS_GRIP_LEFT], borderWidth, borderWidth);
 
       box.x += view_geometry.width - gripWidth;
       render_rect(output, &box, colorDebug4, output->scale);      
 
       memcpy(&view->hotspots[HS_GRIP_RIGHT], &box, sizeof(struct wlr_box));
-      grow_box_vh(&view->hotspots[HS_GRIP_RIGHT], borderWidth, borderWidth);
+      grow_box_hv(&view->hotspots[HS_GRIP_RIGHT], borderWidth, borderWidth);
     }
   }
 
@@ -202,13 +217,13 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     box.y -= frameWidth;
     box.width = borderWidth;
     box.height += (frameWidth * 2);
-    render_rect(output, &box, colorDebug1, output->scale);
+    render_rect(output, &box, color, output->scale);
 
     memcpy(&view->hotspots[HS_EDGE_LEFT], &box, sizeof(struct wlr_box));
 
     // right
     box.x = view_geometry.x + view_geometry.width + frameWidth;
-    render_rect(output, &box, colorDebug1, output->scale);
+    render_rect(output, &box, color, output->scale);
 
     memcpy(&view->hotspots[HS_EDGE_RIGHT], &box, sizeof(struct wlr_box));
 
@@ -225,9 +240,10 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
 
     if (titlebarHeight) {
       box.y -= titlebarHeight;
+    } else {
+      render_rect(output, &box, color, output->scale);
     }
 
-    render_rect(output, &box, colorDebug1, output->scale);
     memcpy(&view->hotspots[HS_EDGE_TOP], &box, sizeof(struct wlr_box));
 
     // bottom
@@ -235,9 +251,10 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
 
     if (handleWidth) {
       box.y += handleWidth;
+    } else {
+      render_rect(output, &box, color, output->scale);
     }
 
-    render_rect(output, &box, colorDebug1, output->scale);
     memcpy(&view->hotspots[HS_EDGE_BOTTOM], &box, sizeof(struct wlr_box));
   }
 
@@ -344,6 +361,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
    * generally at the output's refresh rate (e.g. 60Hz). */
   struct tbx_output *output = wl_container_of(listener, output, frame);
   struct wlr_renderer *renderer = output->server->renderer;
+
+  generate_textures(output, false);
 
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);

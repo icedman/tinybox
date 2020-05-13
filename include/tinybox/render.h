@@ -1,10 +1,13 @@
 #ifndef TINYBOX_RENDER_H
 #define TINYBOX_RENDER_H
 
+#include <stdbool.h>
+
 struct wlr_output;
 struct wlr_renderer;
 struct wlr_box;
 struct wlr_texture;
+struct tbx_output;
 
 /* Used to move all of the data necessary to render a surface from the top-level
  * frame handler to the per-surface render function. */
@@ -20,5 +23,7 @@ void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4],
 
 void render_texture(struct wlr_output *output, struct wlr_box *box,
                     struct wlr_texture *texture, float scale);
+
+void generate_textures(struct tbx_output *output, bool forced);
 
 #endif // TINYBOX_RENDER_H

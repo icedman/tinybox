@@ -12,6 +12,8 @@ enum tbx_cursor_mode {
   TBX_CURSOR_PASSTHROUGH,
   TBX_CURSOR_MOVE,
   TBX_CURSOR_RESIZE,
+  TBX_CURSOR_SWIPE_WORKSPACE,
+  TBX_CURSOR_SWIPE_MOVE
 };
 
 struct tbx_cursor {
