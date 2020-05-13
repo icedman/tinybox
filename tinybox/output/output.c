@@ -67,6 +67,8 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   struct wlr_seat *seat = view->server->seat->seat;
   struct tbx_style *style = &view->server->style;
 
+  bool shaded = view->shaded;
+
   float color[4] = {1, 0, 1, 1};
 
   int unfocus_offset = 0;
@@ -92,6 +94,8 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   double ox = 0, oy = 0;
   wlr_output_layout_output_coords(view->server->output_layout, output, &ox,
                                   &oy);
+  double oox = ox;
+  double ooy = oy;
 
   view_geometry.x += view->x + ox + sx;
   view_geometry.y += view->y + oy + sy;
@@ -113,13 +117,18 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   int borderWidth = 3;
   int handleWidth = 8;
   int titlebarHeight = 24;
+  int margin = frameWidth ? frameWidth : borderWidth;
+
+  if (view->title) {
+    titlebarHeight = view->title_box.height - 4;
+  }
 
   memset(&view->hotspots, 0, sizeof(struct wlr_box) * HS_COUNT);
 
   // ----------------------
   // render frame
   // ----------------------
-  if (frameWidth > 0) {
+  if (frameWidth > 0 && !shaded) {
     if (!unfocus_offset) {
       color_to_rgba(color, style->window_frame_focusColor);
     } else {
@@ -169,19 +178,28 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     render_texture(output, &box, get_texture_cache(tx_window_title_focus + unfocus_offset), output->scale);
     // render_rect(output, &box, colorDebug2, output->scale);
 
-    int margin = frameWidth ? frameWidth : borderWidth;
-
     // label
     grow_box_hv(&box, -margin, -margin);
     render_texture(output, &box, get_texture_cache(tx_window_label_focus + unfocus_offset), output->scale);
     // render_rect(output, &box, colorDebug3, output->scale);
 
+    // title
+    box.x += margin;
+    box.y += margin;
+    box.width = view->title_box.width;
+    box.height = view->title_box.height;
+
+    if (!unfocus_offset) {
+      render_texture(output, &box, view->title, output->scale);
+    } else {
+      render_texture(output, &box, view->title_unfocused, output->scale);
+    }
   }
 
   // ----------------------
   // render handle
   // ----------------------
-  if (handleWidth) {
+  if (handleWidth && !shaded) {
     color_to_rgba(color, style->borderColor);
 
     memcpy(&box, &view_geometry, sizeof(struct wlr_box));
@@ -225,7 +243,7 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   // ----------------------
   // render borders
   // ----------------------
-  if (borderWidth > 0) {
+  if (borderWidth > 0 && !shaded) {
     color_to_rgba(color, style->borderColor);
 
     // left
@@ -285,6 +303,16 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     if (gripWidth && handleWidth) {
       grow_box_lrtb(&view->hotspots[HS_GRIP_LEFT], hs, 0, 0, hs);
       grow_box_lrtb(&view->hotspots[HS_GRIP_RIGHT], 0, hs, 0, hs);
+    }
+  }
+
+  // adjust hotspots to layout
+  for(int i=0; i<HS_COUNT;i++) {
+    view->hotspots[i].x -= oox;
+    view->hotspots[i].y -= ooy;
+    if (shaded && i != HS_TITLEBAR) {
+      view->hotspots[i].width = 0;
+      view->hotspots[i].height = 0;
     }
   }
 }
@@ -415,6 +443,10 @@ static void output_frame(struct wl_listener *listener, void *data) {
         .when = &now,
     };
 
+    if (view->title_dirty) {
+      generate_view_title_texture(output, view);
+    }
+
     if (!view->csd) {
       render_view_decorations((struct wlr_surface *)view->xdg_surface, 0, 0,
                               &rdata);
@@ -422,8 +454,9 @@ static void output_frame(struct wl_listener *listener, void *data) {
       // render_view_decorations, &rdata);
     }
 
-    wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
-                                     &rdata);
+    if (!view->shaded) {
+      wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content, &rdata);
+    }
   }
 
   /* Hardware cursors are rendered by the GPU on a separate plane, and can be

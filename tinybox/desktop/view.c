@@ -6,6 +6,17 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
+const char *get_string_prop(struct tbx_view *view, enum tbx_view_prop prop) {
+  switch (prop) {
+  case VIEW_PROP_TITLE:
+    return view->xdg_surface->toplevel->title;
+  case VIEW_PROP_APP_ID:
+    return view->xdg_surface->toplevel->app_id;
+  default:
+    return NULL;
+  }
+}
+
 void focus_view(struct tbx_view *view, struct wlr_surface *surface) {
   /* Note: this function only deals with keyboard focus. */
   if (view == NULL) {
@@ -80,7 +91,8 @@ struct tbx_view *desktop_view_at(struct tbx_server *server, double lx,
   struct tbx_view *view;
 
   wl_list_for_each(view, &server->views, link) {
-    if (view_at(view, lx, ly, surface, sx, sy)) {
+    bool shaded = view->shaded;
+    if (!shaded && view_at(view, lx, ly, surface, sx, sy)) {
       view->hotspot = HS_NONE;
       return view;
     }
@@ -125,10 +137,12 @@ bool hotspot_at(struct tbx_view *view, double lx, double ly,
 
 void view_destroy(struct tbx_view *view)
 {
-  // if (view->title) {
-  //   wlr_texture_destroy(view->title);
-  //   wlr_texture_destroy(view->title_unfocused);
-  // }
+  if (view->title) {
+    wlr_texture_destroy(view->title);
+    wlr_texture_destroy(view->title_unfocused);
+    view->title = NULL;
+    view->title_unfocused = NULL;
+  }
 
   wl_list_remove(&view->link);
   free(view);

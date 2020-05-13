@@ -16,6 +16,11 @@ enum tbx_view_hotspot {
   HS_NONE = -1
 };
 
+enum tbx_view_prop {
+  VIEW_PROP_APP_ID,
+  VIEW_PROP_TITLE
+};
+
 struct tbx_view {
   struct wl_list link;
   struct tbx_server *server;
@@ -32,8 +37,14 @@ struct tbx_view {
   bool mapped;
   int x, y;
 
-  // bool shaded;
+  bool shaded;
   bool csd;
+
+  // title
+  struct wlr_texture *title;
+  struct wlr_texture *title_unfocused;
+  struct wlr_box title_box;
+  bool title_dirty;
 
   // hotspots
   struct wlr_box hotspots[HS_COUNT];
@@ -56,6 +67,9 @@ void focus_view(struct tbx_view *view, struct wlr_surface *surface);
 bool hotspot_at(struct tbx_view *view, double lx, double ly,
                 struct wlr_surface **surface, double *sx, double *sy);
 
+// create is at xdg_shell
 void view_destroy(struct tbx_view *view);
+
+const char *get_string_prop(struct tbx_view *view, enum tbx_view_prop prop);
 
 #endif // TINYBOX_DESKTOP_H

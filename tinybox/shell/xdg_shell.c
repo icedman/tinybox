@@ -12,8 +12,10 @@ static void xdg_surface_map(struct wl_listener *listener, void *data) {
   /* Called when the surface is mapped, or ready to display on-screen. */
   struct tbx_view *view = wl_container_of(listener, view, map);
   view->mapped = true;
+  view->title_dirty = true;
   view->surface = (struct wlr_surface *)view->xdg_surface;
-  // focus_view(view, view->xdg_surface->surface);
+  
+  focus_view(view, view->xdg_surface->surface);
 }
 
 static void xdg_surface_unmap(struct wl_listener *listener, void *data) {
@@ -97,8 +99,7 @@ static void xdg_toplevel_request_resize(struct wl_listener *listener,
 
 static void handle_set_title(struct wl_listener *listener, void *data) {
   struct tbx_view *view = wl_container_of(listener, view, set_title);
-
-  // view->title_dirty = true;
+  view->title_dirty = true;
 }
 
 static void server_new_xdg_surface(struct wl_listener *listener, void *data) {

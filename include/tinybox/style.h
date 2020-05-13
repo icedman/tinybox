@@ -184,6 +184,8 @@ struct tbx_style {
   int titleFont;
 
   int hash;
+
+  char font[255];
 };
 
 void load_style(struct tbx_style *style, const char *path);
