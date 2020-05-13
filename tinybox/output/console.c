@@ -3,11 +3,14 @@
 #include "common/util.h"
 #include "tinybox/output.h"
 #include "tinybox/server.h"
+#include "tinybox/view.h"
 
 #include <GLES2/gl2.h>
 #include <cairo/cairo.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_xdg_shell.h>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -19,6 +22,7 @@ cairo_surface_t *console_surface = NULL;
 
 void console_setup(struct tbx_server *server) {
   server->console = &theConsole;
+  server->console->server = server;
 
   int w = CONSOLE_WIDTH;
   int h = CONSOLE_HEIGHT;
@@ -40,7 +44,7 @@ void console_clear() {
 void console_log(const char *format, ...) {
   struct tbx_console *console = &theConsole;
 
-  char string[255] = "Hello! We are learning about strtok";
+  char string[255] = "";
 
   va_list args;
   va_start(args, format);
@@ -58,6 +62,40 @@ void console_log(const char *format, ...) {
   }
 
   console->dirty = true;
+}
+
+const char *header = "-------------\n%s\n";
+void console_dump() {
+  struct tbx_console *console = &theConsole;
+  struct tbx_server *server = console->server;
+
+  console_clear();
+  console_log("%s\nv%s", PACKAGE_NAME, PACKAGE_VERSION);
+
+  struct tbx_view *view;
+  console_log(header, "views");
+  wl_list_for_each_reverse(view, &server->views, link) {
+    console_log("v: %s\n", view->xdg_surface->toplevel->title);
+  }
+
+  struct tbx_output *output;
+  console_log(header, "outputs");
+  wl_list_for_each(output, &server->outputs, link) {
+    double ox = 0, oy = 0;
+    wlr_output_layout_output_coords(server->output_layout, output->wlr_output,
+                                    &ox, &oy);
+
+    struct wlr_box *box =
+        wlr_output_layout_get_box(server->output_layout, output->wlr_output);
+
+    char main = ' ';
+    if (output == server->main_output) {
+      main = '*';
+    }
+
+    console_log("%s%c (%d, %d) - (%d %d)", output->wlr_output->name, main,
+                (int)ox, (int)oy, (int)box->width, (int)box->height);
+  }
 }
 
 void console_render(struct tbx_output *output) {

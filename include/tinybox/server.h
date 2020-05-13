@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <wayland-server-core.h>
 
+#include "tinybox/config.h"
 #include "tinybox/console.h"
 #include "tinybox/cursor.h"
 #include "tinybox/seat.h"
@@ -11,7 +12,6 @@
 
 struct tbx_server_decoration_manager;
 struct tbx_command;
-;
 
 struct tbx_server {
   struct wl_display *wl_display;
@@ -21,6 +21,7 @@ struct tbx_server {
   // output
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;
+  struct wl_listener output_destroy;
   struct wl_listener new_output;
   struct tbx_output *main_output;
 
@@ -38,6 +39,7 @@ struct tbx_server {
   struct tbx_seat *seat;
   struct tbx_command *command;
 
+  struct tbx_config config;
   struct tbx_style style;
   struct tbx_console *console;
 };

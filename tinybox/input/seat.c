@@ -54,7 +54,6 @@ static void server_new_input(struct wl_listener *listener, void *data) {
   struct tbx_server *server = seat->server;
 
   struct wlr_input_device *device = data;
-
   bool add_to_devices = false;
 
   switch (device->type) {
@@ -83,13 +82,15 @@ static void server_new_input(struct wl_listener *listener, void *data) {
   wlr_seat_set_capabilities(server->seat->seat, caps);
 
   if (add_to_devices) {
-    struct tbx_input_device *input_device = calloc(1, sizeof(struct tbx_input_device));
+    struct tbx_input_device *input_device =
+        calloc(1, sizeof(struct tbx_input_device));
     input_device->identifier = input_device_get_identifier(device);
     input_device->wlr_device = device;
+    input_device->server = server;
     wl_list_insert(&seat->input_devices, &input_device->link);
 
-    // todo add listen to destroy
     reset_libinput_device(input_device);
+    configure_libinput_device(input_device);
   }
 }
 

@@ -8,9 +8,6 @@
 #include "tinybox/style.h"
 #include "tinybox/view.h"
 
-#include <time.h>
-#include <unistd.h>
-
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
@@ -506,6 +503,31 @@ static void output_frame(struct wl_listener *listener, void *data) {
    * on-screen. */
   wlr_renderer_end(renderer);
   wlr_output_commit(output->wlr_output);
+
+  output->last_frame = now;
+}
+
+static void output_handle_destroy(struct wl_listener *listener, void *data) {
+  struct tbx_output *output = wl_container_of(listener, output, destroy);
+  struct tbx_server *server = output->server;
+
+  if (server->main_output == output) {
+    server->main_output = 0;
+    struct tbx_output *o;
+    wl_list_for_each_reverse(o, &output->server->outputs, link) {
+      if (o != output) {
+        server->main_output = o;
+      }
+    }
+  }
+
+  // remove from layout
+  wlr_output_layout_remove(server->output_layout, output->wlr_output);
+  // console_log("removed from layout");
+
+  output->enabled = false;
+  wl_list_remove(&output->link);
+  free(output);
 }
 
 static void server_new_output(struct wl_listener *listener, void *data) {
@@ -532,10 +554,13 @@ static void server_new_output(struct wl_listener *listener, void *data) {
   struct tbx_output *output = calloc(1, sizeof(struct tbx_output));
   output->wlr_output = wlr_output;
   output->server = server;
+  output->enabled = true;
 
   /* Sets up a listener for the frame notify event. */
   output->frame.notify = output_frame;
   wl_signal_add(&wlr_output->events.frame, &output->frame);
+  output->destroy.notify = output_handle_destroy;
+  wl_signal_add(&wlr_output->events.destroy, &output->destroy);
 
   wl_list_insert(&server->outputs, &output->link);
 
@@ -548,7 +573,8 @@ static void server_new_output(struct wl_listener *listener, void *data) {
    * display, which Wayland clients can see to find out information about the
    * output (such as DPI, scale factor, manufacturer, etc).
    */
-  wlr_output_layout_add_auto(server->output_layout, wlr_output);
+
+  configure_output_layout(output);
 
   if (!server->main_output) {
     server->main_output = output;

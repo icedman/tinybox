@@ -9,6 +9,8 @@ struct tbx_input_device {
   char *identifier;
   struct wlr_input_device *wlr_device;
   struct wl_listener device_destroy;
+
+  struct tbx_server *server;
 };
 
 struct tbx_seat {

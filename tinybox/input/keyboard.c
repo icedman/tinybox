@@ -1,4 +1,5 @@
 #include "tinybox/keyboard.h"
+#include "tinybox/console.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +14,10 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym,
                               uint32_t modifiers) {
 
   switch (sym) {
+  case XKB_KEY_z:
+    console_dump();
+    break;
+
   case XKB_KEY_Escape:
     wl_display_terminate(server->wl_display);
     break;

@@ -1,3 +1,10 @@
+#define _POSIX_C_SOURCE 200809L
+
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <float.h>
 #include <libinput.h>
 #include <limits.h>
@@ -21,7 +28,7 @@ static bool set_send_events(struct libinput_device *device, uint32_t mode) {
   return true;
 }
 
-bool set_tap(struct libinput_device *device,
+static bool set_tap(struct libinput_device *device,
                     enum libinput_config_tap_state tap) {
   if (libinput_device_config_tap_get_finger_count(device) <= 0 ||
       libinput_device_config_tap_get_enabled(device) == tap) {
@@ -86,7 +93,7 @@ static bool set_accel_profile(struct libinput_device *device,
   return true;
 }
 
-bool set_natural_scroll(struct libinput_device *d, bool n) {
+static bool set_natural_scroll(struct libinput_device *d, bool n) {
   if (!libinput_device_config_scroll_has_natural_scroll(d) ||
       libinput_device_config_scroll_get_natural_scroll_enabled(d) == n) {
     return false;
@@ -184,58 +191,63 @@ static bool set_calibration_matrix(struct libinput_device *dev, float mat[6]) {
   return changed;
 }
 
-/*
 static bool config_libinput_pointer(struct libinput_device *device,
-        struct input_config *ic, const char *device_id) {
-    // (SWAY_DEBUG, "config_libinput_pointer('%s' on  '%s')",
-            ic->identifier, device_id);
-    bool changed = false;
-    if (ic->send_events != INT_MIN) {
-        changed |= set_send_events(device, ic->send_events);
-    }
-    if (ic->tap != INT_MIN) {
-        changed |= set_tap(device, ic->tap);
-    }
-    if (ic->tap_button_map != INT_MIN) {
-        changed |= set_tap_button_map(device, ic->tap_button_map);
-    }
-    if (ic->drag != INT_MIN) {
-        changed |= set_tap_drag(device, ic->drag);
-    }
-    if (ic->drag_lock != INT_MIN) {
-        changed |= set_tap_drag_lock(device, ic->drag_lock);
-    }
+                                    struct tbx_config_input *ic,
+                                    const char *device_id) {
+  // (SWAY_DEBUG, "config_libinput_pointer('%s' on  '%s')",
+  // ic->identifier, device_id);
+  bool changed = false;
 
-    if (ic->pointer_accel != FLT_MIN) {
-        changed |= set_accel_speed(device, ic->pointer_accel);
-    }
-    if (ic->accel_profile != INT_MIN) {
-        changed |= set_accel_profile(device, ic->accel_profile);
-    }
-    if (ic->natural_scroll != INT_MIN) {
-        changed |= set_natural_scroll(device, ic->natural_scroll);
-    }
-    if (ic->left_handed != INT_MIN) {
-        changed |= set_left_handed(device, ic->left_handed);
-    }
-    if (ic->click_method != INT_MIN) {
-        changed |= set_click_method(device, ic->click_method);
-    }
-    if (ic->middle_emulation != INT_MIN) {
-        changed |= set_middle_emulation(device, ic->middle_emulation);
-    }
-    if (ic->scroll_method != INT_MIN) {
-        changed |= set_scroll_method(device, ic->scroll_method);
-    }
-    if (ic->scroll_button != INT_MIN) {
-        changed |= set_scroll_button(device, ic->scroll_button);
-    }
-    if (ic->dwt != INT_MIN) {
-        changed |= set_dwt(device, ic->dwt);
-    }
-    return changed;
+  if (ic->tap != INT_MIN) {
+    changed |= set_tap(device, ic->tap);
+  }
+  if (ic->natural_scroll != INT_MIN) {
+    changed |= set_natural_scroll(device, ic->natural_scroll);
+  }
+
+  /*
+  if (ic->send_events != INT_MIN) {
+      changed |= set_send_events(device, ic->send_events);
+  }
+  if (ic->tap_button_map != INT_MIN) {
+      changed |= set_tap_button_map(device, ic->tap_button_map);
+  }
+  if (ic->drag != INT_MIN) {
+      changed |= set_tap_drag(device, ic->drag);
+  }
+  if (ic->drag_lock != INT_MIN) {
+      changed |= set_tap_drag_lock(device, ic->drag_lock);
+  }
+  if (ic->pointer_accel != FLT_MIN) {
+      changed |= set_accel_speed(device, ic->pointer_accel);
+  }
+  if (ic->accel_profile != INT_MIN) {
+      changed |= set_accel_profile(device, ic->accel_profile);
+  }
+  if (ic->left_handed != INT_MIN) {
+      changed |= set_left_handed(device, ic->left_handed);
+  }
+  if (ic->click_method != INT_MIN) {
+      changed |= set_click_method(device, ic->click_method);
+  }
+  if (ic->middle_emulation != INT_MIN) {
+      changed |= set_middle_emulation(device, ic->middle_emulation);
+  }
+  if (ic->scroll_method != INT_MIN) {
+      changed |= set_scroll_method(device, ic->scroll_method);
+  }
+  if (ic->scroll_button != INT_MIN) {
+      changed |= set_scroll_button(device, ic->scroll_button);
+  }
+  if (ic->dwt != INT_MIN) {
+      changed |= set_dwt(device, ic->dwt);
+  }
+  */
+
+  return changed;
 }
 
+/*
 static bool config_libinput_keyboard(struct libinput_device *device,
         struct input_config *ic, const char *device_id) {
     // (SWAY_DEBUG, "config_libinput_keyboard('%s' on  '%s')",
@@ -270,31 +282,46 @@ ic->calibration_matrix.matrix);
     }
     return changed;
 }
-
-void sway_input_configure_libinput_device(struct sway_input_device *device) {
-    struct input_config *ic = input_device_get_config(device);
-    if (!ic || !wlr_input_device_is_libinput(device->wlr_device)) {
-        return;
-    }
-    bool changed = false;
-    const char *device_id = device->identifier;
-    struct libinput_device *libinput_device =
-        wlr_libinput_get_device_handle(device->wlr_device);
-    if (device->wlr_device->type == WLR_INPUT_DEVICE_POINTER ||
-            device->wlr_device->type == WLR_INPUT_DEVICE_TABLET_TOOL) {
-        changed = config_libinput_pointer(libinput_device, ic, device_id);
-    } else if (device->wlr_device->type == WLR_INPUT_DEVICE_KEYBOARD) {
-        changed = config_libinput_keyboard(libinput_device, ic, device_id);
-    } else if (device->wlr_device->type == WLR_INPUT_DEVICE_SWITCH) {
-        changed = config_libinput_switch(libinput_device, ic, device_id);
-    } else if (device->wlr_device->type == WLR_INPUT_DEVICE_TOUCH) {
-        changed = config_libinput_touch(libinput_device, ic, device_id);
-    }
-    if (changed) {
-        ipc_event_input("libinput_config", device);
-    }
-}
 */
+
+static struct tbx_config_input *
+get_input_device_config(struct tbx_input_device *device) {
+  struct tbx_config_input *cfg;
+  wl_list_for_each(cfg, &device->server->config.input, link) {
+    if (strcmp(cfg->identifier, device->identifier) == 0) {
+      return cfg;
+    }
+  }
+  return NULL;
+}
+
+void configure_libinput_device(struct tbx_input_device *device) {
+  struct tbx_config_input *ic = get_input_device_config(device);
+  if (!ic || !wlr_input_device_is_libinput(device->wlr_device)) {
+    return;
+  }
+
+  const char *device_id = device->identifier;
+
+  bool changed = false;
+  struct libinput_device *libinput_device =
+      wlr_libinput_get_device_handle(device->wlr_device);
+
+  if (device->wlr_device->type == WLR_INPUT_DEVICE_POINTER ||
+      device->wlr_device->type == WLR_INPUT_DEVICE_TABLET_TOOL) {
+    changed = config_libinput_pointer(libinput_device, ic, device_id);
+  } else if (device->wlr_device->type == WLR_INPUT_DEVICE_KEYBOARD) {
+    // changed = config_libinput_keyboard(libinput_device, ic, device_id);
+  } else if (device->wlr_device->type == WLR_INPUT_DEVICE_SWITCH) {
+    // changed = config_libinput_switch(libinput_device, ic, device_id);
+  } else if (device->wlr_device->type == WLR_INPUT_DEVICE_TOUCH) {
+    // changed = config_libinput_touch(libinput_device, ic, device_id);
+  }
+
+  if (changed) {
+    //     ipc_event_input("libinput_config", device);
+  }
+}
 
 static bool reset_libinput_pointer(struct libinput_device *device,
                                    const char *device_id) {
@@ -370,12 +397,10 @@ void reset_libinput_device(struct tbx_input_device *device) {
     return;
   }
 
-  // console_log("WLR_INPUT_DEVICE_POINTER %d", WLR_INPUT_DEVICE_POINTER);
-  // console_log("WLR_INPUT_DEVICE_TOUCH %d", WLR_INPUT_DEVICE_TOUCH);
-
   bool changed = false;
   struct libinput_device *libinput_device =
       wlr_libinput_get_device_handle(device->wlr_device);
+
   if (device->wlr_device->type == WLR_INPUT_DEVICE_POINTER ||
       device->wlr_device->type == WLR_INPUT_DEVICE_TABLET_TOOL) {
     changed = reset_libinput_pointer(libinput_device, device->identifier);
@@ -391,6 +416,7 @@ void reset_libinput_device(struct tbx_input_device *device) {
     // console_log("libinput reset");
   }
 
+  // todo remove!
   if (device->wlr_device->type == WLR_INPUT_DEVICE_POINTER) {
     set_tap(libinput_device, LIBINPUT_CONFIG_TAP_ENABLED);
     set_natural_scroll(libinput_device, true);

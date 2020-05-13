@@ -24,6 +24,7 @@ struct tbx_console {
 void console_setup();
 void console_clear();
 void console_log(const char *format, ...);
+void console_dump();
 
 void console_render(struct tbx_output *output);
 

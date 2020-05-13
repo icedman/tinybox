@@ -9,6 +9,7 @@
 
 #include "tinybox/config.h"
 #include "tinybox/server.h"
+#include "tinybox/style.h"
 
 struct tbx_server theServer = {0};
 
@@ -39,12 +40,13 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  load_style(&theServer, 0);
+  load_config(&theServer, "/home/iceman/.tinybox/config");
+
   if (!tbx_server_start(&theServer)) {
     printf("unable to start\n");
     return 0;
   }
-
-  load_config(&theServer, "/home/iceman/.tinybox/config");
 
   // read style
   if (style_path) {

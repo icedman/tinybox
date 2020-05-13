@@ -1,9 +1,9 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include "tinybox/server.h"
+#include "tinybox/command.h"
 #include "tinybox/console.h"
 #include "tinybox/cursor.h"
-#include "tinybox/command.h"
 #include "tinybox/decoration.h"
 #include "tinybox/output.h"
 #include "tinybox/seat.h"
@@ -17,6 +17,7 @@
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
+
 #include <wlr/util/log.h>
 
 bool tbx_server_setup(struct tbx_server *server) {
@@ -38,7 +39,7 @@ bool tbx_server_setup(struct tbx_server *server) {
   wlr_data_device_manager_create(server->wl_display);
 
   // load config
-  load_style(server, 0);
+  config_setup(server);
 
   // setup protocols
   output_setup(server);
@@ -78,6 +79,7 @@ bool tbx_server_start(struct tbx_server *server) {
     return false;
   }
 
+  // struct wl_event_loop *loop = wl_display_get_event_loop(server->wl_display);
   return true;
 }
 

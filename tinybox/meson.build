@@ -1,5 +1,6 @@
 tinybox_src = files(
   'main.c',
+
   'common/cairo.c',
   'common/pango.c',
   'common/stringop.c',
@@ -7,20 +8,26 @@ tinybox_src = files(
 
   'command/command.c',
   'command/commands/input.c',
+  'command/commands/output.c',
   
   'config/config.c',
+  'style/style.c',
+
   'input/cursor.c',
   'input/keyboard.c',
   'input/seat.c',
   'input/libinput.c',
+  
   'desktop/view.c',
   'decoration/decoration.c',
+
   'output/output.c',
   'output/render.c',
+  'output/layout.c',
   'output/console.c',
+
   'server/server.c',
-  'shell/xdg_shell.c',
-  'style/style.c',
+  'shell/xdg_shell.c'
   )
 
 tinybox_dep = [

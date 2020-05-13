@@ -1,8 +1,8 @@
 #define _XOPEN_SOURCE 700 // for realpath
 
 #include "tinybox/config.h"
-#include "tinybox/server.h"
 #include "tinybox/command.h"
+#include "tinybox/server.h"
 
 #include "common/stringop.h"
 #include "common/util.h"
@@ -38,8 +38,15 @@ void load_config(struct tbx_server *server, char *path) {
     char **argv = split_args(line, &argc);
 
     ctx = command_execute(ctx, argc, argv);
-    free_argv(argc, argv);      
+    free_argv(argc, argv);
   }
 
   fclose(f);
+}
+
+bool config_setup(struct tbx_server *server) {
+  server->config.server = server;
+  wl_list_init(&server->config.input);
+  wl_list_init(&server->config.layout);
+  return true;
 }

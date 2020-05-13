@@ -1,6 +1,9 @@
 #ifndef TINYBOX_OUTPUT_H
 #define TINYBOX_OUTPUT_H
 
+#include <time.h>
+#include <unistd.h>
+
 #include <stdbool.h>
 #include <wayland-server-core.h>
 
@@ -11,8 +14,14 @@ struct tbx_output {
 
   struct wlr_output *wlr_output;
   struct wl_listener frame;
+  struct wl_listener destroy;
+
+  struct timespec last_frame;
+
+  bool enabled;
 };
 
 bool output_setup(struct tbx_server *server);
+void configure_output_layout(struct tbx_output *output);
 
 #endif // TINYBOX_OUTPUT_H
