@@ -83,6 +83,8 @@ static bool begin_interactive_sd(struct tbx_server *server,
     view->hotspot = -1;
     view->hotspot_edges = WLR_EDGE_NONE;
 
+    focus_view(view, view->surface);
+
     // // move to active workspace
     // view->workspace = server->active_workspace;
     // view->workspace_id = server->active_workspace_id;

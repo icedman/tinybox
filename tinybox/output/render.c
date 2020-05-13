@@ -24,7 +24,7 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-struct wlr_texture *textCache[16] = {
+static struct wlr_texture *textCache[16] = {
   NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL,
@@ -33,16 +33,10 @@ struct wlr_texture *textCache[16] = {
 
 static int lastCacheHash = 0;
 
-enum {
-  tx_window_title_focus,
-  tx_window_title_unfocus,
-  tx_window_label_focus,
-  tx_window_label_unfocus,
-  tx_window_handle_focus,
-  tx_window_handle_unfocus,
-  tx_window_grip_focus,
-  tx_window_grip_unfocus
-};
+struct wlr_texture *get_texture_cache(int idx)
+{
+  return textCache[idx];
+}
 
 static void generate_texture(struct wlr_renderer *renderer, int idx, int flags, int w, int h, float color[static 4], float colorTo[static 4]) {
   // printf("generate texture %d\n", idx);

@@ -64,9 +64,15 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   struct render_data *rdata = data;
   struct tbx_view *view = rdata->view;
   struct wlr_output *output = rdata->output;
+  struct wlr_seat *seat = view->server->seat->seat;
   struct tbx_style *style = &view->server->style;
 
   float color[4] = {1, 0, 1, 1};
+
+  int unfocus_offset = 0;
+  if (view->xdg_surface->surface != seat->keyboard_state.focused_surface) {
+    unfocus_offset ++;
+  }
 
   float colorDebug1[4] = {0, 1, 1, 1};
   float colorDebug2[4] = {1, 0, 1, 1};
@@ -114,7 +120,11 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   // render frame
   // ----------------------
   if (frameWidth > 0) {
-    color_to_rgba(color, style->window_frame_focusColor);
+    if (!unfocus_offset) {
+      color_to_rgba(color, style->window_frame_focusColor);
+    } else {
+      color_to_rgba(color, style->window_frame_unfocusColor);
+    }
 
     // left
     memcpy(&box, &view_geometry, sizeof(struct wlr_box));
@@ -156,11 +166,15 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
 
     // render the texture
     grow_box_hv(&box, -borderWidth, -borderWidth);
-    render_rect(output, &box, colorDebug2, output->scale);
+    render_texture(output, &box, get_texture_cache(tx_window_title_focus + unfocus_offset), output->scale);
+    // render_rect(output, &box, colorDebug2, output->scale);
+
+    int margin = frameWidth ? frameWidth : borderWidth;
 
     // label
-    grow_box_hv(&box, -frameWidth, -frameWidth);
-    render_rect(output, &box, colorDebug3, output->scale);
+    grow_box_hv(&box, -margin, -margin);
+    render_texture(output, &box, get_texture_cache(tx_window_label_focus + unfocus_offset), output->scale);
+    // render_rect(output, &box, colorDebug3, output->scale);
 
   }
 
@@ -184,7 +198,8 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
       grow_box_hv(&box, -(gripWidth + (borderWidth*2) + 1), 0);
     }
 
-    render_rect(output, &box, colorDebug2, output->scale);
+    render_texture(output, &box, get_texture_cache(tx_window_handle_focus + unfocus_offset), output->scale);
+    // render_rect(output, &box, colorDebug2, output->scale);
 
     // grips
     if (gripWidth) {
@@ -192,13 +207,15 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
       box.y = view_geometry.y + view_geometry.height + frameWidth + borderWidth;
       box.width = gripWidth + (frameWidth * 2);
       box.height = handleWidth - borderWidth;
-      render_rect(output, &box, colorDebug4, output->scale);
+      render_texture(output, &box, get_texture_cache(tx_window_grip_focus + unfocus_offset), output->scale);
+      // render_rect(output, &box, colorDebug4, output->scale);
 
       memcpy(&view->hotspots[HS_GRIP_LEFT], &box, sizeof(struct wlr_box));
       grow_box_hv(&view->hotspots[HS_GRIP_LEFT], borderWidth, borderWidth);
 
       box.x += view_geometry.width - gripWidth;
-      render_rect(output, &box, colorDebug4, output->scale);      
+      render_texture(output, &box, get_texture_cache(tx_window_grip_focus + unfocus_offset), output->scale);
+      // render_rect(output, &box, colorDebug4, output->scale);      
 
       memcpy(&view->hotspots[HS_GRIP_RIGHT], &box, sizeof(struct wlr_box));
       grow_box_hv(&view->hotspots[HS_GRIP_RIGHT], borderWidth, borderWidth);
