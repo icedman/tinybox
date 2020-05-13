@@ -11,7 +11,6 @@
 struct tbx_server theServer = {0};
 
 int main(int argc, char **argv) {
-  printf("%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
 
   char *startup_cmd = NULL;
   char *style_path = NULL;

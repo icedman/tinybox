@@ -6,6 +6,7 @@
 #include "tinybox/output.h"
 #include "tinybox/seat.h"
 #include "tinybox/shell.h"
+#include "tinybox/console.h"
 
 #include <getopt.h>
 #include <stdlib.h>
@@ -45,6 +46,9 @@ bool tbx_server_setup(struct tbx_server *server) {
   seat_setup(server);
   decoration_setup(server);
 
+  console_setup(server);
+
+  console_log("%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
   return true;
 }
 

@@ -12,6 +12,7 @@ tinybox_src = files(
   'decoration/decoration.c',
   'output/output.c',
   'output/render.c',
+  'output/console.c',
   'server/server.c',
   'shell/xdg_shell.c',
   'style/style.c',

@@ -447,6 +447,24 @@ static void output_frame(struct wl_listener *listener, void *data) {
   float color[4] = {0.3, 0.3, 0.3, 1.0};
   wlr_renderer_clear(renderer, color);
 
+  // -----------------------
+  // render the console
+  // -----------------------
+  if (output->server->console->dirty) {
+    console_render(output);
+  }
+
+  // console
+  if (output->server->console->texture) {
+    struct wlr_box console_box = {
+      .x = 10,
+      .y = 10,
+      .width = CONSOLE_WIDTH,
+      .height = CONSOLE_HEIGHT
+    };
+    render_texture(output->wlr_output, &console_box, output->server->console->texture, output->wlr_output->scale);
+  }
+
   // render all views!
   /* Each subsequent window we render is rendered on top of the last. Because
    * our view list is ordered front-to-back, we iterate over it backwards. */
