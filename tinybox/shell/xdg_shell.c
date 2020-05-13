@@ -14,7 +14,7 @@ static void xdg_surface_map(struct wl_listener *listener, void *data) {
   view->mapped = true;
   view->title_dirty = true;
   view->surface = (struct wlr_surface *)view->xdg_surface;
-  
+
   focus_view(view, view->xdg_surface->surface);
 }
 
@@ -28,7 +28,7 @@ static void xdg_surface_unmap(struct wl_listener *listener, void *data) {
 static void xdg_surface_destroy(struct wl_listener *listener, void *data) {
   /* Called when the surface is destroyed and should never be shown again. */
   struct tbx_view *view = wl_container_of(listener, view, destroy);
-  
+
   view_destroy(view);
 }
 

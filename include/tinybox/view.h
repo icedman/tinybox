@@ -16,10 +16,7 @@ enum tbx_view_hotspot {
   HS_NONE = -1
 };
 
-enum tbx_view_prop {
-  VIEW_PROP_APP_ID,
-  VIEW_PROP_TITLE
-};
+enum tbx_view_prop { VIEW_PROP_APP_ID, VIEW_PROP_TITLE };
 
 struct tbx_view {
   struct wl_list link;

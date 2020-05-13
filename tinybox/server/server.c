@@ -36,7 +36,7 @@ bool tbx_server_setup(struct tbx_server *server) {
   wlr_data_device_manager_create(server->wl_display);
 
   // load config
-  load_style(&server->style, 0);
+  load_style(server, 0);
 
   // setup protocols
   output_setup(server);

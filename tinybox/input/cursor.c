@@ -1,4 +1,5 @@
 #include "tinybox/cursor.h"
+#include "tinybox/keyboard.h"
 #include "tinybox/view.h"
 
 #include <stdlib.h>
@@ -22,7 +23,8 @@ const char *cursor_images[] = {
                            // HS_COUNT
 };
 
-static void smooth_move_view(struct tbx_view *view, double tx, double ty, double s) {
+static void smooth_move_view(struct tbx_view *view, double tx, double ty,
+                             double s) {
   view->x += (tx - view->x) * s;
   view->y += (ty - view->y) * s;
   view->request_box.x = tx;
@@ -73,6 +75,18 @@ static bool begin_interactive_sd(struct tbx_server *server,
   }
 
   if (view->hotspot == HS_TITLEBAR || view->hotspot == HS_HANDLE) {
+    wlr_xcursor_manager_set_cursor_image(cursor->xcursor_manager, "grabbing",
+                                         cursor->cursor);
+
+    struct tbx_keyboard *keyboard = view->server->seat->last_keyboard;
+    if (view->hotspot == HS_TITLEBAR && keyboard) {
+      uint32_t modifiers =
+          wlr_keyboard_get_modifiers(keyboard->device->keyboard);
+      if (modifiers & WLR_MODIFIER_ALT) {
+        view->shaded = !view->shaded;
+      }
+    }
+
     cursor->mode = TBX_CURSOR_MOVE;
     cursor->grab_view = view;
     cursor->grab_x = cursor->cursor->x - view->x;
@@ -305,9 +319,34 @@ static void server_cursor_swipe_begin(struct wl_listener *listener,
                                       void *data) {
   struct tbx_cursor *cursor =
       wl_container_of(listener, cursor, cursor_swipe_begin);
-  // struct tbx_server *server = cursor->server;
-  if (cursor) {
-    // printf("swipe_begin\n");
+  struct tbx_server *server = cursor->server;
+  struct wlr_event_pointer_swipe_begin *event = data;
+
+  double sx, sy;
+  struct wlr_surface *surface;
+  struct tbx_view *view = desktop_view_at(server,
+      cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
+
+  cursor->swipe_fingers = event->fingers;
+  cursor->swipe_x = cursor->cursor->x;
+  cursor->swipe_y = cursor->cursor->y;
+  cursor->swipe_begin_x = cursor->swipe_x;
+  cursor->swipe_begin_y = cursor->swipe_y;
+
+  // console_log("begin %d", (int)server->swipe_begin_x);
+
+  if (event->fingers == 3) {
+    focus_view(view, surface);
+
+    if (!begin_interactive_sd(server, view)) {
+      cursor->mode = TBX_CURSOR_PASSTHROUGH;
+      cursor->resize_edges = WLR_EDGE_NONE;
+        wlr_xcursor_manager_set_cursor_image(
+          cursor->xcursor_manager, "left_ptr", cursor->cursor);
+
+        wlr_seat_pointer_notify_button(server->seat->seat,
+          event->time_msec, 0, WLR_BUTTON_PRESSED);
+    }
   }
 }
 
@@ -315,9 +354,16 @@ static void server_cursor_swipe_update(struct wl_listener *listener,
                                        void *data) {
   struct tbx_cursor *cursor =
       wl_container_of(listener, cursor, cursor_swipe_update);
-  // struct tbx_server *server = cursor->server;
-  if (cursor) {
-    // printf("swipe_update\n");
+  struct tbx_server *server = cursor->server;
+  
+  struct wlr_event_pointer_swipe_update *event = data;
+  cursor->swipe_x += event->dx;
+  cursor->swipe_y += event->dy;
+
+  if (cursor->swipe_fingers == 3) {
+    wlr_cursor_move(cursor->cursor, event->device,
+        event->dx, event->dy);
+    process_cursor_motion(server, event->time_msec);
   }
 }
 
@@ -325,9 +371,13 @@ static void server_cursor_swipe_end(struct wl_listener *listener, void *data) {
   struct tbx_cursor *cursor =
       wl_container_of(listener, cursor, cursor_swipe_end);
   // struct tbx_server *server = cursor->server;
-  if (cursor) {
-    // printf("swipe_end\n");
-  }
+  
+  wlr_xcursor_manager_set_cursor_image(
+      cursor->xcursor_manager, "left_ptr", cursor->cursor);
+
+  cursor->mode = TBX_CURSOR_PASSTHROUGH;
+  cursor->resize_edges = WLR_EDGE_NONE;
+  cursor->swipe_fingers = 0;
 }
 
 void cursor_attach(struct tbx_server *server, struct wlr_input_device *device) {

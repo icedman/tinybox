@@ -9,6 +9,21 @@
 
 #include <xkbcommon/xkbcommon.h>
 
+static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym,
+                              uint32_t modifiers) {
+
+  switch (sym) {
+  case XKB_KEY_Escape:
+    wl_display_terminate(server->wl_display);
+    break;
+
+  default:
+    return false;
+  }
+
+  return true;
+}
+
 static void keyboard_handle_modifiers(struct wl_listener *listener,
                                       void *data) {
   /* This event is raised when a modifier key, such as shift or alt, is
@@ -34,6 +49,8 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
   struct wlr_event_keyboard_key *event = data;
   struct wlr_seat *seat = server->seat->seat;
 
+  server->seat->last_keyboard = keyboard;
+
   /* Translate libinput keycode -> xkbcommon */
   uint32_t keycode = event->keycode + 8;
   /* Get a list of keysyms based on the keymap for this keyboard */
@@ -48,7 +65,7 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
     /* If alt is held down and this button was _pressed_, we attempt to
      * process it as a compositor keybinding. */
     for (int i = 0; i < nsyms; i++) {
-      // handled = handle_keybinding(server, syms[i], modifiers);
+      handled = handle_keybinding(server, syms[i], modifiers);
     }
   }
 

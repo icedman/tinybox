@@ -1,6 +1,8 @@
 #ifndef TINYBOX_STYLE_H
 #define TINYBOX_STYLE_H
 
+struct tbx_server;
+
 enum {
   sf_solid = 1 << 1,
   sf_flat = 1 << 2,
@@ -188,6 +190,6 @@ struct tbx_style {
   char font[255];
 };
 
-void load_style(struct tbx_style *style, const char *path);
+void load_style(struct tbx_server *server, const char *path);
 
 #endif // TINYBOX_STYLE_H

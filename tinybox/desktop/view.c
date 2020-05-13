@@ -135,8 +135,7 @@ bool hotspot_at(struct tbx_view *view, double lx, double ly,
   return false;
 }
 
-void view_destroy(struct tbx_view *view)
-{
+void view_destroy(struct tbx_view *view) {
   if (view->title) {
     wlr_texture_destroy(view->title);
     wlr_texture_destroy(view->title_unfocused);

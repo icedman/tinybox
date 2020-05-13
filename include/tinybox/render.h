@@ -34,7 +34,8 @@ void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4],
 void render_texture(struct wlr_output *output, struct wlr_box *box,
                     struct wlr_texture *texture, float scale);
 void generate_textures(struct tbx_output *output, bool forced);
-void generate_view_title_texture(struct tbx_output *output, struct tbx_view *view);
+void generate_view_title_texture(struct tbx_output *output,
+                                 struct tbx_view *view);
 
 struct wlr_texture *get_texture_cache(int idx);
 

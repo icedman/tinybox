@@ -1,12 +1,12 @@
 #define _POSIX_C_SOURCE 200112L
 #include "tinybox/render.h"
 
+#include "common/util.h"
 #include "tinybox/output.h"
 #include "tinybox/render.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
 #include "tinybox/view.h"
-#include "common/util.h"
 
 #include <time.h>
 #include <unistd.h>
@@ -18,15 +18,14 @@
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
-#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_xdg_shell.h>
 
 #include <GLES2/gl2.h>
 #include <cairo/cairo.h>
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-/*
 static void scissor_output(struct wlr_output *wlr_output,
     struct wlr_box box) {
   struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
@@ -42,7 +41,6 @@ static void scissor_output(struct wlr_output *wlr_output,
 
   wlr_renderer_scissor(renderer, &box);
 }
-*/
 
 static void grow_box_lrtb(struct wlr_box *box, int l, int r, int t, int b) {
   box->x -= l;
@@ -73,7 +71,7 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
 
   int unfocus_offset = 0;
   if (view->xdg_surface->surface != seat->keyboard_state.focused_surface) {
-    unfocus_offset ++;
+    unfocus_offset++;
   }
 
   float colorDebug1[4] = {0, 1, 1, 1};
@@ -104,10 +102,10 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
 
   // smoothen resize from top & left edges
   if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT ||
-      view->server->cursor->resize_edges & WLR_EDGE_TOP) && 
+       view->server->cursor->resize_edges & WLR_EDGE_TOP) &&
       (view->request_box.width > 20 && view->request_box.height > 20) &&
       (view->request_box.width != box.width ||
-      view->request_box.height != box.height)) {
+       view->request_box.height != box.height)) {
     view_geometry.width = view->request_box.width * output->scale;
     view_geometry.height = view->request_box.height * output->scale;
   }
@@ -175,25 +173,42 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
 
     // render the texture
     grow_box_hv(&box, -borderWidth, -borderWidth);
-    render_texture(output, &box, get_texture_cache(tx_window_title_focus + unfocus_offset), output->scale);
+    render_texture(output, &box,
+                   get_texture_cache(tx_window_title_focus + unfocus_offset),
+                   output->scale);
     // render_rect(output, &box, colorDebug2, output->scale);
 
     // label
     grow_box_hv(&box, -margin, -margin);
-    render_texture(output, &box, get_texture_cache(tx_window_label_focus + unfocus_offset), output->scale);
+    render_texture(output, &box,
+                   get_texture_cache(tx_window_label_focus + unfocus_offset),
+                   output->scale);
     // render_rect(output, &box, colorDebug3, output->scale);
 
     // title
     box.x += margin;
     box.y += margin;
+
+    struct wlr_box sc_box = {
+      .x = box.x,
+      .y = box.y,
+      .width = box.width - (margin*4),
+      .height = box.height,
+    };
+    
     box.width = view->title_box.width;
     box.height = view->title_box.height;
+
+    scissor_output(output, sc_box);
 
     if (!unfocus_offset) {
       render_texture(output, &box, view->title, output->scale);
     } else {
       render_texture(output, &box, view->title_unfocused, output->scale);
     }
+
+    wlr_renderer_scissor(rdata->renderer, NULL);
+
   }
 
   // ----------------------
@@ -213,10 +228,12 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     // render the texture
     grow_box_hv(&box, -borderWidth, -borderWidth);
     if (gripWidth) {
-      grow_box_hv(&box, -(gripWidth + (borderWidth*2) + 1), 0);
+      grow_box_hv(&box, -(gripWidth + (borderWidth * 2) + 1), 0);
     }
 
-    render_texture(output, &box, get_texture_cache(tx_window_handle_focus + unfocus_offset), output->scale);
+    render_texture(output, &box,
+                   get_texture_cache(tx_window_handle_focus + unfocus_offset),
+                   output->scale);
     // render_rect(output, &box, colorDebug2, output->scale);
 
     // grips
@@ -225,15 +242,19 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
       box.y = view_geometry.y + view_geometry.height + frameWidth + borderWidth;
       box.width = gripWidth + (frameWidth * 2);
       box.height = handleWidth - borderWidth;
-      render_texture(output, &box, get_texture_cache(tx_window_grip_focus + unfocus_offset), output->scale);
+      render_texture(output, &box,
+                     get_texture_cache(tx_window_grip_focus + unfocus_offset),
+                     output->scale);
       // render_rect(output, &box, colorDebug4, output->scale);
 
       memcpy(&view->hotspots[HS_GRIP_LEFT], &box, sizeof(struct wlr_box));
       grow_box_hv(&view->hotspots[HS_GRIP_LEFT], borderWidth, borderWidth);
 
       box.x += view_geometry.width - gripWidth;
-      render_texture(output, &box, get_texture_cache(tx_window_grip_focus + unfocus_offset), output->scale);
-      // render_rect(output, &box, colorDebug4, output->scale);      
+      render_texture(output, &box,
+                     get_texture_cache(tx_window_grip_focus + unfocus_offset),
+                     output->scale);
+      // render_rect(output, &box, colorDebug4, output->scale);
 
       memcpy(&view->hotspots[HS_GRIP_RIGHT], &box, sizeof(struct wlr_box));
       grow_box_hv(&view->hotspots[HS_GRIP_RIGHT], borderWidth, borderWidth);
@@ -263,8 +284,10 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     memcpy(&view->hotspots[HS_EDGE_RIGHT], &box, sizeof(struct wlr_box));
 
     // grow hotspots with titlebar and handle
-    grow_box_lrtb(&view->hotspots[HS_EDGE_LEFT], 0, 0, titlebarHeight, handleWidth);
-    grow_box_lrtb(&view->hotspots[HS_EDGE_RIGHT], 0, 0, titlebarHeight, handleWidth);
+    grow_box_lrtb(&view->hotspots[HS_EDGE_LEFT], 0, 0, titlebarHeight,
+                  handleWidth);
+    grow_box_lrtb(&view->hotspots[HS_EDGE_RIGHT], 0, 0, titlebarHeight,
+                  handleWidth);
 
     // top
     memcpy(&box, &view_geometry, sizeof(struct wlr_box));
@@ -307,7 +330,7 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   }
 
   // adjust hotspots to layout
-  for(int i=0; i<HS_COUNT;i++) {
+  for (int i = 0; i < HS_COUNT; i++) {
     view->hotspots[i].x -= oox;
     view->hotspots[i].y -= ooy;
     if (shaded && i != HS_TITLEBAR) {
@@ -335,10 +358,8 @@ static void render_view_content(struct wlr_surface *surface, int sx, int sy,
   }
 
   // commit from smooth move request
-  if (view->request_wait > 0 &&
-     view->request_box.x != 0 &&
-     view->request_box.y != 0)
-  {
+  if (view->request_wait > 0 && view->request_box.x != 0 &&
+      view->request_box.y != 0) {
     if (--view->request_wait == 0) {
       view->x = view->request_box.x;
       view->y = view->request_box.y;
@@ -368,10 +389,10 @@ static void render_view_content(struct wlr_surface *surface, int sx, int sy,
 
   // smoothen resize from top & left edges
   if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT ||
-      view->server->cursor->resize_edges & WLR_EDGE_TOP) && 
+       view->server->cursor->resize_edges & WLR_EDGE_TOP) &&
       (view->request_box.width > 20 && view->request_box.height > 20) &&
       (view->request_box.width != box.width ||
-      view->request_box.height != box.height)) {
+       view->request_box.height != box.height)) {
     box.width = view->request_box.width * output->scale;
     box.height = view->request_box.height * output->scale;
   }
@@ -455,7 +476,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
     }
 
     if (!view->shaded) {
-      wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content, &rdata);
+      wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
+                                       &rdata);
     }
   }
 

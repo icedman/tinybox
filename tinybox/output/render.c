@@ -1,12 +1,12 @@
 
 #include "tinybox/render.h"
+#include "common/cairo.h"
+#include "common/pango.h"
+#include "common/util.h"
 #include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
 #include "tinybox/view.h"
-#include "common/util.h"
-#include "common/cairo.h"
-#include "common/pango.h"
 
 #include <time.h>
 #include <unistd.h>
@@ -25,21 +25,19 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-static struct wlr_texture *textCache[16] = {
-  NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL
-};
+static struct wlr_texture *textCache[16] = {NULL, NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL};
 
 static int lastCacheHash = 0;
 
-struct wlr_texture *get_texture_cache(int idx)
-{
+struct wlr_texture *get_texture_cache(int idx) {
   return textCache[idx];
 }
 
-static void generate_texture(struct wlr_renderer *renderer, int idx, int flags, int w, int h, float color[static 4], float colorTo[static 4]) {
+static void generate_texture(struct wlr_renderer *renderer, int idx, int flags,
+                             int w, int h, float color[static 4],
+                             float colorTo[static 4]) {
   // printf("generate texture %d\n", idx);
 
   if (textCache[idx]) {
@@ -50,18 +48,16 @@ static void generate_texture(struct wlr_renderer *renderer, int idx, int flags, 
   if (flags == 0) {
     return;
   }
-  
-  cairo_surface_t *surf = cairo_image_surface_create(
-      CAIRO_FORMAT_ARGB32, w, h);
+
+  cairo_surface_t *surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
   cairo_t *cx = cairo_create(surf);
 
   draw_gradient_rect(cx, flags, w, h, color, colorTo);
 
   unsigned char *data = cairo_image_surface_get_data(surf);
-  textCache[idx] = wlr_texture_from_pixels(renderer,
-      WL_SHM_FORMAT_ARGB8888,
-      cairo_image_surface_get_stride(surf),
-      w, h, data);
+  textCache[idx] =
+      wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+                              cairo_image_surface_get_stride(surf), w, h, data);
 
   // char fname[255] = "";
   // sprintf(fname, "/tmp/text_%d.png", idx);
@@ -89,51 +85,60 @@ void generate_textures(struct tbx_output *output, bool forced) {
   color_to_rgba(color, style->window_title_focus_color);
   color_to_rgba(colorTo, style->window_title_focus_colorTo);
   flags = style->window_title_focus;
-  generate_texture(renderer, tx_window_title_focus, flags, 512, 16, color, colorTo);
+  generate_texture(renderer, tx_window_title_focus, flags, 512, 16, color,
+                   colorTo);
 
   color_to_rgba(color, style->window_title_unfocus_color);
   color_to_rgba(colorTo, style->window_title_unfocus_colorTo);
   flags = style->window_title_unfocus;
-  generate_texture(renderer, tx_window_title_unfocus, flags, 512, 16, color, colorTo);
+  generate_texture(renderer, tx_window_title_unfocus, flags, 512, 16, color,
+                   colorTo);
 
   // titlebar/label
   color_to_rgba(color, style->window_label_focus_color);
   color_to_rgba(colorTo, style->window_label_focus_colorTo);
   flags = style->window_label_focus;
-  generate_texture(renderer, tx_window_label_focus, flags, 512, 16, color, colorTo);
+  generate_texture(renderer, tx_window_label_focus, flags, 512, 16, color,
+                   colorTo);
 
   color_to_rgba(color, style->window_label_unfocus_color);
   color_to_rgba(colorTo, style->window_label_unfocus_colorTo);
   flags = style->window_label_unfocus;
-  generate_texture(renderer, tx_window_label_unfocus, flags, 512, 16, color, colorTo);
+  generate_texture(renderer, tx_window_label_unfocus, flags, 512, 16, color,
+                   colorTo);
 
   // handle
   color_to_rgba(color, style->window_handle_focus_color);
   color_to_rgba(colorTo, style->window_handle_focus_colorTo);
   flags = style->window_handle_focus;
-  generate_texture(renderer, tx_window_handle_focus, flags, 512, 16, color, colorTo);
+  generate_texture(renderer, tx_window_handle_focus, flags, 512, 16, color,
+                   colorTo);
 
   color_to_rgba(color, style->window_handle_unfocus_color);
   color_to_rgba(colorTo, style->window_handle_unfocus_colorTo);
   flags = style->window_handle_unfocus;
-  generate_texture(renderer, tx_window_handle_unfocus, flags, 512, 16, color, colorTo);
+  generate_texture(renderer, tx_window_handle_unfocus, flags, 512, 16, color,
+                   colorTo);
 
   // grip
   color_to_rgba(color, style->window_grip_focus_color);
   color_to_rgba(colorTo, style->window_grip_focus_colorTo);
   flags = style->window_grip_focus;
-  generate_texture(renderer, tx_window_grip_focus, flags, 30, 16, color, colorTo);
+  generate_texture(renderer, tx_window_grip_focus, flags, 30, 16, color,
+                   colorTo);
 
   color_to_rgba(color, style->window_grip_unfocus_color);
   color_to_rgba(colorTo, style->window_grip_unfocus_colorTo);
   flags = style->window_grip_unfocus;
-  generate_texture(renderer, tx_window_grip_unfocus, flags, 30, 16, color, colorTo);
+  generate_texture(renderer, tx_window_grip_unfocus, flags, 30, 16, color,
+                   colorTo);
 }
 
-void generate_view_title_texture(struct tbx_output *output, struct tbx_view *view)
-{
+void generate_view_title_texture(struct tbx_output *output,
+                                 struct tbx_view *view) {
   struct tbx_style *style = &output->server->style;
-  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+  struct wlr_renderer *renderer =
+      wlr_backend_get_renderer(output->wlr_output->backend);
 
   if (view->title) {
     wlr_texture_destroy(view->title);
@@ -162,8 +167,8 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
 
   // We must use a non-nil cairo_t for cairo_set_font_options to work.
   // Therefore, we cannot use cairo_create(NULL).
-  cairo_surface_t *dummy_surface = cairo_image_surface_create(
-      WL_SHM_FORMAT_ARGB8888, 0, 0);
+  cairo_surface_t *dummy_surface =
+      cairo_image_surface_create(WL_SHM_FORMAT_ARGB8888, 0, 0);
   cairo_t *c = cairo_create(dummy_surface);
   cairo_set_antialias(c, CAIRO_ANTIALIAS_BEST);
   cairo_font_options_t *fo = cairo_font_options_create();
@@ -172,10 +177,10 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
     cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_GRAY);
   } else {
     cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
-    
+
     // cairo.c
-    cairo_font_options_set_subpixel_order(fo,
-      to_cairo_subpixel_order(output->wlr_output->subpixel));
+    cairo_font_options_set_subpixel_order(
+        fo, to_cairo_subpixel_order(output->wlr_output->subpixel));
   }
   cairo_set_font_options(c, fo);
   get_text_size(c, font, &w, NULL, NULL, scale, true, "%s", title);
@@ -184,8 +189,8 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
 
   float color[4];
 
-  cairo_surface_t *surf = cairo_image_surface_create(
-      WL_SHM_FORMAT_ARGB8888, w, h);
+  cairo_surface_t *surf =
+      cairo_image_surface_create(WL_SHM_FORMAT_ARGB8888, w, h);
   cairo_t *cx = cairo_create(surf);
 
   cairo_set_font_options(cx, fo);
@@ -200,10 +205,9 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
 
   unsigned char *data = cairo_image_surface_get_data(surf);
 
-  view->title = wlr_texture_from_pixels(renderer,
-      WL_SHM_FORMAT_ARGB8888,
-      cairo_image_surface_get_stride(surf),
-      w, h, data);
+  view->title =
+      wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+                              cairo_image_surface_get_stride(surf), w, h, data);
 
   // clear
   cairo_save(cx);
@@ -218,10 +222,9 @@ void generate_view_title_texture(struct tbx_output *output, struct tbx_view *vie
   pango_printf(cx, font, scale, true, "%s", title);
 
   data = cairo_image_surface_get_data(surf);
-  view->title_unfocused = wlr_texture_from_pixels(renderer,
-      WL_SHM_FORMAT_ARGB8888,
-      cairo_image_surface_get_stride(surf),
-      w, h, data);
+  view->title_unfocused =
+      wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+                              cairo_image_surface_get_stride(surf), w, h, data);
 
   view->title_box.width = w;
   view->title_box.height = h;
