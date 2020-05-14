@@ -1,7 +1,7 @@
+#include "tinybox/config.h"
 #include "common/stringop.h"
 #include "common/util.h"
 #include "tinybox/command.h"
-#include "tinybox/config.h"
 #include "tinybox/seat.h"
 #include "tinybox/server.h"
 
@@ -63,7 +63,8 @@ static void exec_animate(struct tbx_command *cmd, int argc, char **argv) {
   // console_log("cfg animate %d", config->animate);
 }
 
-static void exec_swipe_threshold(struct tbx_command *cmd, int argc, char **argv) {
+static void exec_swipe_threshold(struct tbx_command *cmd, int argc,
+                                 char **argv) {
   if (!command_check_args(cmd, argc, 1)) {
     return;
   }

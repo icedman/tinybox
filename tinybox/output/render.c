@@ -29,9 +29,8 @@ static struct wlr_texture *textCache[tx_last];
 
 static int lastStyleHash = 0;
 
-void texture_cache_destroy()
-{
-  for(int idx=0; idx<tx_last; idx++) {
+void texture_cache_destroy() {
+  for (int idx = 0; idx < tx_last; idx++) {
     if (textCache[idx]) {
       wlr_texture_destroy(textCache[idx]);
       textCache[idx] = NULL;

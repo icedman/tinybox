@@ -1,14 +1,14 @@
 #include "tinybox/workspace.h"
-#include "tinybox/view.h"
 #include "tinybox/output.h"
+#include "tinybox/view.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_xdg_shell.h>
 
 static struct tbx_workspace *create_workspace(struct tbx_server *server) {
   struct tbx_workspace *ws = calloc(1, sizeof(struct tbx_workspace));
@@ -22,21 +22,17 @@ void workspace_setup(struct tbx_server *server) {
   server->workspace = -1;
 
   wl_list_init(&server->workspaces);
-  int i = 0;
-  for (; i < MAX_WORKSPACES; i++) {
+  for (int i=0; i < MAX_WORKSPACES; i++) {
     struct tbx_workspace *ws = create_workspace(server);
     ws->id = i;
-    if (i + 1 >= config->workspaces) {
-      break;
-    }
   }
 
-  config->workspaces = i;
+  config->workspaces = config->workspaces;
   // console_log("workspaces %d", config->workspaces);
 }
 
-void move_to_workspace(struct tbx_server *server, struct tbx_view *view, int id, bool animate)
-{
+void move_to_workspace(struct tbx_server *server, struct tbx_view *view, int id,
+                       bool animate) {
   if (!view) {
     return;
   }
@@ -58,10 +54,10 @@ void move_to_workspace(struct tbx_server *server, struct tbx_view *view, int id,
   // animate view
   if (animate) {
 
-  // recompute workspaces
-  struct wlr_box *main_box = wlr_output_layout_get_box(
-      server->output_layout, server->main_output->wlr_output);
-  
+    // recompute workspaces
+    struct wlr_box *main_box = wlr_output_layout_get_box(
+        server->output_layout, server->main_output->wlr_output);
+
     int dir = id - prev;
     view->wsv_animate = true;
     view->wsv_anim_x += dir * main_box->width;
@@ -99,7 +95,8 @@ void activate_workspace(struct tbx_server *server, int id, bool animate) {
     struct tbx_workspace *workspace;
     wl_list_for_each(workspace, &server->workspaces, link) {
       memcpy(&workspace->box, main_box, sizeof(struct wlr_box));
-      workspace->box.x = (main_box->width * workspace->id) - (main_box->width * server->workspace);
+      workspace->box.x = (main_box->width * workspace->id) -
+                         (main_box->width * server->workspace);
       workspace->box.y = 0;
       workspace->active = workspace->id == server->workspace;
     }
@@ -113,8 +110,7 @@ void activate_workspace(struct tbx_server *server, int id, bool animate) {
   }
 }
 
-struct tbx_workspace *get_workspace(struct tbx_server *server, int id)
-{
+struct tbx_workspace *get_workspace(struct tbx_server *server, int id) {
   struct tbx_workspace *workspace;
   wl_list_for_each(workspace, &server->workspaces, link) {
     if (workspace->id == id) {

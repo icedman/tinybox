@@ -4,13 +4,15 @@
 #include <stdbool.h>
 #include <wayland-server-core.h>
 
+struct tbx_keys_press;
 struct tbx_server;
 
 enum config_entry_type {
-    TBX_CONFIG_DICTIONARY,
-    TBX_CONFIG_INPUT,
-    TBX_CONFIG_LAYOUT,
-    TBX_CONFIG_KEYBINDING };
+  TBX_CONFIG_DICTIONARY,
+  TBX_CONFIG_INPUT,
+  TBX_CONFIG_LAYOUT,
+  TBX_CONFIG_KEYBINDING
+};
 
 struct tbx_config_entry {
   char *identifier;
@@ -39,6 +41,13 @@ struct tbx_config_keybinding {
   char *identifier;
   enum config_entry_type type;
   struct wl_list link;
+
+  struct tbx_keys_pressed *keys;
+  char *command;
+  // struct tbx_command *command;
+  char *command_identifier;
+  int argc;
+  char **argv;
 };
 
 struct tbx_config_layout {
@@ -62,9 +71,12 @@ struct tbx_config {
   int swipe_threshold;
   bool animate;
 
+  uint32_t super_key;
+
   struct tbx_server *server;
 };
 
+char *get_dictionary_value(struct tbx_server *server, char *name);
 bool config_setup(struct tbx_server *server);
 void load_config(struct tbx_server *server, char *config);
 

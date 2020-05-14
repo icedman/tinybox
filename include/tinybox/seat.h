@@ -2,6 +2,7 @@
 #define TINYBOX_SEAT_H
 
 struct tbx_keyboard;
+struct tbx_keys_pressed;
 
 struct tbx_input_device {
   struct wl_list link;
@@ -23,7 +24,7 @@ struct tbx_seat {
   struct wl_list keyboards;
 
   struct tbx_keyboard *last_keyboard;
-
+  struct tbx_keys_pressed *keys_pressed;
   struct tbx_server *server;
 };
 

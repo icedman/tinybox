@@ -3,9 +3,9 @@
 
 #include <stdbool.h>
 
-#define CONSOLE_LINES 24
+#define CONSOLE_LINES 32
 #define CONSOLE_WIDTH 800
-#define CONSOLE_HEIGHT 400
+#define CONSOLE_HEIGHT 600
 
 struct wlr_texture;
 struct tbx_server;

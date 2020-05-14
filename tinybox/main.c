@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
 
   // load default style
   load_style(&theServer, 0);
-  load_config(&theServer, "/home/iceman/.tinybox/config");
+  load_config(&theServer, "~/.tinybox/config");
 
   if (!tbx_server_start(&theServer)) {
     printf("unable to start\n");

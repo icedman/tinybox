@@ -14,6 +14,8 @@ struct tbx_server_decoration_manager;
 struct tbx_command;
 
 struct tbx_server {
+  bool started;
+  
   struct wl_display *wl_display;
   struct wlr_backend *backend;
   struct wlr_renderer *renderer;

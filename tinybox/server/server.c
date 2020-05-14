@@ -6,10 +6,10 @@
 #include "tinybox/cursor.h"
 #include "tinybox/decoration.h"
 #include "tinybox/output.h"
+#include "tinybox/render.h"
 #include "tinybox/seat.h"
 #include "tinybox/shell.h"
 #include "tinybox/workspace.h"
-#include "tinybox/render.h"
 
 #include <getopt.h>
 #include <stdlib.h>
@@ -54,6 +54,9 @@ bool tbx_server_setup(struct tbx_server *server) {
   console_setup(server);
   command_setup(server);
 
+  // create max of 8 workspaces
+  workspace_setup(server);
+
   console_log("%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
   return true;
 }
@@ -64,9 +67,6 @@ bool tbx_server_start(struct tbx_server *server) {
     wlr_backend_destroy(server->backend);
     return false;
   }
-
-  // setup after config loaded
-  workspace_setup(server);
 
   /* Set the WAYLAND_DISPLAY environment variable to our socket and run the
    * startup command if requested. */
@@ -86,8 +86,8 @@ bool tbx_server_start(struct tbx_server *server) {
   }
 
   activate_workspace(server, 0, false);
+  server->started = true;
 
-  // struct wl_event_loop *loop = wl_display_get_event_loop(server->wl_display);
   return true;
 }
 

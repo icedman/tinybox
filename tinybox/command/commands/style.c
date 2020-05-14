@@ -1,10 +1,10 @@
+#include "tinybox/style.h"
 #include "common/stringop.h"
 #include "common/util.h"
 #include "tinybox/command.h"
 #include "tinybox/config.h"
 #include "tinybox/seat.h"
 #include "tinybox/server.h"
-#include "tinybox/style.h"
 
 #include <stdio.h>
 #include <stdlib.h>

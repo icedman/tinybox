@@ -2,13 +2,13 @@
 #include "tinybox/render.h"
 
 #include "common/util.h"
+#include "tinybox/cursor.h"
 #include "tinybox/output.h"
 #include "tinybox/render.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
-#include "tinybox/cursor.h"
 
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
@@ -505,8 +505,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
         d -= view->wsv_anim_x;
       }
 
-
-      if (animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+      if (animate &&
+          (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
 
         // is view in main_output
         if (!view_is_visible(output, view)) {
@@ -520,7 +520,7 @@ static void output_frame(struct wl_listener *listener, void *data) {
         }
 
         workspace = get_workspace(output->server, view->workspace);
-        offset_x = workspace->box.x + d;        
+        offset_x = workspace->box.x + d;
       } else {
         if (view->workspace != server->workspace) {
           continue;

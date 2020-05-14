@@ -1,7 +1,8 @@
 #include "tinybox/keyboard.h"
 #include "tinybox/console.h"
-#include "tinybox/workspace.h"
 #include "tinybox/view.h"
+#include "tinybox/workspace.h"
+#include "tinybox/command.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,9 +12,129 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
+#include <string.h>
+#include <strings.h>
 #include <xkbcommon/xkbcommon.h>
 
-static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym,
+static struct modifier_key {
+  char *name;
+  uint32_t mod;
+} modifiers[] = {
+    {XKB_MOD_NAME_SHIFT, WLR_MODIFIER_SHIFT},
+    {XKB_MOD_NAME_CAPS, WLR_MODIFIER_CAPS},
+    {XKB_MOD_NAME_CTRL, WLR_MODIFIER_CTRL},
+    {"Ctrl", WLR_MODIFIER_CTRL},
+    {XKB_MOD_NAME_ALT, WLR_MODIFIER_ALT}, // Mod1
+    {"Alt", WLR_MODIFIER_ALT},            // Mod2
+    {XKB_MOD_NAME_NUM, WLR_MODIFIER_MOD2},
+    {"Mod3", WLR_MODIFIER_MOD3},
+    {XKB_MOD_NAME_LOGO, WLR_MODIFIER_LOGO}, // Mod4
+    {"Mod5", WLR_MODIFIER_MOD5},            // Mod5
+};
+
+uint32_t get_modifier_mask_by_name(const char *name) {
+  int i;
+  for (i = 0; i < (int)(sizeof(modifiers) / sizeof(struct modifier_key)); ++i) {
+    if (strcasecmp(modifiers[i].name, name) == 0) {
+      return modifiers[i].mod;
+    }
+  }
+  return 0;
+}
+
+bool compare_keys(struct tbx_keys_pressed *kp1, struct tbx_keys_pressed *kp2) {
+  for (int i = 0; i < KP_MAX_PRESSED - KP_RESERVED_SPACE; i++) {
+    if (kp1->pressed[i] != kp2->pressed[i]) {
+      return false;
+    }
+    if (kp2->pressed[i] == 0) {
+      break;
+    }
+  }
+  return true;
+}
+
+void dump_keys(struct tbx_keys_pressed *kp) {
+  console_log("------");
+  for (int i = 0; i < KP_MAX_PRESSED - KP_RESERVED_SPACE; i++) {
+    console_log("%d %d", i, kp->pressed[i]);
+    if (kp->pressed[i] == 0) {
+      break;
+    }
+  }
+}
+
+void add_key_by_name(struct tbx_keys_pressed *kp, char *name) {
+  if (strlen(name) == 1) {
+    add_key(kp, name[0]);
+    return;
+  }
+
+  // modifier
+  uint32_t m = get_modifier_mask_by_name(name);
+  if (m) {
+    add_key(kp, m);
+    return;
+  }
+
+  // common name
+  xkb_keysym_t keysym = xkb_keysym_from_name(name, XKB_KEYSYM_CASE_INSENSITIVE);
+  if (keysym) {
+    add_key(kp, keysym);
+    return;
+  }
+
+  add_key(kp, name[0]);
+}
+
+
+void add_modifiers(struct tbx_keys_pressed *kp, uint32_t mod)
+{
+  int i;
+  for (i = 0; i < (int)(sizeof(modifiers) / sizeof(struct modifier_key)); ++i) {
+    if ((modifiers[i].mod & mod)) {
+      add_key(kp, modifiers[i].mod);
+    }
+  }
+}
+
+void add_key(struct tbx_keys_pressed *kp, uint32_t k) {
+  
+  // modifiers
+  if (k == 65515 ||
+      k == 65513 || 
+      k == 65514 ||
+      k == 65505 || 
+      k == 65507 ||
+      k == 65508 ||
+      k == 65511) {
+    return;
+  }
+
+  for (int i = 0; i < KP_MAX_PRESSED - KP_RESERVED_SPACE; i++) {
+    if (kp->pressed[i] == 0) {
+      kp->pressed[i] = k;
+      return;
+    }
+    if (kp->pressed[i] == k) {
+      return;
+    }
+    if (kp->pressed[i] > k) {
+      // push
+      memmove(&kp->pressed[i+1], &kp->pressed[i],
+              sizeof(char) * (KP_MAX_PRESSED - KP_RESERVED_SPACE - i + 1));
+      kp->pressed[i] = k;
+      return;
+    }
+  }
+}
+
+void clear_keys(struct tbx_keys_pressed *kp) {
+  memset(kp, 0, sizeof(struct tbx_keys_pressed));
+}
+
+#if 0
+static bool handle_keybinding_(struct tbx_server *server, xkb_keysym_t sym,
                               uint32_t modifiers) {
 
   switch (sym) {
@@ -79,6 +200,33 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym,
 
   return true;
 }
+#endif
+
+static bool handle_keybinding(struct tbx_server *server,
+                              struct tbx_keys_pressed *keys) {
+
+  struct tbx_keys_pressed k = {.pressed = { WLR_MODIFIER_ALT, XKB_KEY_Escape, 0}};
+  if (compare_keys(keys, &k)) {
+    wl_display_terminate(server->wl_display);
+    return true;
+  }
+
+  // dump_keys(keys);
+
+  struct tbx_config_keybinding *entry;
+  wl_list_for_each(entry, &server->config.keybinding, link) {
+    if (compare_keys(entry->keys, keys)) {
+
+      struct tbx_command *ctx = server->command;
+      command_execute(ctx, entry->argc, entry->argv);
+      // console_log("key binding found! %s", entry->identifier);
+
+      return true;
+    }
+  }
+
+  return false;
+}
 
 static void keyboard_handle_modifiers(struct wl_listener *listener,
                                       void *data) {
@@ -105,7 +253,10 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
   struct wlr_event_keyboard_key *event = data;
   struct wlr_seat *seat = server->seat->seat;
 
+  // uint32_t super_key = server->config.super_key;
+
   server->seat->last_keyboard = keyboard;
+  struct tbx_keys_pressed *kp = server->seat->keys_pressed;
 
   /* Translate libinput keycode -> xkbcommon */
   uint32_t keycode = event->keycode + 8;
@@ -117,11 +268,26 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
   bool handled = false;
   uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
 
-  if ((modifiers & WLR_MODIFIER_ALT) && event->state == WLR_KEY_PRESSED) {
-    /* If alt is held down and this button was _pressed_, we attempt to
-     * process it as a compositor keybinding. */
+  if (!modifiers && event->state == WLR_KEY_PRESSED && kp->pressed[1]) {
+    clear_keys(kp);
+  }
+
+  if (modifiers && event->state == WLR_KEY_PRESSED) {
+    add_modifiers(kp, modifiers);
     for (int i = 0; i < nsyms; i++) {
-      handled = handle_keybinding(server, syms[i], modifiers);
+      uint32_t k = syms[i];
+      // if (k > 255) {
+        // console_log("???%d", k);
+        // continue;
+      // }
+      add_key(kp, k);
+    }
+    if (kp->pressed[1]) {
+      handled = handle_keybinding(server, kp);
+      if (handled) {
+        // consumexxxx
+        clear_keys(kp);
+      }
     }
   }
 

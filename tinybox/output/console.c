@@ -61,7 +61,7 @@ void console_log(const char *format, ...) {
     }
     token = strtok(NULL, "\n");
   }
-
+  console->lines[(console->inputIdx + 1) % CONSOLE_LINES][0] = 0;
   console->dirty = true;
 }
 
@@ -86,7 +86,8 @@ void console_dump() {
     if (workspace->id == server->workspace) {
       main = '*';
     }
-    console_log("w: %d%c %d %d\n", workspace->id, main, workspace->box.x, workspace->box.y);
+    console_log("w: %d%c %d %d\n", workspace->id, main, workspace->box.x,
+                workspace->box.y);
   }
 
   struct tbx_output *output;
