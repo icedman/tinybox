@@ -4,11 +4,14 @@
 #include "tinybox/config.h"
 #include "tinybox/seat.h"
 #include "tinybox/server.h"
+#include "tinybox/view.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+void view_close(struct tbx_view *view);
 
 void exec_exec(struct tbx_command *cmd, int argc, char **argv) {
   if (!command_check_args(cmd, argc, 1)) {
@@ -40,10 +43,19 @@ void exec_exec(struct tbx_command *cmd, int argc, char **argv) {
   if (fork() == 0) {
     execl("/bin/sh", "/bin/sh", "-c", command_line, (void *)NULL);
   }
+}
 
-  console_log("exec!!!");
+void exec_kill(struct tbx_command *cmd, int argc, char **argv) {
+
+  struct tbx_view *current_view =
+      wl_container_of(cmd->server->views.next, current_view, link);
+
+  if (current_view) {
+    view_close(current_view);
+  }
 }
 
 void register_global_commands(struct tbx_server *server) {
   register_command(server->command, "exec", exec_exec);
+  register_command(server->command, "kill", exec_kill);
 }

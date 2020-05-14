@@ -235,3 +235,11 @@ void view_destroy(struct tbx_view *view) {
   wl_list_remove(&view->link);
   free(view);
 }
+
+void view_close(struct tbx_view *view) {
+  struct wlr_xdg_surface *surface = view->xdg_surface;
+  if (surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL
+      && surface->toplevel) {
+    wlr_xdg_toplevel_send_close(surface);
+  }
+}
