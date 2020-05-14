@@ -1,6 +1,7 @@
 #include "tinybox/cursor.h"
 #include "tinybox/keyboard.h"
 #include "tinybox/view.h"
+#include "tinybox/workspace.h"
 
 #include <stdlib.h>
 
@@ -68,11 +69,6 @@ static bool begin_interactive_sd(struct tbx_server *server,
     cursor->grab_box.y = view->y;
     view->hotspot = HS_NONE;
     view->hotspot_edges = WLR_EDGE_NONE;
-
-    // move to active workspace
-    // view->workspace = server->active_workspace;
-    // view->workspace_id = server->active_workspace_id;
-
     return true;
   }
 
@@ -102,11 +98,6 @@ static bool begin_interactive_sd(struct tbx_server *server,
     view->workspace = server->workspace;
 
     focus_view(view, view->surface);
-
-    // // move to active workspace
-    // view->workspace = server->active_workspace;
-    // view->workspace_id = server->active_workspace_id;
-
     return true;
   }
 
@@ -352,6 +343,11 @@ static void server_cursor_swipe_begin(struct wl_listener *listener,
                                      WLR_BUTTON_PRESSED);
     }
   }
+
+  if (event->fingers == 4 && server->config.workspaces > 1) {
+    cursor->mode = TBX_CURSOR_SWIPE_WORKSPACE;
+    cursor->server->ws_animate = false;
+  }
 }
 
 static void server_cursor_swipe_update(struct wl_listener *listener,
@@ -373,10 +369,24 @@ static void server_cursor_swipe_update(struct wl_listener *listener,
 static void server_cursor_swipe_end(struct wl_listener *listener, void *data) {
   struct tbx_cursor *cursor =
       wl_container_of(listener, cursor, cursor_swipe_end);
-  // struct tbx_server *server = cursor->server;
+  struct tbx_server *server = cursor->server;
 
   wlr_xcursor_manager_set_cursor_image(cursor->xcursor_manager, "left_ptr",
                                        cursor->cursor);
+
+  if (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE) {
+    // distance travelled?
+    double d = cursor->swipe_x - cursor->swipe_begin_x;
+    if (d < -100) {
+      activate_workspace(server, server->workspace + 1, true);
+    } else if (d > 100) {
+      activate_workspace(server, server->workspace - 1, true);
+    }
+
+    server->ws_animate = true;
+    server->ws_anim_x += d;
+    server->ws_anim_y = 0;
+  }
 
   cursor->mode = TBX_CURSOR_PASSTHROUGH;
   cursor->resize_edges = WLR_EDGE_NONE;

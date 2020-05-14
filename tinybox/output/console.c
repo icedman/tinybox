@@ -86,7 +86,7 @@ void console_dump() {
     if (workspace->id == server->workspace) {
       main = '*';
     }
-    console_log("w: %d%c\n", workspace->id, main);
+    console_log("w: %d%c %d %d\n", workspace->id, main, workspace->box.x, workspace->box.y);
   }
 
   struct tbx_output *output;

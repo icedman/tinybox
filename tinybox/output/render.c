@@ -289,3 +289,29 @@ void render_texture(struct wlr_output *output, struct wlr_box *box,
 
   wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0);
 }
+
+void scissor_output(struct wlr_output *wlr_output, struct wlr_box box) {
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
+
+  // assert(renderer);
+
+  int ow, oh;
+  wlr_output_transformed_resolution(wlr_output, &ow, &oh);
+
+  enum wl_output_transform transform =
+      wlr_output_transform_invert(wlr_output->transform);
+  wlr_box_transform(&box, &box, transform, ow, oh);
+
+  wlr_renderer_scissor(renderer, &box);
+}
+
+void grow_box_lrtb(struct wlr_box *box, int l, int r, int t, int b) {
+  box->x -= l;
+  box->width += l + r;
+  box->y -= t;
+  box->height += t + b;
+}
+
+void grow_box_hv(struct wlr_box *box, int h, int v) {
+  grow_box_lrtb(box, h, h, v, v);
+}

@@ -18,12 +18,12 @@ struct tbx_workspace {
 
   // state
   bool active;
-  int x;
-  int y;
+  struct wlr_box box;
 };
 
 void workspace_setup(struct tbx_server *server);
-void move_to_workspace(struct tbx_server *server, struct tbx_view *view, int id);
-void activate_workspace(struct tbx_server *server, int id);
+void move_to_workspace(struct tbx_server *server, struct tbx_view *view, int id, bool animate);
+void activate_workspace(struct tbx_server *server, int id, bool animate);
+struct tbx_workspace *get_workspace(struct tbx_server *server, int id);
 
 #endif // TINYBOX_WORKSPACE_H

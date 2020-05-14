@@ -53,7 +53,6 @@ bool tbx_server_setup(struct tbx_server *server) {
 
   console_setup(server);
   command_setup(server);
-  workspace_setup(server);
 
   console_log("%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
   return true;
@@ -65,6 +64,9 @@ bool tbx_server_start(struct tbx_server *server) {
     wlr_backend_destroy(server->backend);
     return false;
   }
+
+  // setup after config loaded
+  workspace_setup(server);
 
   /* Set the WAYLAND_DISPLAY environment variable to our socket and run the
    * startup command if requested. */
@@ -82,6 +84,8 @@ bool tbx_server_start(struct tbx_server *server) {
     tbx_server_terminate(server);
     return false;
   }
+
+  activate_workspace(server, 0, false);
 
   // struct wl_event_loop *loop = wl_display_get_event_loop(server->wl_display);
   return true;

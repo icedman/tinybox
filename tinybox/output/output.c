@@ -7,6 +7,8 @@
 #include "tinybox/server.h"
 #include "tinybox/style.h"
 #include "tinybox/view.h"
+#include "tinybox/workspace.h"
+#include "tinybox/cursor.h"
 
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
@@ -22,32 +24,6 @@
 #include <cairo/cairo.h>
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
-
-static void scissor_output(struct wlr_output *wlr_output, struct wlr_box box) {
-  struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
-
-  // assert(renderer);
-
-  int ow, oh;
-  wlr_output_transformed_resolution(wlr_output, &ow, &oh);
-
-  enum wl_output_transform transform =
-      wlr_output_transform_invert(wlr_output->transform);
-  wlr_box_transform(&box, &box, transform, ow, oh);
-
-  wlr_renderer_scissor(renderer, &box);
-}
-
-static void grow_box_lrtb(struct wlr_box *box, int l, int r, int t, int b) {
-  box->x -= l;
-  box->width += l + r;
-  box->y -= t;
-  box->height += t + b;
-}
-
-static void grow_box_hv(struct wlr_box *box, int h, int v) {
-  grow_box_lrtb(box, h, h, v, v);
-}
 
 static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
                                     void *data) {
@@ -82,17 +58,21 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   struct wlr_box view_geometry;
   struct wlr_box box;
 
-  wlr_xdg_surface_get_geometry((struct wlr_xdg_surface *)surface,
-                               &view_geometry);
+  wlr_xdg_surface_get_geometry(view->xdg_surface, &view_geometry);
 
   double ox = 0, oy = 0;
   wlr_output_layout_output_coords(view->server->output_layout, output, &ox,
                                   &oy);
+
+  ox += rdata->offset_x;
+  ox += rdata->offset_y;
+
   double oox = ox;
   double ooy = oy;
 
   view_geometry.x += view->x + ox + sx;
   view_geometry.y += view->y + oy + sy;
+
   // view_geometry.width = surface->current.width;
   // view_geometry.height = surface->current.height;
 
@@ -339,6 +319,7 @@ static void render_view_content(struct wlr_surface *surface, int sx, int sy,
                                 void *data) {
   /* This function is called for every surface that needs to be rendered. */
   struct render_data *rdata = data;
+  // struct tbx_workspace *workspace = rdata->workspace;
   struct tbx_view *view = rdata->view;
   struct wlr_output *output = rdata->output;
 
@@ -370,6 +351,9 @@ static void render_view_content(struct wlr_surface *surface, int sx, int sy,
   double ox = 0, oy = 0;
   wlr_output_layout_output_coords(view->server->output_layout, output, &ox,
                                   &oy);
+  ox += rdata->offset_x;
+  ox += rdata->offset_y;
+
   ox += view->x + sx;
   oy += view->y + sy;
 
@@ -434,22 +418,39 @@ static void render_console(struct tbx_output *output) {
   }
 }
 
-// static void output_frame_main_display(struct tbx_output *output) {
+static void render_workspace(struct tbx_output *output) {
+  struct wlr_renderer *renderer = output->server->renderer;
 
-// }
+  float color[4] = {0.3, 0.3, 0.3, 1.0};
+  wlr_renderer_clear(renderer, color);
+}
 
 static void output_frame(struct wl_listener *listener, void *data) {
   /* This function is called every time an output is ready to display a frame,
    * generally at the output's refresh rate (e.g. 60Hz). */
   struct tbx_output *output = wl_container_of(listener, output, frame);
-  struct wlr_renderer *renderer = output->server->renderer;
+  struct tbx_server *server = output->server;
+  struct tbx_cursor *cursor = server->cursor;
+  struct wlr_renderer *renderer = server->renderer;
 
   generate_textures(output, false);
 
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
 
-  bool in_main_output = (output == output->server->main_output);
+  bool in_main_output = (output == server->main_output);
+
+  // workspace animation
+  bool animate = server->config.animate;
+  if (in_main_output && (server->ws_animate && animate)) {
+    server->ws_anim_x *= 0.9;
+    server->ws_anim_y *= 0.9;
+    if ((server->ws_anim_x * server->ws_anim_x) < 10) {
+      server->ws_animate = false;
+      server->ws_anim_x = 0;
+      server->ws_anim_y = 0;
+    }
+  }
 
   // uint32_t elapsed = (now.tv_nsec - output->last_frame.tv_nsec)/1000000;
   // output->run_time += elapsed;
@@ -464,25 +465,64 @@ static void output_frame(struct wl_listener *listener, void *data) {
   /* Begin the renderer (calls glViewport and some other GL sanity checks) */
   wlr_renderer_begin(renderer, width, height);
 
-  // render
-  float color[4] = {0.3, 0.3, 0.3, 1.0};
-  wlr_renderer_clear(renderer, color);
+  // render begin
+  render_workspace(output);
 
-  render_console(output);
+  if (in_main_output) {
+    render_console(output);
+  }
 
   // render all views!
   /* Each subsequent window we render is rendered on top of the last. Because
    * our view list is ordered front-to-back, we iterate over it backwards. */
   struct tbx_view *view;
-  wl_list_for_each_reverse(view, &output->server->views, link) {
+  wl_list_for_each_reverse(view, &server->views, link) {
     if (!view->mapped || !view->surface) {
       /* An unmapped view should not be rendered. */
       continue;
     }
 
+    double offset_x = 0;
+    double offset_y = 0;
+    struct tbx_workspace *workspace = 0;
+
+    // workspace logic
     if (in_main_output) {
-      if (view->workspace != output->server->workspace) {
-        continue;
+      double d = 0;
+
+      // view animation
+      if (animate && view->wsv_animate) {
+        view->wsv_anim_x *= 0.9;
+        view->wsv_anim_y *= 0.9;
+        if ((view->wsv_anim_x * view->wsv_anim_x) < 10) {
+          view->wsv_animate = false;
+          view->wsv_anim_x = 0;
+          view->wsv_anim_y = 0;
+        }
+
+        d -= view->wsv_anim_x;
+      }
+
+
+      if (animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+
+        // is view in main_output
+        if (!view_is_visible(output, view)) {
+          continue;
+        }
+
+        if (server->ws_animate) {
+          d += server->ws_anim_x;
+        } else {
+          d += cursor->swipe_x - cursor->swipe_begin_x;
+        }
+
+        workspace = get_workspace(output->server, view->workspace);
+        offset_x = workspace->box.x + d;        
+      } else {
+        if (view->workspace != server->workspace) {
+          continue;
+        }
       }
     }
 
@@ -493,10 +533,15 @@ static void output_frame(struct wl_listener *listener, void *data) {
     //-----------------
     // render the view
     //-----------------
+
     struct render_data rdata = {
         .output = output->wlr_output,
         .view = view,
         .renderer = renderer,
+        .workspace = workspace,
+        .in_main_output = in_main_output,
+        .offset_x = offset_x,
+        .offset_y = offset_y,
         .when = &now,
     };
 

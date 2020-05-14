@@ -36,6 +36,9 @@ struct tbx_server {
   // workspaces
   struct wl_list workspaces;
   int workspace;
+  bool ws_animate;
+  double ws_anim_x;
+  double ws_anim_y;
 
   // input
   struct tbx_cursor *cursor;

@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  // load default style
   load_style(&theServer, 0);
   load_config(&theServer, "/home/iceman/.tinybox/config");
 

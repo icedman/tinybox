@@ -37,6 +37,11 @@ struct tbx_view {
   bool shaded;
   bool csd;
 
+  // animate
+  bool wsv_animate;
+  double wsv_anim_x;
+  double wsv_anim_y;
+
   // title
   struct wlr_texture *title;
   struct wlr_texture *title_unfocused;
@@ -66,6 +71,8 @@ void focus_view(struct tbx_view *view, struct wlr_surface *surface);
 
 bool hotspot_at(struct tbx_view *view, double lx, double ly,
                 struct wlr_surface **surface, double *sx, double *sy);
+
+bool view_is_visible(struct tbx_output *output, struct tbx_view *view);
 
 // create is at xdg_shell
 void view_destroy(struct tbx_view *view);

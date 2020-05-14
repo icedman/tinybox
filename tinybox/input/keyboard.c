@@ -40,6 +40,19 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym,
     break;
   }
 
+  case XKB_KEY_Left:
+  case XKB_KEY_Right: {
+    int ws = (sym == XKB_KEY_Left ? -1 : 1);
+    if ((modifiers & WLR_MODIFIER_CTRL) ) {
+      struct tbx_view *current_view = wl_container_of(
+      server->views.next, current_view, link);
+      move_to_workspace(server, current_view, current_view->workspace + ws, true);
+    } else {
+      activate_workspace(server, server->workspace + ws, true);
+    }
+    break;
+  }
+
   case XKB_KEY_1:
   case XKB_KEY_2:
   case XKB_KEY_3:
@@ -51,9 +64,9 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym,
     if ((modifiers & WLR_MODIFIER_CTRL) ) {
       struct tbx_view *current_view = wl_container_of(
       server->views.next, current_view, link);
-      move_to_workspace(server, current_view, sym - XKB_KEY_1);
+      move_to_workspace(server, current_view, sym - XKB_KEY_1, true);
     } else {
-      activate_workspace(server, sym - XKB_KEY_1);
+      activate_workspace(server, sym - XKB_KEY_1, true);
     }
     break;
   case XKB_KEY_z:

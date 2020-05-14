@@ -8,6 +8,7 @@ struct wlr_renderer;
 struct wlr_box;
 struct wlr_texture;
 struct tbx_output;
+struct tbx_workspace;
 
 enum {
   tx_window_title_focus,
@@ -37,7 +38,11 @@ struct render_data {
   struct wlr_output *output;
   struct wlr_renderer *renderer;
   struct tbx_view *view;
+  struct tbx_workspace *workspace;
   struct timespec *when;
+  bool in_main_output;
+  double offset_x;
+  double offset_y;
 };
 
 void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4],
@@ -49,6 +54,10 @@ void generate_view_title_texture(struct tbx_output *output,
                                  struct tbx_view *view);
 
 void texture_cache_destroy();
+void scissor_output(struct wlr_output *wlr_output, struct wlr_box box);
+
+void grow_box_lrtb(struct wlr_box *box, int l, int r, int t, int b);
+void grow_box_hv(struct wlr_box *box, int h, int v);
 
 struct wlr_texture *get_texture_cache(int idx);
 

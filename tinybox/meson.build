@@ -7,6 +7,7 @@ tinybox_src = files(
   'common/util.c',
 
   'command/command.c',
+  'command/commands/config.c',
   'command/commands/input.c',
   'command/commands/output.c',
   

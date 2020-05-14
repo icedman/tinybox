@@ -39,6 +39,7 @@ struct tbx_config {
   struct wl_list layout;
 
   int workspaces;
+  bool animate;
 
   struct tbx_server *server;
 };

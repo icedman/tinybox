@@ -52,6 +52,6 @@ bool config_setup(struct tbx_server *server) {
 
   // defaults
   config->workspaces = 4;
-
+  config->animate = false;
   return true;
 }
