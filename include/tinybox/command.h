@@ -15,6 +15,7 @@ struct tbx_command {
   struct wl_list commands;
   struct tbx_command *context;
 
+  char *description;
   void *data;
 };
 

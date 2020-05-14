@@ -22,7 +22,7 @@ void workspace_setup(struct tbx_server *server) {
   server->workspace = -1;
 
   wl_list_init(&server->workspaces);
-  for (int i=0; i < MAX_WORKSPACES; i++) {
+  for (int i = 0; i < MAX_WORKSPACES; i++) {
     struct tbx_workspace *ws = create_workspace(server);
     ws->id = i;
   }
@@ -49,7 +49,7 @@ void move_to_workspace(struct tbx_server *server, struct tbx_view *view, int id,
   // console_log("view at ws %d", view->workspace);
 
   activate_workspace(server, id, animate);
-  focus_view(view, view->xdg_surface->surface);
+  focus_view_without_raising(view, view->xdg_surface->surface);
 
   // animate view
   if (animate) {
@@ -87,7 +87,7 @@ void activate_workspace(struct tbx_server *server, int id, bool animate) {
     struct tbx_view *view;
     wl_list_for_each_reverse(view, &server->views, link) {
       if (view->workspace == id) {
-        focus_view(view, view->xdg_surface->surface);
+        focus_view_without_raising(view, view->xdg_surface->surface);
         break;
       }
     }

@@ -73,6 +73,7 @@ static void exec_bind(struct tbx_command *cmd, int argc, char **argv) {
   free_argv(kargc, kargv);
 
   console_log(">> bind %s?", entry->identifier);
+  dump_keys(entry->keys);
 
   //-------------------
   // extract command
@@ -93,7 +94,7 @@ static void exec_bind(struct tbx_command *cmd, int argc, char **argv) {
     ptr += strlen(n);
     ptr[0] = ' ';
     ptr[1] = 0;
-    ptr ++;
+    ptr++;
   }
 
   {

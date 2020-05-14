@@ -1,8 +1,8 @@
 #include "tinybox/keyboard.h"
+#include "tinybox/command.h"
 #include "tinybox/console.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
-#include "tinybox/command.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +57,11 @@ bool compare_keys(struct tbx_keys_pressed *kp1, struct tbx_keys_pressed *kp2) {
 void dump_keys(struct tbx_keys_pressed *kp) {
   console_log("------");
   for (int i = 0; i < KP_MAX_PRESSED - KP_RESERVED_SPACE; i++) {
-    console_log("%d %d", i, kp->pressed[i]);
+    char c = ' ';
+    if (kp->pressed[i] < 250) {
+      c = kp->pressed[i];
+    }
+    console_log("%d %d %c", i, kp->pressed[i], c);
     if (kp->pressed[i] == 0) {
       break;
     }
@@ -87,9 +91,7 @@ void add_key_by_name(struct tbx_keys_pressed *kp, char *name) {
   add_key(kp, name[0]);
 }
 
-
-void add_modifiers(struct tbx_keys_pressed *kp, uint32_t mod)
-{
+void add_modifiers(struct tbx_keys_pressed *kp, uint32_t mod) {
   int i;
   for (i = 0; i < (int)(sizeof(modifiers) / sizeof(struct modifier_key)); ++i) {
     if ((modifiers[i].mod & mod)) {
@@ -99,15 +101,10 @@ void add_modifiers(struct tbx_keys_pressed *kp, uint32_t mod)
 }
 
 void add_key(struct tbx_keys_pressed *kp, uint32_t k) {
-  
+
   // modifiers
-  if (k == 65515 ||
-      k == 65513 || 
-      k == 65514 ||
-      k == 65505 || 
-      k == 65507 ||
-      k == 65508 ||
-      k == 65511) {
+  if (k == 65515 || k == 65513 || k == 65514 || k == 65505 || k == 65507 ||
+      k == 65508 || k == 65511) {
     return;
   }
 
@@ -121,7 +118,7 @@ void add_key(struct tbx_keys_pressed *kp, uint32_t k) {
     }
     if (kp->pressed[i] > k) {
       // push
-      memmove(&kp->pressed[i+1], &kp->pressed[i],
+      memmove(&kp->pressed[i + 1], &kp->pressed[i],
               sizeof(char) * (KP_MAX_PRESSED - KP_RESERVED_SPACE - i + 1));
       kp->pressed[i] = k;
       return;
@@ -134,14 +131,6 @@ void clear_keys(struct tbx_keys_pressed *kp) {
 }
 
 #if 0
-static bool handle_keybinding_(struct tbx_server *server, xkb_keysym_t sym,
-                              uint32_t modifiers) {
-
-  switch (sym) {
-  case XKB_KEY_Escape:
-    wl_display_terminate(server->wl_display);
-    break;
-
   case XKB_KEY_Tab:
   {
     /* Cycle to the next view */
@@ -160,58 +149,22 @@ static bool handle_keybinding_(struct tbx_server *server, xkb_keysym_t sym,
     wl_list_insert(server->views.prev, &current_view->link);
     break;
   }
-
-  case XKB_KEY_Left:
-  case XKB_KEY_Right: {
-    int ws = (sym == XKB_KEY_Left ? -1 : 1);
-    if ((modifiers & WLR_MODIFIER_CTRL) ) {
-      struct tbx_view *current_view = wl_container_of(
-      server->views.next, current_view, link);
-      move_to_workspace(server, current_view, current_view->workspace + ws, true);
-    } else {
-      activate_workspace(server, server->workspace + ws, true);
-    }
-    break;
-  }
-
-  case XKB_KEY_1:
-  case XKB_KEY_2:
-  case XKB_KEY_3:
-  case XKB_KEY_4:
-  case XKB_KEY_5:
-  case XKB_KEY_6:
-  case XKB_KEY_7:
-  case XKB_KEY_8:
-    if ((modifiers & WLR_MODIFIER_CTRL) ) {
-      struct tbx_view *current_view = wl_container_of(
-      server->views.next, current_view, link);
-      move_to_workspace(server, current_view, sym - XKB_KEY_1, true);
-    } else {
-      activate_workspace(server, sym - XKB_KEY_1, true);
-    }
-    break;
   case XKB_KEY_z:
     console_dump();
     break;
-
-  default:
-    return false;
-  }
-
-  return true;
-}
 #endif
 
 static bool handle_keybinding(struct tbx_server *server,
                               struct tbx_keys_pressed *keys) {
 
-  struct tbx_keys_pressed k = {.pressed = { WLR_MODIFIER_ALT, XKB_KEY_Escape, 0}};
+  struct tbx_keys_pressed k = {
+      .pressed = {WLR_MODIFIER_ALT, XKB_KEY_Escape, 0}};
   if (compare_keys(keys, &k)) {
     wl_display_terminate(server->wl_display);
     return true;
   }
 
-  // dump_keys(keys);
+  dump_keys(keys);
 
   struct tbx_config_keybinding *entry;
   wl_list_for_each(entry, &server->config.keybinding, link) {
@@ -277,8 +230,8 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
     for (int i = 0; i < nsyms; i++) {
       uint32_t k = syms[i];
       // if (k > 255) {
-        // console_log("???%d", k);
-        // continue;
+      // console_log("???%d", k);
+      // continue;
       // }
       add_key(kp, k);
     }

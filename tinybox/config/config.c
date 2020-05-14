@@ -32,7 +32,6 @@ char *get_dictionary_value(struct tbx_server *server, char *name) {
 
 void load_config(struct tbx_server *server, char *path) {
 
-
   char *expanded = calloc(1, sizeof(char) + (strlen(path) + 1));
   strcpy(expanded, path);
   expand_path(&expanded);
@@ -42,7 +41,7 @@ void load_config(struct tbx_server *server, char *path) {
     free(expanded);
     return;
   }
-  
+
   free(expanded);
 
   struct tbx_command *ctx = server->command;

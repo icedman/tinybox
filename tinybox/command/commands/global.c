@@ -1,7 +1,7 @@
-#include "tinybox/config.h"
 #include "common/stringop.h"
 #include "common/util.h"
 #include "tinybox/command.h"
+#include "tinybox/config.h"
 #include "tinybox/seat.h"
 #include "tinybox/server.h"
 
@@ -34,16 +34,15 @@ void exec_exec(struct tbx_command *cmd, int argc, char **argv) {
     ptr += strlen(n);
     ptr[0] = ' ';
     ptr[1] = 0;
-    ptr ++;
+    ptr++;
   }
 
   if (fork() == 0) {
-      execl("/bin/sh", "/bin/sh", "-c", command_line, (void *)NULL);
+    execl("/bin/sh", "/bin/sh", "-c", command_line, (void *)NULL);
   }
 
   console_log("exec!!!");
 }
-
 
 void register_global_commands(struct tbx_server *server) {
   register_command(server->command, "exec", exec_exec);
