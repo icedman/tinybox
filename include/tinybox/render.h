@@ -52,6 +52,7 @@ void render_texture(struct wlr_output *output, struct wlr_box *box,
 void generate_textures(struct tbx_output *output, bool forced);
 void generate_view_title_texture(struct tbx_output *output,
                                  struct tbx_view *view);
+void generate_background(struct tbx_output *output, struct tbx_workspace *workspace);
 
 void texture_cache_destroy();
 void scissor_output(struct wlr_output *wlr_output, struct wlr_box box);

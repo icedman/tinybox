@@ -420,9 +420,52 @@ static void render_console(struct tbx_output *output) {
   }
 }
 
-static void render_workspace(struct tbx_output *output) {
-  struct wlr_renderer *renderer = output->server->renderer;
+static void render_workspace(struct tbx_output *output, struct tbx_workspace *workspace) {
+  struct tbx_server *server = output->server;
+  struct wlr_renderer *renderer = server->renderer;
 
+  bool in_main_output = (output == server->main_output);
+
+  struct wlr_texture *texture = 0;
+  int texture_id = tx_workspace_1 + workspace->id;
+  texture = get_texture_cache(texture_id);
+  if (!texture && workspace->background) {
+
+    // generate and try again
+    generate_background(output, workspace);
+    texture = get_texture_cache(texture_id);
+    
+    if (!texture) {
+      // invalid image
+      workspace->background = 0;
+
+      // try default background
+      texture = get_texture_cache(tx_workspace_1);
+    }
+  } 
+
+  struct wlr_box box;
+  memcpy(&box, &workspace->box, sizeof(struct wlr_box));
+
+  if (server->config.animate && in_main_output) {
+      if (server->ws_animate) {
+        box.x += server->ws_anim_x;
+      } else {
+        box.x += server->cursor->swipe_x - server->cursor->swipe_begin_x;
+      }
+  }
+
+  if (texture) {
+    render_texture(output->wlr_output, &workspace->box,
+                   texture, output->wlr_output->scale);
+
+    return;
+  }
+
+  // else
+  // render flat color
+
+  // render box
   float color[4] = {0.3, 0.3, 0.3, 1.0};
   wlr_renderer_clear(renderer, color);
 }
@@ -467,8 +510,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
   /* Begin the renderer (calls glViewport and some other GL sanity checks) */
   wlr_renderer_begin(renderer, width, height);
 
-  // render begin
-  render_workspace(output);
+  struct tbx_workspace *workspace = get_workspace(server, server->workspace);
+  render_workspace(output, workspace);
 
   if (in_main_output) {
     render_console(output);

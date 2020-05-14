@@ -39,7 +39,15 @@ void exec_set_background(struct tbx_command *cmd, int argc, char **argv) {
 
   struct tbx_workspace *workspace = cmd->context->data;
   if (workspace) {
-    console_log("set background %s", argv[0]);
+
+    strip_quotes(argv[0]);
+
+    char *expanded = calloc(1, sizeof(char) + (strlen(argv[0]) + 1));
+    strcpy(expanded, argv[0]);
+    expand_path(&expanded);
+
+    workspace->background = expanded;
+    console_log("set background %s", expanded);
   }
 }
 

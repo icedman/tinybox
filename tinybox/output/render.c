@@ -7,6 +7,7 @@
 #include "tinybox/server.h"
 #include "tinybox/style.h"
 #include "tinybox/view.h"
+#include "tinybox/workspace.h"
 
 #include <time.h>
 #include <unistd.h>
@@ -25,21 +26,21 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-static struct wlr_texture *textCache[tx_last];
+static struct wlr_texture *texture_cache[tx_last];
 
 static int lastStyleHash = 0;
 
 void texture_cache_destroy() {
   for (int idx = 0; idx < tx_last; idx++) {
-    if (textCache[idx]) {
-      wlr_texture_destroy(textCache[idx]);
-      textCache[idx] = NULL;
+    if (texture_cache[idx]) {
+      wlr_texture_destroy(texture_cache[idx]);
+      texture_cache[idx] = NULL;
     }
   }
 }
 
 struct wlr_texture *get_texture_cache(int idx) {
-  return textCache[idx];
+  return texture_cache[idx];
 }
 
 static void generate_texture(struct wlr_renderer *renderer, int idx, int flags,
@@ -47,9 +48,9 @@ static void generate_texture(struct wlr_renderer *renderer, int idx, int flags,
                              float colorTo[static 4]) {
   // printf("generate texture %d\n", idx);
 
-  if (textCache[idx]) {
-    wlr_texture_destroy(textCache[idx]);
-    textCache[idx] = NULL;
+  if (texture_cache[idx]) {
+    wlr_texture_destroy(texture_cache[idx]);
+    texture_cache[idx] = NULL;
   }
 
   if (flags == 0) {
@@ -62,7 +63,7 @@ static void generate_texture(struct wlr_renderer *renderer, int idx, int flags,
   draw_gradient_rect(cx, flags, w, h, color, colorTo);
 
   unsigned char *data = cairo_image_surface_get_data(surf);
-  textCache[idx] =
+  texture_cache[idx] =
       wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
                               cairo_image_surface_get_stride(surf), w, h, data);
 
@@ -78,7 +79,7 @@ void generate_textures(struct tbx_output *output, bool forced) {
   struct tbx_style *style = &output->server->style;
   struct wlr_renderer *renderer = output->server->renderer;
 
-  if (textCache[0] != NULL && !(forced || lastStyleHash != style->hash)) {
+  if (texture_cache[0] != NULL && !(forced || lastStyleHash != style->hash)) {
     return;
   }
 
@@ -246,6 +247,41 @@ void generate_view_title_texture(struct tbx_output *output,
   g_object_unref(pango);
   cairo_destroy(cx);
   cairo_surface_destroy(surf);
+}
+
+void generate_background(struct tbx_output *output, struct tbx_workspace *workspace)
+{
+  int texture_id = workspace->id + tx_workspace_1;
+  if (texture_cache[texture_id]) {
+    wlr_texture_destroy(texture_cache[texture_id]);
+    texture_cache[texture_id] = NULL;
+  }
+
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+  cairo_surface_t *surface = cairo_image_surface_create_from_png (workspace->background);
+  if (!surface) {
+    console_log("error loading");
+    return;
+  }
+
+  int w = cairo_image_surface_get_width (surface);
+  int h = cairo_image_surface_get_height (surface);
+
+    console_log("loaded %s %d %d", workspace->background, w, h);
+
+  unsigned char *data = cairo_image_surface_get_data(surface);
+  texture_cache[texture_id] =
+      wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+                              cairo_image_surface_get_stride(surface), w, h, data);
+
+  char fname[255] = "";
+  sprintf(fname, "/tmp/text_%s.png", workspace->background);
+  cairo_surface_write_to_png(surface, fname);
+
+  if (texture_cache[texture_id]) {
+    console_log("we have an image");
+  }
+  cairo_surface_destroy(surface);
 }
 
 void render_rect(struct wlr_output *output, struct wlr_box *box, float color[4],
