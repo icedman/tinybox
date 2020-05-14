@@ -377,9 +377,10 @@ static void server_cursor_swipe_end(struct wl_listener *listener, void *data) {
   if (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE) {
     // distance travelled?
     double d = cursor->swipe_x - cursor->swipe_begin_x;
-    if (d < -100) {
+    int threshold = 50 + server->config.swipe_threshold;
+    if (d < -threshold) {
       activate_workspace(server, server->workspace + 1, true);
-    } else if (d > 100) {
+    } else if (d > threshold) {
       activate_workspace(server, server->workspace - 1, true);
     }
 

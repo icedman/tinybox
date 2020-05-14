@@ -110,9 +110,17 @@ void parseColor(int argc, char **argv, int *target) {
 }
 
 void load_style(struct tbx_server *server, const char *path) {
+  if (!path) {
+    return;
+  }
+
   struct tbx_style *config_style = &server->style;
 
-  FILE *f = fopen(path, "r");
+  char *expanded = calloc(1, sizeof(char) + (strlen(path) + 1));
+  strcpy(expanded, path);
+  expand_path(&expanded);
+
+  FILE *f = fopen(expanded, "r");
   if (!f) {
     memcpy(config_style, style_bin, sizeof(struct tbx_style));
     strcpy(config_style->font, "monospace 10");

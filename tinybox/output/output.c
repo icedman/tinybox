@@ -25,6 +25,8 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
+#define ANIM_SPEED 0.75
+
 static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
                                     void *data) {
 
@@ -443,8 +445,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
   // workspace animation
   bool animate = server->config.animate;
   if (in_main_output && (server->ws_animate && animate)) {
-    server->ws_anim_x *= 0.9;
-    server->ws_anim_y *= 0.9;
+    server->ws_anim_x *= ANIM_SPEED;
+    server->ws_anim_y *= ANIM_SPEED;
     if ((server->ws_anim_x * server->ws_anim_x) < 10) {
       server->ws_animate = false;
       server->ws_anim_x = 0;
@@ -492,8 +494,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
 
       // view animation
       if (animate && view->wsv_animate) {
-        view->wsv_anim_x *= 0.9;
-        view->wsv_anim_y *= 0.9;
+        view->wsv_anim_x *= ANIM_SPEED;
+        view->wsv_anim_y *= ANIM_SPEED;
         if ((view->wsv_anim_x * view->wsv_anim_x) < 10) {
           view->wsv_animate = false;
           view->wsv_anim_x = 0;

@@ -52,6 +52,7 @@ bool config_setup(struct tbx_server *server) {
 
   // defaults
   config->workspaces = 4;
+  config->swipe_threshold = 80;
   config->animate = false;
   return true;
 }

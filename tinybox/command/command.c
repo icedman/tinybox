@@ -7,6 +7,7 @@
 #include <wayland-server-core.h>
 
 void register_config_commands(struct tbx_server *server);
+void register_style_commands(struct tbx_server *server);
 void register_input_commands(struct tbx_server *server);
 void register_output_commands(struct tbx_server *server);
 
@@ -76,6 +77,7 @@ struct tbx_command *command_execute(struct tbx_command *context, int argc,
 void command_setup(struct tbx_server *server) {
   server->command = context_create(server);
   register_config_commands(server);
+  register_style_commands(server);
   register_input_commands(server);
   register_output_commands(server);
 }

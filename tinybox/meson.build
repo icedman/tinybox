@@ -10,6 +10,7 @@ tinybox_src = files(
   'command/commands/config.c',
   'command/commands/input.c',
   'command/commands/output.c',
+  'command/commands/style.c',
   
   'config/config.c',
   'style/style.c',
