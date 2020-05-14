@@ -57,8 +57,9 @@ void focus_view(struct tbx_view *view, struct wlr_surface *surface) {
                                  &keyboard->modifiers);
 }
 
-void focus_view_without_raising(struct tbx_view *view, struct wlr_surface *surface) {
-/* Note: this function only deals with keyboard focus. */
+void focus_view_without_raising(struct tbx_view *view,
+                                struct wlr_surface *surface) {
+  /* Note: this function only deals with keyboard focus. */
   if (view == NULL) {
     return;
   }

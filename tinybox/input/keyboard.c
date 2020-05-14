@@ -102,7 +102,7 @@ void add_modifiers(struct tbx_keys_pressed *kp, uint32_t mod) {
 
 void add_key(struct tbx_keys_pressed *kp, uint32_t k) {
 
-  // modifiers
+  // modifiers (todo!)
   if (k == 65515 || k == 65513 || k == 65514 || k == 65505 || k == 65507 ||
       k == 65508 || k == 65511) {
     return;
@@ -129,30 +129,6 @@ void add_key(struct tbx_keys_pressed *kp, uint32_t k) {
 void clear_keys(struct tbx_keys_pressed *kp) {
   memset(kp, 0, sizeof(struct tbx_keys_pressed));
 }
-
-#if 0
-  case XKB_KEY_Tab:
-  {
-    /* Cycle to the next view */
-    if (wl_list_length(&server->views) < 2) {
-      break;
-    }
-    struct tbx_view *current_view = wl_container_of(
-      server->views.next, current_view, link);
-
-    struct tbx_view *next_view = wl_container_of(
-      current_view->link.next, next_view, link);
-    focus_view(next_view, next_view->xdg_surface->surface);
-
-    /* Move the previous view to the end of the list */
-    wl_list_remove(&current_view->link);
-    wl_list_insert(server->views.prev, &current_view->link);
-    break;
-  }
-  case XKB_KEY_z:
-    console_dump();
-    break;
-#endif
 
 static bool handle_keybinding(struct tbx_server *server,
                               struct tbx_keys_pressed *keys) {
@@ -215,8 +191,15 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
   uint32_t keycode = event->keycode + 8;
   /* Get a list of keysyms based on the keymap for this keyboard */
   const xkb_keysym_t *syms;
-  int nsyms = xkb_state_key_get_syms(keyboard->device->keyboard->xkb_state,
-                                     keycode, &syms);
+
+  // int nsyms = xkb_state_key_get_syms(keyboard->device->keyboard->xkb_state,
+  //                                    keycode, &syms);
+
+  xkb_layout_index_t layout_index =
+      xkb_state_key_get_layout(keyboard->device->keyboard->xkb_state, keycode);
+
+  int nsyms = xkb_keymap_key_get_syms_by_level(
+      keyboard->device->keyboard->keymap, keycode, layout_index, 0, &syms);
 
   bool handled = false;
   uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);

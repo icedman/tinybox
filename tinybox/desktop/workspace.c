@@ -119,3 +119,22 @@ struct tbx_workspace *get_workspace(struct tbx_server *server, int id) {
   }
   return NULL;
 }
+
+void cycle_next_view(struct tbx_server *server) {
+  /* Cycle to the next view */
+  if (wl_list_length(&server->views) < 2) {
+    return;
+  }
+
+  struct tbx_view *current_view =
+      wl_container_of(server->views.next, current_view, link);
+
+  struct tbx_view *next_view =
+      wl_container_of(current_view->link.next, next_view, link);
+
+  focus_view(next_view, next_view->xdg_surface->surface);
+
+  /* Move the previous view to the end of the list */
+  wl_list_remove(&current_view->link);
+  wl_list_insert(server->views.prev, &current_view->link);
+}
