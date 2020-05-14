@@ -26,6 +26,7 @@ add_project_arguments(
 )
 
 tinybox_inc = include_directories('include')
+tinybox_menu_inc = include_directories('tinybox/menu/include')
 
 cc = meson.get_compiler('c')
 

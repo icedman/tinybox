@@ -1,0 +1,62 @@
+# Mod1 = Alt
+# Mod4 = Logo
+
+set $mod Mod1
+
+set $left h
+set $down j
+set $up k
+set $right l
+
+set $term termite
+set $menu dmenu_path | dmenu | xargs swaymsg exec --
+
+bind $mod+ctrl+return exec $term
+
+workspaces 4
+animate true
+
+bind $mod+ctrl+1 workspace 0
+bind $mod+ctrl+2 workspace 1
+bind $mod+ctrl+3 workspace 2
+bind $mod+ctrl+4 workspace 3
+
+bind $mod+ctrl+shift+1 move window to workspace 0
+bind $mod+ctrl+shift+2 move window to workspace 1
+bind $mod+ctrl+shift+3 move window to workspace 2
+bind $mod+ctrl+shift+4 move window to workspace 3
+
+bind $mod+ctrl+left workspace left
+bind $mod+ctrl+right workspace right
+
+bind $mod+ctrl+shift+left move window to workspace left
+bind $mod+ctrl+shift+right move window to workspace right
+
+bind $mod+ctrl+up shade up
+bind $mod+ctrl+down shade down
+bind $mod+ctrl+space shade
+
+input 1739:30382:DLL0704:01_06CB:76AE_Touchpad {
+    tap enabled
+    natural_scroll enabled
+}
+
+output eDP-1 {
+    position 0 0
+    resolution 1920 1080
+}
+
+output DP-1 {
+    position 1920 0
+    resolution 1336 768
+}
+
+workspace 0 {
+    background /usr/share/backgrounds/lambo2.jpg
+}
+
+workspace 1 {
+    background /usr/share/backgrounds/lambo4.jpg
+}
+
+style ~/.sway/styles/Nyz 
