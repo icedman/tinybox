@@ -32,7 +32,7 @@ void workspace_setup(struct tbx_server *server) {
   }
 
   config->workspaces = i;
-  console_log("workspaces %d", config->workspaces);
+  // console_log("workspaces %d", config->workspaces);
 }
 
 void move_to_workspace(struct tbx_server *server, struct tbx_view *view, int id, bool animate)
@@ -50,7 +50,7 @@ void move_to_workspace(struct tbx_server *server, struct tbx_view *view, int id,
 
   int prev = view->workspace;
   view->workspace = id;
-  console_log("view at ws %d", view->workspace);
+  // console_log("view at ws %d", view->workspace);
 
   activate_workspace(server, id, animate);
   focus_view(view, view->xdg_surface->surface);
@@ -81,7 +81,7 @@ void activate_workspace(struct tbx_server *server, int id, bool animate) {
     id = config->workspaces;
   }
   server->workspace = id;
-  console_log("desktop at ws %d", server->workspace);
+  // console_log("desktop at ws %d", server->workspace);
 
   // recompute workspaces
   struct wlr_box *main_box = wlr_output_layout_get_box(

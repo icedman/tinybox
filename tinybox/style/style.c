@@ -124,6 +124,7 @@ void load_style(struct tbx_server *server, const char *path) {
   if (!f) {
     memcpy(config_style, style_bin, sizeof(struct tbx_style));
     strcpy(config_style->font, "monospace 10");
+    free(expanded);
     return;
   }
 
@@ -131,7 +132,8 @@ void load_style(struct tbx_server *server, const char *path) {
   memset(&style, 0, sizeof(struct tbx_style));
   int *styleFirstProp = &style.toolbar;
 
-  style.hash = fnv1a_hash(path);
+  style.hash = fnv1a_hash(expanded);
+  free(expanded);
 
   struct style_property pointerMap[] = {
 #include "style.inc.h"

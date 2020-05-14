@@ -10,6 +10,7 @@ void register_config_commands(struct tbx_server *server);
 void register_style_commands(struct tbx_server *server);
 void register_input_commands(struct tbx_server *server);
 void register_output_commands(struct tbx_server *server);
+void register_keybinding_commands(struct tbx_server *server);
 
 static struct tbx_command *context_create(struct tbx_server *server) {
   struct tbx_command *cmd = calloc(1, sizeof(struct tbx_command));
@@ -80,4 +81,5 @@ void command_setup(struct tbx_server *server) {
   register_style_commands(server);
   register_input_commands(server);
   register_output_commands(server);
+  register_keybinding_commands(server);
 }

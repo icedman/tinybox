@@ -6,12 +6,24 @@
 
 struct tbx_server;
 
-enum config_entry_type { CONFIG_INPUT, CONFIG_LAYOUT };
+enum config_entry_type {
+    TBX_CONFIG_DICTIONARY,
+    TBX_CONFIG_INPUT,
+    TBX_CONFIG_LAYOUT,
+    TBX_CONFIG_KEYBINDING };
 
 struct tbx_config_entry {
   char *identifier;
   enum config_entry_type type;
   struct wl_list link;
+};
+
+struct tbx_config_dictionary {
+  char *identifier;
+  enum config_entry_type type;
+  struct wl_list link;
+
+  char *value;
 };
 
 struct tbx_config_input {
@@ -21,6 +33,12 @@ struct tbx_config_input {
 
   int tap;
   int natural_scroll;
+};
+
+struct tbx_config_keybinding {
+  char *identifier;
+  enum config_entry_type type;
+  struct wl_list link;
 };
 
 struct tbx_config_layout {
@@ -35,8 +53,10 @@ struct tbx_config_layout {
 };
 
 struct tbx_config {
+  struct wl_list dictionary;
   struct wl_list input;
   struct wl_list layout;
+  struct wl_list keybinding;
 
   int workspaces;
   int swipe_threshold;

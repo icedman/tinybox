@@ -31,6 +31,7 @@ static void exec_input(struct tbx_command *cmd, int argc, char **argv) {
   entry = calloc(1, sizeof(struct tbx_config_input));
   entry->identifier = calloc(1, strlen(argv[0]) + 1);
   strcpy(entry->identifier, argv[0]);
+  entry->type = TBX_CONFIG_INPUT;
   cmd->data = entry;
 
   wl_list_insert(&server->config.input, &entry->link);

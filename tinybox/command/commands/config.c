@@ -9,6 +9,40 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void exec_set(struct tbx_command *cmd, int argc, char **argv) {
+  if (!command_check_args(cmd, argc, 2)) {
+    return;
+  }
+
+  cmd->data = 0;
+  strip_quotes(argv[0]);
+  strip_quotes(argv[1]);
+
+  struct tbx_server *server = cmd->server;
+
+  // find dictionary
+  struct tbx_config_dictionary *entry;
+  wl_list_for_each(entry, &server->config.dictionary, link) {
+    if (entry->identifier && strcmp(entry->identifier, argv[0]) == 0) {
+      cmd->data = (struct tbx_dictionary_config *)entry;
+      return;
+    }
+  }
+
+  entry = calloc(1, sizeof(struct tbx_config_dictionary));
+  entry->identifier = calloc(1, strlen(argv[0]) + 1);
+  strcpy(entry->identifier, argv[0]);
+  entry->value = calloc(1, strlen(argv[1]) + 1);
+  strcpy(entry->value, argv[1]);
+  entry->type = TBX_CONFIG_DICTIONARY;
+
+  // command
+  console_log("set %s :\"%s\"", argv[0], argv[1]);
+
+  cmd->data = entry;
+  wl_list_insert(&server->config.dictionary, &entry->link);
+}
+
 static void exec_workspaces(struct tbx_command *cmd, int argc, char **argv) {
   if (!command_check_args(cmd, argc, 1)) {
     return;
@@ -45,6 +79,7 @@ static void exec_swipe_threshold(struct tbx_command *cmd, int argc, char **argv)
 }
 
 void register_config_commands(struct tbx_server *server) {
+  register_command(server->command, "set", exec_set);
   register_command(server->command, "workspaces", exec_workspaces);
   register_command(server->command, "animate", exec_animate);
   register_command(server->command, "swipe_threshold", exec_swipe_threshold);
