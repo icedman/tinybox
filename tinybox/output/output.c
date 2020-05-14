@@ -417,6 +417,27 @@ static void render_view_content(struct wlr_surface *surface, int sx, int sy,
   wlr_surface_send_frame_done(surface, rdata->when);
 }
 
+static void render_console(struct tbx_output *output) {
+  // -----------------------
+  // render the console
+  // -----------------------
+  if (output->server->console->dirty) {
+    console_render(output);
+  }
+
+  // console
+  if (output->server->console->texture) {
+    struct wlr_box console_box = {
+        .x = 10, .y = 10, .width = CONSOLE_WIDTH, .height = CONSOLE_HEIGHT};
+    render_texture(output->wlr_output, &console_box,
+                   output->server->console->texture, output->wlr_output->scale);
+  }
+}
+
+// static void output_frame_main_display(struct tbx_output *output) {
+
+// }
+
 static void output_frame(struct wl_listener *listener, void *data) {
   /* This function is called every time an output is ready to display a frame,
    * generally at the output's refresh rate (e.g. 60Hz). */
@@ -427,6 +448,8 @@ static void output_frame(struct wl_listener *listener, void *data) {
 
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
+
+  bool in_main_output = (output == output->server->main_output);
 
   // uint32_t elapsed = (now.tv_nsec - output->last_frame.tv_nsec)/1000000;
   // output->run_time += elapsed;
@@ -445,20 +468,7 @@ static void output_frame(struct wl_listener *listener, void *data) {
   float color[4] = {0.3, 0.3, 0.3, 1.0};
   wlr_renderer_clear(renderer, color);
 
-  // -----------------------
-  // render the console
-  // -----------------------
-  if (output->server->console->dirty) {
-    console_render(output);
-  }
-
-  // console
-  if (output->server->console->texture) {
-    struct wlr_box console_box = {
-        .x = 10, .y = 10, .width = CONSOLE_WIDTH, .height = CONSOLE_HEIGHT};
-    render_texture(output->wlr_output, &console_box,
-                   output->server->console->texture, output->wlr_output->scale);
-  }
+  render_console(output);
 
   // render all views!
   /* Each subsequent window we render is rendered on top of the last. Because
@@ -470,6 +480,19 @@ static void output_frame(struct wl_listener *listener, void *data) {
       continue;
     }
 
+    if (in_main_output) {
+      if (view->workspace != output->server->workspace) {
+        continue;
+      }
+    }
+
+    if (view->title_dirty) {
+      generate_view_title_texture(output, view);
+    }
+
+    //-----------------
+    // render the view
+    //-----------------
     struct render_data rdata = {
         .output = output->wlr_output,
         .view = view,
@@ -477,17 +500,13 @@ static void output_frame(struct wl_listener *listener, void *data) {
         .when = &now,
     };
 
-    if (view->title_dirty) {
-      generate_view_title_texture(output, view);
-    }
-
+    // decorations
     if (!view->csd) {
       render_view_decorations((struct wlr_surface *)view->xdg_surface, 0, 0,
                               &rdata);
-      // wlr_xdg_surface_for_each_surface(view->xdg_surface,
-      // render_view_decorations, &rdata);
     }
 
+    // content
     if (!view->shaded) {
       wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
                                        &rdata);
@@ -510,6 +529,16 @@ static void output_frame(struct wl_listener *listener, void *data) {
   output->last_frame = now;
 }
 
+static void output_remove(void *data) {
+  // struct tbx_output *output = data;
+  // struct tbx_server *server = output->server;
+  // wlr_output_layout_remove(server->output_layout, output->wlr_output);
+  // wl_list_remove(&output->link);
+  // free(output);
+
+  console_log("remove output");
+}
+
 static void output_handle_destroy(struct wl_listener *listener, void *data) {
   struct tbx_output *output = wl_container_of(listener, output, destroy);
   struct tbx_server *server = output->server;
@@ -524,13 +553,8 @@ static void output_handle_destroy(struct wl_listener *listener, void *data) {
     }
   }
 
-  // remove from layout
-  // wlr_output_layout_remove(server->output_layout, output->wlr_output);
-  // console_log("removed from layout");
-
   output->enabled = false;
-  // wl_list_remove(&output->link);
-  // free(output);
+  wl_event_loop_add_idle(server->wl_event_loop, output_remove, output);
 }
 
 static void server_new_output(struct wl_listener *listener, void *data) {

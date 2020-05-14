@@ -10,7 +10,7 @@
 #include <string.h>
 
 static void exec_output(struct tbx_command *cmd, int argc, char **argv) {
-  if (!command_check_args(cmd, argc, 6)) {
+  if (!command_check_args(cmd, argc, 1)) {
     console_log("expecting: output eDP-1 pos 0 0 res 1920 1080");
     return;
   }
@@ -32,18 +32,39 @@ static void exec_output(struct tbx_command *cmd, int argc, char **argv) {
   entry = calloc(1, sizeof(struct tbx_config_layout));
   entry->identifier = calloc(1, strlen(argv[0]) + 1);
   strcpy(entry->identifier, argv[0]);
-
-  entry->x = strtol(argv[2], NULL, 10);
-  entry->y = strtol(argv[3], NULL, 10);
-  entry->width = strtol(argv[5], NULL, 10);
-  entry->height = strtol(argv[6], NULL, 10);
-
   cmd->data = entry;
 
   wl_list_insert(&server->config.layout, &entry->link);
 }
 
+static void exec_position(struct tbx_command *cmd, int argc, char **argv) {
+  if (!command_check_args(cmd, argc, 2)) {
+    return;
+  }
+
+  struct tbx_config_layout *entry = cmd->context->data;
+  if (entry) {
+    entry->x = strtol(argv[0], NULL, 10);
+    entry->y = strtol(argv[1], NULL, 10);
+  }
+}
+
+static void exec_resolution(struct tbx_command *cmd, int argc, char **argv) {
+  if (!command_check_args(cmd, argc, 2)) {
+    return;
+  }
+
+  struct tbx_config_layout *entry = cmd->context->data;
+  if (entry) {
+    entry->width = strtol(argv[0], NULL, 10);
+    entry->height = strtol(argv[1], NULL, 10);
+  }
+}
+
 void register_output_commands(struct tbx_server *server) {
-  // struct tbx_command *cmd =
-  register_command(server->command, "output", exec_output);
+  struct tbx_command *cmd =
+      register_command(server->command, "output", exec_output);
+
+  register_command(cmd, "position", exec_position);
+  register_command(cmd, "resolution", exec_resolution);
 }

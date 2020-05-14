@@ -143,6 +143,9 @@ static void server_new_xdg_surface(struct wl_listener *listener, void *data) {
   view->set_title.notify = handle_set_title;
   wl_signal_add(&toplevel->events.set_title, &view->set_title);
 
+  // move to workspace
+  view->workspace = server->workspace;
+
   /* Add it to the list of views. */
   wl_list_insert(&server->views, &view->link);
 }

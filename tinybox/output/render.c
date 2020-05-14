@@ -25,11 +25,19 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-static struct wlr_texture *textCache[16] = {NULL, NULL, NULL, NULL, NULL, NULL,
-                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                            NULL, NULL, NULL, NULL};
+static struct wlr_texture *textCache[tx_last];
 
-static int lastCacheHash = 0;
+static int lastStyleHash = 0;
+
+void texture_cache_destroy()
+{
+  for(int idx=0; idx<tx_last; idx++) {
+    if (textCache[idx]) {
+      wlr_texture_destroy(textCache[idx]);
+      textCache[idx] = NULL;
+    }
+  }
+}
 
 struct wlr_texture *get_texture_cache(int idx) {
   return textCache[idx];
@@ -71,11 +79,11 @@ void generate_textures(struct tbx_output *output, bool forced) {
   struct tbx_style *style = &output->server->style;
   struct wlr_renderer *renderer = output->server->renderer;
 
-  if (textCache[0] != NULL && !(forced || lastCacheHash != style->hash)) {
+  if (textCache[0] != NULL && !(forced || lastStyleHash != style->hash)) {
     return;
   }
 
-  lastCacheHash = style->hash;
+  lastStyleHash = style->hash;
 
   float color[4];
   float colorTo[4];

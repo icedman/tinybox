@@ -8,6 +8,8 @@
 #include "tinybox/output.h"
 #include "tinybox/seat.h"
 #include "tinybox/shell.h"
+#include "tinybox/workspace.h"
+#include "tinybox/render.h"
 
 #include <getopt.h>
 #include <stdlib.h>
@@ -32,10 +34,11 @@ bool tbx_server_setup(struct tbx_server *server) {
     return false;
   }
 
+  server->wl_event_loop = wl_display_get_event_loop(server->wl_display);
   server->renderer = wlr_backend_get_renderer(server->backend);
+
   wlr_renderer_init_wl_display(server->renderer, server->wl_display);
   wlr_compositor_create(server->wl_display, server->renderer);
-
   wlr_data_device_manager_create(server->wl_display);
 
   // load config
@@ -50,6 +53,7 @@ bool tbx_server_setup(struct tbx_server *server) {
 
   console_setup(server);
   command_setup(server);
+  workspace_setup(server);
 
   console_log("%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
   return true;
@@ -87,6 +91,8 @@ void tbx_server_terminate(struct tbx_server *server) {
   // destroy seats
   // destroy cursor
   // destroy xdg_shell
+
+  texture_cache_destroy();
 
   wlr_backend_destroy(server->backend);
   wl_display_destroy(server->wl_display);

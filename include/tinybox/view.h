@@ -1,5 +1,5 @@
-#ifndef TINYBOX_DESKTOP_H
-#define TINYBOX_DESKTOP_H
+#ifndef TINYBOX_VIEW_H
+#define TINYBOX_VIEW_H
 
 #include "tinybox/server.h"
 
@@ -50,6 +50,9 @@ struct tbx_view {
 
   struct wlr_box request_box;
   int request_wait;
+
+  // workspace
+  int workspace;
 };
 
 struct tbx_view *desktop_view_at(struct tbx_server *server, double lx,
@@ -69,4 +72,4 @@ void view_destroy(struct tbx_view *view);
 
 const char *get_string_prop(struct tbx_view *view, enum tbx_view_prop prop);
 
-#endif // TINYBOX_DESKTOP_H
+#endif // TINYBOX_VIEW_H

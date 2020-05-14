@@ -41,8 +41,7 @@ static void exec_tap(struct tbx_command *cmd, int argc, char **argv) {
     return;
   }
 
-  struct tbx_config_input *entry =
-      (struct tbx_config_input *)cmd->context->data;
+  struct tbx_config_input *entry = cmd->context->data;
   if (entry) {
     entry->tap = parse_boolean(argv[0], false);
   }
@@ -54,8 +53,7 @@ static void exec_natural_scroll(struct tbx_command *cmd, int argc,
     return;
   }
 
-  struct tbx_config_input *entry =
-      (struct tbx_config_input *)cmd->context->data;
+  struct tbx_config_input *entry = cmd->context->data;
   if (entry) {
     entry->natural_scroll = parse_boolean(argv[0], false);
   }

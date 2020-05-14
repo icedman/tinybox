@@ -17,6 +17,7 @@ struct tbx_server {
   struct wl_display *wl_display;
   struct wlr_backend *backend;
   struct wlr_renderer *renderer;
+  struct wl_event_loop *wl_event_loop;
 
   // output
   struct wlr_output_layout *output_layout;
@@ -33,6 +34,8 @@ struct tbx_server {
   struct wl_list views;
 
   // workspaces
+  struct wl_list workspaces;
+  int workspace;
 
   // input
   struct tbx_cursor *cursor;

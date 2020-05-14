@@ -45,8 +45,13 @@ void load_config(struct tbx_server *server, char *path) {
 }
 
 bool config_setup(struct tbx_server *server) {
-  server->config.server = server;
-  wl_list_init(&server->config.input);
-  wl_list_init(&server->config.layout);
+  struct tbx_config *config = &server->config;
+  config->server = server;
+  wl_list_init(&config->input);
+  wl_list_init(&config->layout);
+
+  // defaults
+  config->workspaces = 4;
+
   return true;
 }

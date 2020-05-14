@@ -1,5 +1,7 @@
 #include "tinybox/keyboard.h"
 #include "tinybox/console.h"
+#include "tinybox/workspace.h"
+#include "tinybox/view.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +9,7 @@
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_xdg_shell.h>
 
 #include <xkbcommon/xkbcommon.h>
 
@@ -14,12 +17,47 @@ static bool handle_keybinding(struct tbx_server *server, xkb_keysym_t sym,
                               uint32_t modifiers) {
 
   switch (sym) {
-  case XKB_KEY_z:
-    console_dump();
-    break;
-
   case XKB_KEY_Escape:
     wl_display_terminate(server->wl_display);
+    break;
+
+  case XKB_KEY_Tab:
+  {
+    /* Cycle to the next view */
+    if (wl_list_length(&server->views) < 2) {
+      break;
+    }
+    struct tbx_view *current_view = wl_container_of(
+      server->views.next, current_view, link);
+
+    struct tbx_view *next_view = wl_container_of(
+      current_view->link.next, next_view, link);
+    focus_view(next_view, next_view->xdg_surface->surface);
+
+    /* Move the previous view to the end of the list */
+    wl_list_remove(&current_view->link);
+    wl_list_insert(server->views.prev, &current_view->link);
+    break;
+  }
+
+  case XKB_KEY_1:
+  case XKB_KEY_2:
+  case XKB_KEY_3:
+  case XKB_KEY_4:
+  case XKB_KEY_5:
+  case XKB_KEY_6:
+  case XKB_KEY_7:
+  case XKB_KEY_8:
+    if ((modifiers & WLR_MODIFIER_CTRL) ) {
+      struct tbx_view *current_view = wl_container_of(
+      server->views.next, current_view, link);
+      move_to_workspace(server, current_view, sym - XKB_KEY_1);
+    } else {
+      activate_workspace(server, sym - XKB_KEY_1);
+    }
+    break;
+  case XKB_KEY_z:
+    console_dump();
     break;
 
   default:

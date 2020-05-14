@@ -19,6 +19,7 @@ tinybox_src = files(
   'input/libinput.c',
   
   'desktop/view.c',
+  'desktop/workspace.c',
   'decoration/decoration.c',
 
   'output/output.c',

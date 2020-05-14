@@ -17,7 +17,18 @@ enum {
   tx_window_handle_focus,
   tx_window_handle_unfocus,
   tx_window_grip_focus,
-  tx_window_grip_unfocus
+  tx_window_grip_unfocus,
+
+  tx_workspace_1,
+  tx_workspace_2,
+  tx_workspace_3,
+  tx_workspace_4,
+  tx_workspace_5,
+  tx_workspace_6,
+  tx_workspace_7,
+  tx_workspace_8,
+
+  tx_last
 };
 
 /* Used to move all of the data necessary to render a surface from the top-level
@@ -36,6 +47,8 @@ void render_texture(struct wlr_output *output, struct wlr_box *box,
 void generate_textures(struct tbx_output *output, bool forced);
 void generate_view_title_texture(struct tbx_output *output,
                                  struct tbx_view *view);
+
+void texture_cache_destroy();
 
 struct wlr_texture *get_texture_cache(int idx);
 

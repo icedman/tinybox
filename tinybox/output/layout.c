@@ -18,7 +18,7 @@ get_output_layout_config(struct tbx_output *output) {
   struct tbx_server *server = output->server;
   struct tbx_config_layout *cfg;
   char *identifier = output->wlr_output->name;
-  
+
   wl_list_for_each(cfg, &server->config.layout, link) {
     if (strcmp(cfg->identifier, identifier) == 0) {
       return cfg;

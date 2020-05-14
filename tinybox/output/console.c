@@ -4,6 +4,7 @@
 #include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
+#include "tinybox/workspace.h"
 
 #include <GLES2/gl2.h>
 #include <cairo/cairo.h>
@@ -78,11 +79,21 @@ void console_dump() {
     console_log("v: %s\n", view->xdg_surface->toplevel->title);
   }
 
+  struct tbx_workspace *workspace;
+  console_log(header, "workspaces");
+  wl_list_for_each(workspace, &server->workspaces, link) {
+    char main = ' ';
+    if (workspace->id == server->workspace) {
+      main = '*';
+    }
+    console_log("w: %d%c\n", workspace->id, main);
+  }
+
   struct tbx_output *output;
   console_log(header, "outputs");
   wl_list_for_each(output, &server->outputs, link) {
     if (!output->enabled) {
-      console_log("idle %d", output->last_frame.tv_nsec/1000000);
+      console_log("idle %d", output->last_frame.tv_nsec / 1000000);
       continue;
     }
     double ox = 0, oy = 0;
@@ -98,8 +109,8 @@ void console_dump() {
     }
 
     console_log("%s%c (%d, %d) - (%d %d) %d", output->wlr_output->name, main,
-                (int)ox, (int)oy, (int)box->width, (int)box->height, 
-                output->last_frame.tv_nsec/1000000);
+                (int)ox, (int)oy, (int)box->width, (int)box->height,
+                output->last_frame.tv_nsec / 1000000);
   }
 }
 

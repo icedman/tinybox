@@ -49,6 +49,8 @@ static bool begin_interactive_sd(struct tbx_server *server,
     cursor->grab_x = 0;
     cursor->grab_y = 0;
 
+    view->workspace = server->workspace;
+
     int titlebarHeight = view->hotspots[HS_TITLEBAR].height;
     int handleWidth = view->hotspots[HS_HANDLE].height;
 
@@ -96,6 +98,8 @@ static bool begin_interactive_sd(struct tbx_server *server,
     cursor->grab_box.y = view->y;
     view->hotspot = -1;
     view->hotspot_edges = WLR_EDGE_NONE;
+
+    view->workspace = server->workspace;
 
     focus_view(view, view->surface);
 

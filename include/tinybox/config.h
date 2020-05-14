@@ -35,9 +35,10 @@ struct tbx_config_layout {
 };
 
 struct tbx_config {
-
   struct wl_list input;
   struct wl_list layout;
+
+  int workspaces;
 
   struct tbx_server *server;
 };
