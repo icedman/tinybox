@@ -2,7 +2,7 @@
 
 #include "tinybox/style.h"
 #include "tinybox/server.h"
-#include "tinybox/style_defaults.h"
+// #include "tinybox/style_defaults.h"
 
 #include "common/stringop.h"
 #include "common/util.h"
@@ -30,12 +30,14 @@ static size_t fnv1a_hash(const char *cp) {
   return hash;
 }
 
-typedef void parse_func(int argc, char **argv, int *target);
+typedef void parse_func(int argc, char **argv, int *target, char *name);
 
 struct style_property {
-  char *name;
-  parse_func *cmd;
+    const char *name;
+    void *data;
+    parse_func *cmd;
 };
+
 
 struct style_flag {
   char *name;
@@ -55,7 +57,7 @@ int getPropertyIndex(struct style_property *props, char *name) {
   return -1;
 }
 
-void parseValue(int argc, char **argv, int *target) {
+void parseValue(int argc, char **argv, int *target, char *name) {
 
   struct style_flag flagMap[] = {{"solid", (int)sf_solid},
                                  {"flat", (int)sf_flat},
@@ -98,15 +100,23 @@ void parseValue(int argc, char **argv, int *target) {
   *target = flags;
 }
 
-void parseInt(int argc, char **argv, int *target) {
+void parseInt(int argc, char **argv, int *target, char *name) {
   *target = strtol(argv[1], NULL, 10);
+  // printf("parseInt: %d\n", *target);
 }
 
-void parseColor(int argc, char **argv, int *target) {
+void parseString(int argc, char **argv, int *target, char *name) {
+  // printf("parseString: %s\n", name);
+}
+
+void parseColor(int argc, char **argv, int *target, char *name) {
   uint32_t color;
   if (parse_color(argv[1], &color)) {
     *target = color;
   }
+  float colors[4];
+  color_to_rgba(colors, *target);
+  // printf("parseColor: %f %f %f\n", colors[0], colors[1], colors[2]);
 }
 
 void load_style(struct tbx_server *server, const char *path) {
@@ -118,26 +128,28 @@ void load_style(struct tbx_server *server, const char *path) {
 
   char *expanded = calloc(1, sizeof(char) + (strlen(path) + 1));
   strcpy(expanded, path);
-  expand_path(&expanded);
+  expand_path(&expanded);  // return;
 
   FILE *f = fopen(expanded, "r");
   if (!f) {
-    memcpy(config_style, style_bin, sizeof(struct tbx_style));
+    // memcpy(config_style, style_bin, sizeof(struct tbx_style));
     strcpy(config_style->font, "monospace 10");
     free(expanded);
     return;
   }
 
-  struct tbx_style style;
-  memset(&style, 0, sizeof(struct tbx_style));
-  int *styleFirstProp = &style.toolbar;
+  struct tbx_style _style;
+  struct tbx_style *style = &_style;
 
-  style.hash = fnv1a_hash(expanded);
+  memset(style, 0, sizeof(struct tbx_style));
+  // int *styleFirstProp = &style.toolbar;
+
+  style->hash = fnv1a_hash(expanded);
   free(expanded);
 
   struct style_property pointerMap[] = {
 #include "style.inc.h"
-      {0, 0}};
+      {0, 0, 0}};
 
   char *line = NULL;
   size_t line_size = 0;
@@ -147,6 +159,7 @@ void load_style(struct tbx_server *server, const char *path) {
     if (!nread) {
       continue;
     }
+
     int argc;
     char **argv = split_args(line, &argc);
 
@@ -157,7 +170,7 @@ void load_style(struct tbx_server *server, const char *path) {
         continue;
       }
 
-      pointerMap[idx].cmd(argc, argv, &styleFirstProp[idx]);
+      pointerMap[idx].cmd(argc, argv, pointerMap[idx].data, argv[0]);
     }
 
     free_argv(argc, argv);
@@ -165,6 +178,6 @@ void load_style(struct tbx_server *server, const char *path) {
 
   fclose(f);
 
-  memcpy(config_style, &style, sizeof(struct tbx_style));
+  memcpy(config_style, style, sizeof(struct tbx_style));
   strcpy(config_style->font, "monospace 10");
 }
