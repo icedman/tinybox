@@ -140,7 +140,7 @@ static bool handle_keybinding(struct tbx_server *server,
     return true;
   }
 
-  dump_keys(keys);
+  // dump_keys(keys);
 
   struct tbx_config_keybinding *entry;
   wl_list_for_each(entry, &server->config.keybinding, link) {
