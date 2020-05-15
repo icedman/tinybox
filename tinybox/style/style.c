@@ -2,7 +2,7 @@
 
 #include "tinybox/style.h"
 #include "tinybox/server.h"
-// #include "tinybox/style_defaults.h"
+#include "tinybox/style_defaults.h"
 
 #include "common/stringop.h"
 #include "common/util.h"
@@ -120,19 +120,19 @@ void parseColor(int argc, char **argv, int *target, char *name) {
 }
 
 void load_style(struct tbx_server *server, const char *path) {
-  if (!path) {
-    return;
-  }
-
   struct tbx_style *config_style = &server->style;
 
-  char *expanded = calloc(1, sizeof(char) + (strlen(path) + 1));
-  strcpy(expanded, path);
-  expand_path(&expanded);  // return;
+  char *expanded = 0;
+  if (path) {
+    expanded = calloc(1, sizeof(char) + (strlen(path) + 1));
+    strcpy(expanded, path);
+    expand_path(&expanded);  // return;
+  }
 
   FILE *f = fopen(expanded, "r");
   if (!f) {
-    // memcpy(config_style, style_bin, sizeof(struct tbx_style));
+    printf("load defaults\n");
+    memcpy(config_style, style_bin, sizeof(struct tbx_style));
     strcpy(config_style->font, "monospace 10");
     free(expanded);
     return;
@@ -170,7 +170,8 @@ void load_style(struct tbx_server *server, const char *path) {
         continue;
       }
 
-      pointerMap[idx].cmd(argc, argv, pointerMap[idx].data, argv[0]);
+      void *target = pointerMap[idx].data;
+      pointerMap[idx].cmd(argc, argv, target, argv[0]);
     }
 
     free_argv(argc, argv);
@@ -180,4 +181,9 @@ void load_style(struct tbx_server *server, const char *path) {
 
   memcpy(config_style, style, sizeof(struct tbx_style));
   strcpy(config_style->font, "monospace 10");
+
+    // dump defaults bin
+    // FILE *fp = fopen("./style.bin", "wb");
+    // fwrite(style, 1, sizeof(struct tbx_style), fp);
+    // fclose(fp);
 }
