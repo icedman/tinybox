@@ -32,7 +32,7 @@ char *get_dictionary_value(struct tbx_server *server, char *name) {
 
 void load_config(struct tbx_server *server, char *path) {
 
-  char *expanded = calloc(1, sizeof(char) + (strlen(path) + 1));
+  char *expanded = calloc((strlen(path) + 1), sizeof(char));
   strcpy(expanded, path);
   expand_path(&expanded);
 

@@ -30,9 +30,9 @@ static void exec_set(struct tbx_command *cmd, int argc, char **argv) {
   }
 
   entry = calloc(1, sizeof(struct tbx_config_dictionary));
-  entry->identifier = calloc(1, strlen(argv[0]) + 1);
+  entry->identifier = calloc(strlen(argv[0]) + 1, sizeof(char));
   strcpy(entry->identifier, argv[0]);
-  entry->value = calloc(1, strlen(argv[1]) + 1);
+  entry->value = calloc(strlen(argv[1]) + 1, sizeof(char));
   strcpy(entry->value, argv[1]);
   entry->type = TBX_CONFIG_DICTIONARY;
 

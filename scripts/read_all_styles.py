@@ -75,6 +75,7 @@ def generate_map(configs, gtype):
         cfg_identifier = "\"" + n + "\""
         field = n.replace('.', '_').replace(':','')
         field_identifier = "&style->" + field
+        field_identifier_string = "style->" + field
 
         t = "int"
         f = "parseValue"
@@ -92,11 +93,15 @@ def generate_map(configs, gtype):
         if f == "parseString":
             t = "char*";
 
-        if gtype == "-h":
+        if gtype == "-s" or gtype == "s":
+            if t == "char*":
+                print(field_identifier_string +",")
+
+        if gtype == "-h" or gtype == "h":
             line = t + " " + field + ";"
             h = line.ljust(60) + comment
             print(h)
-        if gtype == "-m":
+        if gtype == "-m" or gtype == "-m":
             line1 = "{ " +cfg_identifier + ","
             line2 = "\n\t\t" + field_identifier + ", " + f + " },"
             line2 = line2.ljust(60) + comment
@@ -104,7 +109,7 @@ def generate_map(configs, gtype):
             print(map)
 
 if len(sys.argv) < 2:
-    print("usage: -h or -m")
+    print("usage: -[h,s,m]")
     exit()
 
 tt = sys.argv[1]

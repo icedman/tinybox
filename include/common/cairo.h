@@ -16,4 +16,6 @@ cairo_surface_t *cairo_image_surface_scale(cairo_surface_t *image, int width,
 void draw_gradient_rect(cairo_t *cx, int flags, int w, int h,
                         float color[static 4], float colorTo[static 4]);
 
+cairo_surface_t *cairo_image_from_xpm(char *path);
+
 #endif // TINYBOX_CAIRO_H

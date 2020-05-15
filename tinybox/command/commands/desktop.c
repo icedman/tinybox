@@ -27,7 +27,7 @@ void exec_workspace(struct tbx_command *cmd, int argc, char **argv) {
     } else if (strcmp(argv[0], "right") == 0) {
       w = cmd->server->workspace + 1;
     }
-    
+
     activate_workspace(cmd->server, w, true);
   }
 }
@@ -42,7 +42,7 @@ void exec_set_background(struct tbx_command *cmd, int argc, char **argv) {
 
     strip_quotes(argv[0]);
 
-    char *expanded = calloc(1, sizeof(char) + (strlen(argv[0]) + 1));
+    char *expanded = calloc(strlen(argv[0]) + 1, sizeof(char));
     strcpy(expanded, argv[0]);
     expand_path(&expanded);
 
@@ -51,7 +51,8 @@ void exec_set_background(struct tbx_command *cmd, int argc, char **argv) {
   }
 }
 
-void exec_move_window_to_workspace(struct tbx_command *cmd, int argc, char **argv) {
+void exec_move_window_to_workspace(struct tbx_command *cmd, int argc,
+                                   char **argv) {
   if (!command_check_args(cmd, argc, 4)) {
     return;
   }
@@ -100,7 +101,7 @@ void exec_shade_window(struct tbx_command *cmd, int argc, char **argv) {
     shade = true;
   }
   if (argc && strcmp(argv[0], "down") == 0) {
-    shade = false;  
+    shade = false;
   }
 
   current_view->shaded = shade;
@@ -109,9 +110,7 @@ void exec_shade_window(struct tbx_command *cmd, int argc, char **argv) {
 void register_desktop_commands(struct tbx_server *server) {
   struct tbx_command *wks =
       register_command(server->command, "workspace", exec_workspace);
-    register_command(wks, "background", exec_set_background);
-  register_command(server->command, "move",
-                   exec_move_window_to_workspace);
-  register_command(server->command, "shade",
-                   exec_shade_window);
+  register_command(wks, "background", exec_set_background);
+  register_command(server->command, "move", exec_move_window_to_workspace);
+  register_command(server->command, "shade", exec_shade_window);
 }

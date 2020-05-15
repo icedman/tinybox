@@ -102,6 +102,11 @@ void generate_textures(struct tbx_output *output, bool forced) {
   generate_texture(renderer, tx_window_title_unfocus, flags, 512, 16, color,
                    colorTo);
 
+  // titlebar pixmap
+  if (style->window_title_focus_pixmap) {
+    printf("%s\n", style->window_title_focus_pixmap);
+  }
+
   // titlebar/label
   color_to_rgba(color, style->window_label_focus_color);
   color_to_rgba(colorTo, style->window_label_focus_colorTo);
@@ -249,30 +254,32 @@ void generate_view_title_texture(struct tbx_output *output,
   cairo_surface_destroy(surf);
 }
 
-void generate_background(struct tbx_output *output, struct tbx_workspace *workspace)
-{
+void generate_background(struct tbx_output *output,
+                         struct tbx_workspace *workspace) {
   int texture_id = workspace->id + tx_workspace_1;
   if (texture_cache[texture_id]) {
     wlr_texture_destroy(texture_cache[texture_id]);
     texture_cache[texture_id] = NULL;
   }
 
-  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
-  cairo_surface_t *surface = cairo_image_surface_create_from_png (workspace->background);
+  struct wlr_renderer *renderer =
+      wlr_backend_get_renderer(output->wlr_output->backend);
+  cairo_surface_t *surface =
+      cairo_image_surface_create_from_png(workspace->background);
   if (!surface) {
     console_log("error loading");
     return;
   }
 
-  int w = cairo_image_surface_get_width (surface);
-  int h = cairo_image_surface_get_height (surface);
+  int w = cairo_image_surface_get_width(surface);
+  int h = cairo_image_surface_get_height(surface);
 
-    console_log("loaded %s %d %d", workspace->background, w, h);
+  console_log("loaded %s %d %d", workspace->background, w, h);
 
   unsigned char *data = cairo_image_surface_get_data(surface);
-  texture_cache[texture_id] =
-      wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
-                              cairo_image_surface_get_stride(surface), w, h, data);
+  texture_cache[texture_id] = wlr_texture_from_pixels(
+      renderer, WL_SHM_FORMAT_ARGB8888, cairo_image_surface_get_stride(surface),
+      w, h, data);
 
   char fname[255] = "";
   sprintf(fname, "/tmp/text_%s.png", workspace->background);

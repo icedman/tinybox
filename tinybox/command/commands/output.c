@@ -30,7 +30,7 @@ static void exec_output(struct tbx_command *cmd, int argc, char **argv) {
   }
 
   entry = calloc(1, sizeof(struct tbx_config_layout));
-  entry->identifier = calloc(1, strlen(argv[0]) + 1);
+  entry->identifier = calloc(strlen(argv[0]) + 1, sizeof(char));
   strcpy(entry->identifier, argv[0]);
   entry->type = TBX_CONFIG_LAYOUT;
   cmd->data = entry;

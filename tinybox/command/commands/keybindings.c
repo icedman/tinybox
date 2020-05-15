@@ -37,7 +37,7 @@ static void exec_bind(struct tbx_command *cmd, int argc, char **argv) {
   }
 
   entry = calloc(1, sizeof(struct tbx_config_keybinding));
-  entry->identifier = calloc(1, strlen(argv[0]) + 1);
+  entry->identifier = calloc(strlen(argv[0]) + 1, sizeof(char));
   strcpy(entry->identifier, argv[0]);
   entry->type = TBX_CONFIG_KEYBINDING;
 

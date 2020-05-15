@@ -30,14 +30,13 @@ static size_t fnv1a_hash(const char *cp) {
   return hash;
 }
 
-typedef void parse_func(int argc, char **argv, int *target, char *name);
+typedef void parse_func(int argc, char **argv, void *target, char *name);
 
 struct style_property {
-    const char *name;
-    void *data;
-    parse_func *cmd;
+  const char *name;
+  void *data;
+  parse_func *cmd;
 };
-
 
 struct style_flag {
   char *name;
@@ -57,8 +56,7 @@ int getPropertyIndex(struct style_property *props, char *name) {
   return -1;
 }
 
-void parseValue(int argc, char **argv, int *target, char *name) {
-
+void parseValue(int argc, char **argv, void *target, char *name) {
   struct style_flag flagMap[] = {{"solid", (int)sf_solid},
                                  {"flat", (int)sf_flat},
                                  {"raised", (int)sf_raised},
@@ -97,25 +95,33 @@ void parseValue(int argc, char **argv, int *target, char *name) {
 
   // is font?
 
-  *target = flags;
+  *(int *)target = flags;
 }
 
-void parseInt(int argc, char **argv, int *target, char *name) {
-  *target = strtol(argv[1], NULL, 10);
+void parseInt(int argc, char **argv, void *target, char *name) {
+  *(int *)target = strtol(argv[1], NULL, 10);
   // printf("parseInt: %d\n", *target);
 }
 
-void parseString(int argc, char **argv, int *target, char *name) {
-  // printf("parseString: %s\n", name);
+void parseString(int argc, char **argv, void *target, char *name) {
+  if (argc < 2) {
+    return;
+  }
+
+  int l = strlen(argv[1]);
+  if (l) {
+    *(char **)target = calloc((l + 1), sizeof(char));
+    strcpy(*(char **)target, argv[1]);
+  }
 }
 
-void parseColor(int argc, char **argv, int *target, char *name) {
+void parseColor(int argc, char **argv, void *target, char *name) {
   uint32_t color;
   if (parse_color(argv[1], &color)) {
-    *target = color;
+    *(int *)target = color;
   }
   float colors[4];
-  color_to_rgba(colors, *target);
+  color_to_rgba(colors, *(int *)target);
   // printf("parseColor: %f %f %f\n", colors[0], colors[1], colors[2]);
 }
 
@@ -124,9 +130,9 @@ void load_style(struct tbx_server *server, const char *path) {
 
   char *expanded = 0;
   if (path) {
-    expanded = calloc(1, sizeof(char) + (strlen(path) + 1));
+    expanded = calloc(strlen(path) + 1, sizeof(char));
     strcpy(expanded, path);
-    expand_path(&expanded);  // return;
+    expand_path(&expanded); // return;
   }
 
   FILE *f = fopen(expanded, "r");
@@ -171,7 +177,17 @@ void load_style(struct tbx_server *server, const char *path) {
       }
 
       void *target = pointerMap[idx].data;
+
+      // if (pointerMap[idx].cmd == parseString) {
+      //   int l = strlen(argv[1]);
+      //   if (l) {
+      //     *(char**)pointerMap[idx].data = calloc(1, (l+1)*sizeof(char));
+      //     strcpy(*(char**)pointerMap[idx].data, argv[1]);
+      //   }
+      //   // _parseString(argc, argv, target, argv[0]);
+      // } else {
       pointerMap[idx].cmd(argc, argv, target, argv[0]);
+      // }
     }
 
     free_argv(argc, argv);
@@ -182,8 +198,28 @@ void load_style(struct tbx_server *server, const char *path) {
   memcpy(config_style, style, sizeof(struct tbx_style));
   strcpy(config_style->font, "monospace 10");
 
-    // dump defaults bin
-    // FILE *fp = fopen("./style.bin", "wb");
-    // fwrite(style, 1, sizeof(struct tbx_style), fp);
-    // fclose(fp);
+  // dump defaults bin
+  // FILE *fp = fopen("./style.bin", "wb");
+  // fwrite(style, 1, sizeof(struct tbx_style), fp);
+  // fclose(fp);
+}
+
+void free_style(struct tbx_style *style) {
+  printf("freeing..\n");
+  char *strings[] = {
+#include "style.strings.h"
+      "!"};
+
+  for (int i = 0;; i++) {
+    char *s = strings[i];
+    if (s && s[0] == '!')
+      break;
+    if (s) {
+      // printf(">%d %s\n", i, s);
+      free(strings[i]);
+    }
+  }
+
+  memcpy(style, style_bin, sizeof(struct tbx_style));
+  strcpy(style->font, "monospace 10");
 }

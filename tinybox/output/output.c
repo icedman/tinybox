@@ -420,7 +420,8 @@ static void render_console(struct tbx_output *output) {
   }
 }
 
-static void render_workspace(struct tbx_output *output, struct tbx_workspace *workspace) {
+static void render_workspace(struct tbx_output *output,
+                             struct tbx_workspace *workspace) {
   if (!workspace) {
     return;
   }
@@ -443,7 +444,7 @@ static void render_workspace(struct tbx_output *output, struct tbx_workspace *wo
       // invalid image
       workspace->background = 0;
     }
-  } 
+  }
 
   // fallback default background of workspace_1
   if (!texture) {
@@ -457,17 +458,16 @@ static void render_workspace(struct tbx_output *output, struct tbx_workspace *wo
   struct wlr_box box;
   memcpy(&box, &workspace->box, sizeof(struct wlr_box));
 
-  if (server->config.animate && in_main_output && 
+  if (server->config.animate && in_main_output &&
       (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
-      if (server->ws_animate) {
-        box.x += server->ws_anim_x;
-      } else {
-        box.x += server->cursor->swipe_x - server->cursor->swipe_begin_x;
-      }
+    if (server->ws_animate) {
+      box.x += server->ws_anim_x;
+    } else {
+      box.x += server->cursor->swipe_x - server->cursor->swipe_begin_x;
+    }
   }
 
-  render_texture(output->wlr_output, &box,
-                 texture, output->wlr_output->scale);
+  render_texture(output->wlr_output, &box, texture, output->wlr_output->scale);
 }
 
 static void output_frame(struct wl_listener *listener, void *data) {
@@ -517,12 +517,13 @@ static void output_frame(struct wl_listener *listener, void *data) {
   //-----------------
   // render workspace backgrounds
   //-----------------
-  if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
-      render_workspace(output, get_workspace(server, server->workspace - 1));
-      render_workspace(output, get_workspace(server, server->workspace + 1));
+  if (in_main_output && animate &&
+      (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+    render_workspace(output, get_workspace(server, server->workspace - 1));
+    render_workspace(output, get_workspace(server, server->workspace + 1));
   }
   render_workspace(output, get_workspace(server, server->workspace));
-  
+
   if (in_main_output) {
     render_console(output);
   }

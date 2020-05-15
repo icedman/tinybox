@@ -7,6 +7,7 @@
 
 #include <wlr/util/log.h>
 
+#include "common/cairo.h"
 #include "tinybox/config.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
@@ -42,6 +43,7 @@ int main(int argc, char **argv) {
 
   // load default style
   load_style(&theServer, 0); // style_defaults.h
+  // load_style(&theServer, "~/.sway/styles/Nyz");
   load_config(&theServer, "~/.tinybox/config");
 
   if (!tbx_server_start(&theServer)) {
