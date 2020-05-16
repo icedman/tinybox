@@ -1,3 +1,6 @@
+#define _POSIX_C_SOURCE 200112L
+#include <assert.h>
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,7 +17,20 @@
 
 struct tbx_server theServer = {0};
 
+// static void
+// setup_signals (void)
+// {
+//   sigset_t mask;
+
+//   // wlroots uses this to talk to xwayland, block it before we spawn other threads
+//   sigemptyset(&mask);
+//   sigaddset(&mask, SIGUSR1);
+//   sigprocmask(SIG_BLOCK, &mask, NULL);
+// }
+
 int main(int argc, char **argv) {
+
+  // setup_signals();
 
   char *startup_cmd = NULL;
   char *style_path = NULL;

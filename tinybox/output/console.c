@@ -36,6 +36,10 @@ void console_setup(struct tbx_server *server) {
 void console_clear() {
   struct tbx_console *console = &theConsole;
 
+  if (!console->server->config.console) {
+    return;
+  }
+
   console->inputIdx = 0;
   console->renderIdx = 0;
   console->dirty = true;
@@ -44,6 +48,10 @@ void console_clear() {
 
 void console_log(const char *format, ...) {
   struct tbx_console *console = &theConsole;
+
+  if (!console->server->config.console) {
+    return;
+  }
 
   char string[255] = "";
 

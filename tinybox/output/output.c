@@ -416,6 +416,10 @@ static void render_view_content(struct wlr_surface *surface, int sx, int sy,
 }
 
 static void render_console(struct tbx_output *output) {
+  if (!output->server->config.console) {
+    return;
+  }
+
   // -----------------------
   // render the console
   // -----------------------

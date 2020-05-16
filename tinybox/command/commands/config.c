@@ -76,9 +76,20 @@ static void exec_swipe_threshold(struct tbx_command *cmd, int argc,
   }
 }
 
+static void exec_console(struct tbx_command *cmd, int argc, char **argv) {
+  if (!command_check_args(cmd, argc, 1)) {
+    return;
+  }
+
+  struct tbx_config *config = &cmd->server->config;
+  config->console = parse_boolean(argv[0], false);
+}
+
+
 void register_config_commands(struct tbx_server *server) {
   register_command(server->command, "set", exec_set);
   register_command(server->command, "workspaces", exec_workspaces);
   register_command(server->command, "animate", exec_animate);
   register_command(server->command, "swipe_threshold", exec_swipe_threshold);
+  register_command(server->command, "console", exec_console);
 }

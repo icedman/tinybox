@@ -70,6 +70,7 @@ struct tbx_config {
   int workspaces;
   int swipe_threshold;
   bool animate;
+  bool console;
 
   uint32_t super_key;
 
