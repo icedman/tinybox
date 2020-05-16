@@ -11,53 +11,55 @@
 #include <string.h>
 #include <unistd.h>
 
-void view_close(struct tbx_view *view);
+void view_close(struct tbx_view* view);
 
-void exec_exec(struct tbx_command *cmd, int argc, char **argv) {
-  if (!command_check_args(cmd, argc, 1)) {
-    return;
-  }
-
-  //-------------------
-  // extract command
-  //-------------------
-  char command_line[512];
-  char *ptr = command_line;
-  for (int i = 0; i < argc; i++) {
-    char *n = argv[i];
-
-    if (n[0] == '$') {
-      n = get_dictionary_value(cmd->server, n);
-    }
-    if (!n) {
-      n = argv[i];
+void exec_exec(struct tbx_command* cmd, int argc, char** argv)
+{
+    if (!command_check_args(cmd, argc, 1)) {
+        return;
     }
 
-    strcpy(ptr, n);
-    ptr += strlen(n);
-    ptr[0] = ' ';
-    ptr[1] = 0;
-    ptr++;
-  }
+    //-------------------
+    // extract command
+    //-------------------
+    char command_line[512];
+    char* ptr = command_line;
+    for (int i = 0; i < argc; i++) {
+        char* n = argv[i];
 
-  console_log("%s", command_line);
-  
-  if (fork() == 0) {
-    execl("/bin/sh", "/bin/sh", "-c", command_line, (void *)NULL);
-  }
+        if (n[0] == '$') {
+            n = get_dictionary_value(cmd->server, n);
+        }
+        if (!n) {
+            n = argv[i];
+        }
+
+        strcpy(ptr, n);
+        ptr += strlen(n);
+        ptr[0] = ' ';
+        ptr[1] = 0;
+        ptr++;
+    }
+
+    console_log("%s", command_line);
+
+    if (fork() == 0) {
+        execl("/bin/sh", "/bin/sh", "-c", command_line, (void*)NULL);
+    }
 }
 
-void exec_kill(struct tbx_command *cmd, int argc, char **argv) {
+void exec_kill(struct tbx_command* cmd, int argc, char** argv)
+{
 
-  struct tbx_view *current_view =
-      wl_container_of(cmd->server->views.next, current_view, link);
+    struct tbx_view* current_view = wl_container_of(cmd->server->views.next, current_view, link);
 
-  if (current_view) {
-    view_close(current_view);
-  }
+    if (current_view) {
+        view_close(current_view);
+    }
 }
 
-void register_global_commands(struct tbx_server *server) {
-  register_command(server->command, "exec", exec_exec);
-  register_command(server->command, "kill", exec_kill);
+void register_global_commands(struct tbx_server* server)
+{
+    register_command(server->command, "exec", exec_exec);
+    register_command(server->command, "kill", exec_kill);
 }

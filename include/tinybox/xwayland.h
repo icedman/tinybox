@@ -7,14 +7,14 @@
 struct tbx_server;
 
 struct tbx_xwayland_shell {
-    struct wlr_xwayland *wlr_xwayland;
+    struct wlr_xwayland* wlr_xwayland;
 
-  struct wl_listener new_xwayland_surface;
-  struct tbx_server *server;
+    struct wl_listener new_xwayland_surface;
+    struct tbx_server* server;
 
-  int create_offset;
+    int create_offset;
 };
 
-bool xwayland_shell_setup(struct tbx_server *server);
+bool xwayland_shell_setup(struct tbx_server* server);
 
 #endif // TINYBOX_XWAYLNAD_H
