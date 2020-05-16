@@ -13,12 +13,14 @@
 #include <wlr/xwayland.h>
 
 
-static void xwayland_commit(struct wl_listener *listener, void *data) {
-
-  struct tbx_view *view = wl_container_of(listener, view, map);
-  struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
-  view->surface = xsurface->surface;
-}
+// static void xwayland_commit(struct wl_listener *listener, void *data) {
+  //???
+  // struct tbx_view *view = wl_container_of(listener, view, map);
+  // struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
+  // view->surface = xsurface->surface;
+  // view->surface = data;
+  // view->xwayland_surface = (struct wlr_xwayland_surface*)data;
+// }
 
 static void xwayland_surface_map(struct wl_listener *listener, void *data) {
   /* Called when the surface is mapped, or ready to display on-screen. */
@@ -29,13 +31,14 @@ static void xwayland_surface_map(struct wl_listener *listener, void *data) {
   view->mapped = true;
   view->title_dirty = true;
   view->surface = xsurface->surface;
-
+  view->xwayland_surface = xsurface;
+  
   // Wire up the commit listener here, because xwayland map/unmap can change
   // the underlying wlr_surface
-  view->commit.notify = xwayland_commit;
-  wl_signal_add(&xsurface->surface->events.commit, &view->commit);
+  // view->commit.notify = xwayland_commit;
+  // wl_signal_add(&xsurface->surface->events.commit, &view->commit);
 
-  // focus_view(view, view->xdg_surface->surface);
+  focus_view(view, view->surface);
 }
 
 static void xwayland_surface_unmap(struct wl_listener *listener, void *data) {

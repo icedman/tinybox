@@ -1,5 +1,6 @@
 #include "tinybox/view.h"
 #include "tinybox/output.h"
+#include "tinybox/xwayland.h"
 
 #include <stdlib.h>
 
@@ -45,11 +46,6 @@ void focus_view(struct tbx_view *view, struct wlr_surface *surface) {
     return;
   }
 
-  // implement xwayland_surface!
-  if (!view->xdg_surface) {
-    return;
-  }
-
   struct tbx_server *server = view->server;
   struct wlr_seat *seat = server->seat->seat;
   struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
@@ -64,9 +60,23 @@ void focus_view(struct tbx_view *view, struct wlr_surface *surface) {
      * it no longer has focus and the client will repaint accordingly, e.g.
      * stop displaying a caret.
      */
-    struct wlr_xdg_surface *previous =
-        wlr_xdg_surface_from_wlr_surface(seat->keyboard_state.focused_surface);
-    wlr_xdg_toplevel_set_activated(previous, false);
+    // todo
+    bool is_xdg = false;
+    struct tbx_view *v;
+    wl_list_for_each(v, &server->views, link) {
+      if (seat->keyboard_state.focused_surface == v->surface) {
+        if (v->xdg_surface) {
+          is_xdg = true;
+        }
+        break;
+      }
+    }
+
+    if (is_xdg) {
+      struct wlr_xdg_surface *previous =
+          wlr_xdg_surface_from_wlr_surface(seat->keyboard_state.focused_surface);
+      wlr_xdg_toplevel_set_activated(previous, false);
+    }
   }
 
   struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
@@ -74,16 +84,30 @@ void focus_view(struct tbx_view *view, struct wlr_surface *surface) {
   wl_list_remove(&view->link);
   wl_list_insert(&server->views, &view->link);
 
-  /* Activate the new surface */
-  wlr_xdg_toplevel_set_activated(view->xdg_surface, true);
-  /*
-   * Tell the seat to have the keyboard enter this surface. wlroots will keep
-   * track of this and automatically send key events to the appropriate
-   * clients without additional work on your part.
-   */
-  wlr_seat_keyboard_notify_enter(seat, view->xdg_surface->surface,
-                                 keyboard->keycodes, keyboard->num_keycodes,
-                                 &keyboard->modifiers);
+  if (view->xdg_surface) {
+    /* Activate the new surface */
+    wlr_xdg_toplevel_set_activated(view->xdg_surface, true);
+    /*
+     * Tell the seat to have the keyboard enter this surface. wlroots will keep
+     * track of this and automatically send key events to the appropriate
+     * clients without additional work on your part.
+     */
+    wlr_seat_keyboard_notify_enter(seat, view->xdg_surface->surface,
+                                   keyboard->keycodes, keyboard->num_keycodes,
+                                   &keyboard->modifiers);
+  }
+
+  if (view->xwayland_surface && view->surface) {
+
+    struct wlr_xwayland *xwayland = server->xwayland_shell->wlr_xwayland;
+      wlr_xwayland_set_seat(xwayland, seat);
+
+    wlr_seat_keyboard_notify_enter(seat, view->surface,
+                                   keyboard->keycodes, keyboard->num_keycodes,
+                                   &keyboard->modifiers);
+
+    wlr_xwayland_surface_activate(view->xwayland_surface, true);
+  }
 }
 
 void focus_view_without_raising(struct tbx_view *view,
@@ -116,6 +140,7 @@ void focus_view_without_raising(struct tbx_view *view,
         wlr_xdg_surface_from_wlr_surface(seat->keyboard_state.focused_surface);
     wlr_xdg_toplevel_set_activated(previous, false);
   }
+
   struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
 
   /* Activate the new surface */
@@ -132,6 +157,25 @@ void focus_view_without_raising(struct tbx_view *view,
 
 bool view_at(struct tbx_view *view, double lx, double ly,
              struct wlr_surface **surface, double *sx, double *sy) {
+
+
+  if (view->xwayland_surface) {
+    int w = view->width;
+    int h = view->height;
+    if (view->surface) {
+      w = view->surface->current.width;
+      h = view->surface->current.height;
+      if (lx >= view->x && lx <= view->x + w && 
+          ly >= view->y && ly <= view->y + h) {
+
+        *sx = lx - view->x;
+        *sy = ly - view->y;
+        *surface = view->surface;
+        return true;
+      }
+    }
+  }
+
     // implement xwayland_surface!
   if (!view->xdg_surface) {
     return false;

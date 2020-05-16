@@ -237,6 +237,7 @@ static void process_cursor_motion(struct tbx_server *server, uint32_t time) {
      * from keyboard focus. You get pointer focus by moving the pointer over
      * a window.
      */
+
     wlr_seat_pointer_notify_enter(seat, surface, sx, sy);
     if (!focus_changed) {
       /* The enter event contains coordinates, so we only need to notify
