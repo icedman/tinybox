@@ -12,13 +12,28 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/xwayland.h>
 
+
+static void xwayland_commit(struct wl_listener *listener, void *data) {
+
+  struct tbx_view *view = wl_container_of(listener, view, map);
+  struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
+  view->surface = xsurface->surface;
+}
+
 static void xwayland_surface_map(struct wl_listener *listener, void *data) {
   /* Called when the surface is mapped, or ready to display on-screen. */
-  console_log("map");
+
+  struct wlr_xwayland_surface *xsurface = data;
+
   struct tbx_view *view = wl_container_of(listener, view, map);
   view->mapped = true;
   view->title_dirty = true;
-  view->surface = (struct wlr_surface *)view->xwayland_surface;
+  view->surface = xsurface->surface;
+
+  // Wire up the commit listener here, because xwayland map/unmap can change
+  // the underlying wlr_surface
+  view->commit.notify = xwayland_commit;
+  wl_signal_add(&xsurface->surface->events.commit, &view->commit);
 
   // focus_view(view, view->xdg_surface->surface);
 }
@@ -38,17 +53,38 @@ static void xwayland_destroy(struct wl_listener *listener, void *data) {
   view_destroy(view);
 }
 
+static void xwayland_request_configure(struct wl_listener *listener, void *data) {
+  /* Called when the surface is destroyed and should never be shown again. */
+  struct tbx_view *view = wl_container_of(listener, view, destroy);
+  struct wlr_xwayland_surface_configure_event *ev = data;
+  struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
+  // if (!xsurface->mapped) {
+    wlr_xwayland_surface_configure(xsurface, ev->x, ev->y,
+      ev->width, ev->height);
+    // return;
+  // }
+
+    view->x = ev->x;
+    view->y = ev->y;
+    view->width = ev->width;
+    view->height = ev->height;
+}
+
 static void new_xwayland_surface(struct wl_listener *listener, void *data) {
   struct wlr_xwayland_surface *xwayland_surface = data;
 
     if (xwayland_surface->override_redirect) {
-        console_log("New xwayland unmanaged surface");
+        console_log("new xwayland unmanaged surface");
         // create_unmanaged(xsurface);
         return;
     }
 
   console_log("new surface");
 
+  if (!xwayland_surface) {
+    console_log("no surface?!!");
+  }
+  
   /* This event is raised when wlr_xdg_shell receives a new xdg surface from a
    * client, either a toplevel (application window) or popup. */
   struct tbx_xwayland_shell *xwayland_shell =
@@ -71,10 +107,15 @@ static void new_xwayland_surface(struct wl_listener *listener, void *data) {
   /* Listen to the various events it can emit */
   view->map.notify = xwayland_surface_map;
   wl_signal_add(&xwayland_surface->events.map, &view->map);
+
   view->unmap.notify = xwayland_surface_unmap;
   wl_signal_add(&xwayland_surface->events.unmap, &view->unmap);
+
   view->destroy.notify = xwayland_destroy;
   wl_signal_add(&xwayland_surface->events.destroy, &view->destroy);
+
+  view->request_configure.notify = xwayland_request_configure;
+  wl_signal_add(&xwayland_surface->events.request_configure, &view->request_configure);
 
   /* cotd */
   /*

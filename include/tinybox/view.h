@@ -33,8 +33,13 @@ struct tbx_view {
   struct wl_listener request_resize;
   struct wl_listener set_title;
 
+  // xwayland
+  struct wl_listener request_configure;
+  struct wl_listener commit;
+
   bool mapped;
   int x, y;
+  int width, height; // xwayland
 
   bool shaded;
   bool csd;

@@ -66,11 +66,11 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   if (view->xdg_surface) {
     wlr_xdg_surface_get_geometry(view->xdg_surface, &view_geometry);
   } else {
-    //
+    // todo implement xwayland geometry
     view_geometry.x = 0;
     view_geometry.y = 0;
-    view_geometry.width = 400;
-    view_geometry.height = 400;
+    view_geometry.width = view->surface->current.width;
+    view_geometry.height = view->surface->current.height;
   }
 
   double ox = 0, oy = 0;
@@ -341,6 +341,7 @@ static void render_view_content(struct wlr_surface *surface, int sx, int sy,
    * resource could be an opaque handle passed from the client, or the client
    * could have sent a pixel buffer which we copied to the GPU, or a few other
    * means. You don't have to worry about this, wlroots takes care of it. */
+
   struct wlr_texture *texture = wlr_surface_get_texture(surface);
   if (texture == NULL) {
     return;
@@ -626,9 +627,16 @@ static void output_frame(struct wl_listener *listener, void *data) {
     }
 
     // content
-    if (!view->shaded && view->xdg_surface) {
-      wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
+    if (!view->shaded) {
+
+      if (view->xdg_surface) {
+        wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
                                        &rdata);
+      }
+
+      if (view->xwayland_surface && view->surface) {
+        render_view_content(view->surface, 0, 0, &rdata);
+      }
     }
   }
 

@@ -63,7 +63,13 @@ static bool begin_interactive_sd(struct tbx_server *server,
       cursor->grab_y += handleWidth;
     }
 
-    wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
+    if (view->xdg_surface) {
+      wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
+    } else {
+      // todo xwayland
+      cursor->grab_box.width = view->surface->current.width;
+      cursor->grab_box.height = view->surface->current.height;
+    }
 
     cursor->grab_box.x = view->x;
     cursor->grab_box.y = view->y;
@@ -89,7 +95,16 @@ static bool begin_interactive_sd(struct tbx_server *server,
     cursor->grab_view = view;
     cursor->grab_x = cursor->cursor->x - view->x;
     cursor->grab_y = cursor->cursor->y - view->y;
-    wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
+
+
+    if (view->xdg_surface) {
+      wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
+    } else {
+      // todo xwayland
+      cursor->grab_box.width = view->surface->current.width;
+      cursor->grab_box.height = view->surface->current.height;
+    }
+
     cursor->grab_box.x = view->x;
     cursor->grab_box.y = view->y;
     view->hotspot = -1;
@@ -157,6 +172,10 @@ static void process_cursor_resize(struct tbx_server *server, uint32_t time) {
     if (new_right <= new_left) {
       new_right = new_left + 1;
     }
+  }
+
+  if (!view->xdg_surface) {
+    return;
   }
 
   struct wlr_box geo_box;

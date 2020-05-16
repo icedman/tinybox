@@ -91,7 +91,9 @@ void activate_workspace(struct tbx_server *server, int id, bool animate) {
     struct tbx_view *view;
     wl_list_for_each_reverse(view, &server->views, link) {
       if (view->workspace == id) {
-        focus_view_without_raising(view, view->xdg_surface->surface);
+        if (view->xdg_surface) {
+          focus_view_without_raising(view, view->xdg_surface->surface);
+        }
         break;
       }
     }
@@ -137,7 +139,7 @@ void cycle_next_view(struct tbx_server *server) {
       wl_container_of(current_view->link.next, next_view, link);
 
   // implement xwayland_surface!
-  if (!next_view->xdg_surface) {
+  if (next_view->xdg_surface) {
     focus_view(next_view, next_view->xdg_surface->surface);
   }
 
