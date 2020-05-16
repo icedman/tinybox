@@ -40,6 +40,8 @@ void exec_exec(struct tbx_command *cmd, int argc, char **argv) {
     ptr++;
   }
 
+  console_log("%s", command_line);
+  
   if (fork() == 0) {
     execl("/bin/sh", "/bin/sh", "-c", command_line, (void *)NULL);
   }

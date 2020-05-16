@@ -360,6 +360,11 @@ static void server_cursor_swipe_update(struct wl_listener *listener,
   cursor->swipe_x += event->dx;
   cursor->swipe_y += event->dy;
 
+  if (cursor->swipe_fingers == 4 && cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE) {
+    cursor->swipe_x += event->dx * 1.5;
+    cursor->swipe_y += event->dy * 1.5;
+  }
+
   if (cursor->swipe_fingers == 3) {
     wlr_cursor_move(cursor->cursor, event->device, event->dx, event->dy);
     process_cursor_motion(server, event->time_msec);

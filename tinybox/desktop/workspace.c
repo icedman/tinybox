@@ -49,8 +49,12 @@ void move_to_workspace(struct tbx_server *server, struct tbx_view *view, int id,
   // console_log("view at ws %d", view->workspace);
 
   activate_workspace(server, id, animate);
-  focus_view_without_raising(view, view->xdg_surface->surface);
 
+  // implement xwayland_surface!
+  if (view->xdg_surface) {
+    focus_view_without_raising(view, view->xdg_surface->surface);
+  }
+  
   // animate view
   if (animate) {
 
@@ -132,7 +136,10 @@ void cycle_next_view(struct tbx_server *server) {
   struct tbx_view *next_view =
       wl_container_of(current_view->link.next, next_view, link);
 
-  focus_view(next_view, next_view->xdg_surface->surface);
+  // implement xwayland_surface!
+  if (!next_view->xdg_surface) {
+    focus_view(next_view, next_view->xdg_surface->surface);
+  }
 
   /* Move the previous view to the end of the list */
   wl_list_remove(&current_view->link);

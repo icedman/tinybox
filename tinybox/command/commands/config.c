@@ -71,8 +71,8 @@ static void exec_swipe_threshold(struct tbx_command *cmd, int argc,
   if (config->swipe_threshold < 0) {
     config->swipe_threshold = 0;
   }
-  if (config->swipe_threshold > 200) {
-    config->swipe_threshold = 200;
+  if (config->swipe_threshold > 500) {
+    config->swipe_threshold = 500;
   }
 }
 

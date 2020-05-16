@@ -33,7 +33,8 @@ tinybox_src = files(
   'output/console.c',
 
   'server/server.c',
-  'shell/xdg_shell.c'
+  'shell/xdg_shell.c',
+  'shell/xwayland_shell.c'
   )
 
 tinybox_dep = [

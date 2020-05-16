@@ -46,6 +46,10 @@ struct wlr_texture *get_texture_cache(int idx) {
 static void generate_texture(struct wlr_renderer *renderer, int idx, int flags,
                              int w, int h, float color[static 4],
                              float colorTo[static 4]) {
+  if (flags == 0) {
+    return;
+  }
+
   // printf("generate texture %d\n", idx);
 
   if (texture_cache[idx]) {
@@ -53,14 +57,53 @@ static void generate_texture(struct wlr_renderer *renderer, int idx, int flags,
     texture_cache[idx] = NULL;
   }
 
-  if (flags == 0) {
+  cairo_surface_t *surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+  cairo_t *cx = cairo_create(surf);
+
+  draw_gradient_rect(cx, flags, w, h, color, colorTo);
+
+  unsigned char *data = cairo_image_surface_get_data(surf);
+  texture_cache[idx] =
+      wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+                              cairo_image_surface_get_stride(surf), w, h, data);
+
+  // char fname[255] = "";
+  // sprintf(fname, "/tmp/text_%d.png", idx);
+  // cairo_surface_write_to_png(surf, fname);
+
+  cairo_destroy(cx);
+  cairo_surface_destroy(surf);
+};
+
+static void generate_texture_pixmap(struct wlr_renderer *renderer, int idx,
+                             int w, int h, char *pixmap) {
+  // printf("generate texture %d\n", idx);
+  if (!pixmap) {
+    return;
+  }
+
+  if (texture_cache[idx]) {
+    wlr_texture_destroy(texture_cache[idx]);
+    texture_cache[idx] = NULL;
+  }
+
+  if (!pixmap) {
+    return;
+  }
+
+  cairo_surface_t *xpm = cairo_image_from_xpm(pixmap);
+  if (xpm) {
     return;
   }
 
   cairo_surface_t *surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
   cairo_t *cx = cairo_create(surf);
 
+  console_log("we got ourselves a pixmap");
+
+  /*
   draw_gradient_rect(cx, flags, w, h, color, colorTo);
+  */
 
   unsigned char *data = cairo_image_surface_get_data(surf);
   texture_cache[idx] =
@@ -95,17 +138,14 @@ void generate_textures(struct tbx_output *output, bool forced) {
   flags = style->window_title_focus;
   generate_texture(renderer, tx_window_title_focus, flags, 512, 16, color,
                    colorTo);
+  generate_texture_pixmap(renderer, tx_window_title_focus, 512, 16, style->window_title_focus_pixmap);
 
   color_to_rgba(color, style->window_title_unfocus_color);
   color_to_rgba(colorTo, style->window_title_unfocus_colorTo);
   flags = style->window_title_unfocus;
   generate_texture(renderer, tx_window_title_unfocus, flags, 512, 16, color,
                    colorTo);
-
-  // titlebar pixmap
-  if (style->window_title_focus_pixmap) {
-    printf("%s\n", style->window_title_focus_pixmap);
-  }
+  generate_texture_pixmap(renderer, tx_window_title_unfocus, 512, 16, style->window_title_unfocus_pixmap);
 
   // titlebar/label
   color_to_rgba(color, style->window_label_focus_color);
@@ -113,12 +153,14 @@ void generate_textures(struct tbx_output *output, bool forced) {
   flags = style->window_label_focus;
   generate_texture(renderer, tx_window_label_focus, flags, 512, 16, color,
                    colorTo);
+  generate_texture_pixmap(renderer, tx_window_label_focus, 512, 16, style->window_label_focus_pixmap);
 
   color_to_rgba(color, style->window_label_unfocus_color);
   color_to_rgba(colorTo, style->window_label_unfocus_colorTo);
   flags = style->window_label_unfocus;
   generate_texture(renderer, tx_window_label_unfocus, flags, 512, 16, color,
                    colorTo);
+  generate_texture_pixmap(renderer, tx_window_label_unfocus, 512, 16, style->window_label_unfocus_pixmap);
 
   // handle
   color_to_rgba(color, style->window_handle_focus_color);
@@ -126,12 +168,14 @@ void generate_textures(struct tbx_output *output, bool forced) {
   flags = style->window_handle_focus;
   generate_texture(renderer, tx_window_handle_focus, flags, 512, 16, color,
                    colorTo);
+  generate_texture_pixmap(renderer, tx_window_handle_focus, 512, 16, style->window_handle_focus_pixmap);
 
   color_to_rgba(color, style->window_handle_unfocus_color);
   color_to_rgba(colorTo, style->window_handle_unfocus_colorTo);
   flags = style->window_handle_unfocus;
   generate_texture(renderer, tx_window_handle_unfocus, flags, 512, 16, color,
                    colorTo);
+  generate_texture_pixmap(renderer, tx_window_handle_unfocus, 512, 16, style->window_handle_unfocus_pixmap);
 
   // grip
   color_to_rgba(color, style->window_grip_focus_color);
@@ -139,12 +183,14 @@ void generate_textures(struct tbx_output *output, bool forced) {
   flags = style->window_grip_focus;
   generate_texture(renderer, tx_window_grip_focus, flags, 30, 16, color,
                    colorTo);
+  generate_texture_pixmap(renderer, tx_window_grip_focus, 512, 16, style->window_grip_focus_pixmap);
 
   color_to_rgba(color, style->window_grip_unfocus_color);
   color_to_rgba(colorTo, style->window_grip_unfocus_colorTo);
   flags = style->window_grip_unfocus;
   generate_texture(renderer, tx_window_grip_unfocus, flags, 30, 16, color,
                    colorTo);
+  generate_texture_pixmap(renderer, tx_window_grip_unfocus, 512, 16, style->window_grip_unfocus_pixmap);
 }
 
 void generate_view_title_texture(struct tbx_output *output,

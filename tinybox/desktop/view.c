@@ -6,16 +6,37 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/xwayland.h>
 
 const char *get_string_prop(struct tbx_view *view, enum tbx_view_prop prop) {
-  switch (prop) {
-  case VIEW_PROP_TITLE:
-    return view->xdg_surface->toplevel->title;
-  case VIEW_PROP_APP_ID:
-    return view->xdg_surface->toplevel->app_id;
-  default:
+  if (view->xwayland_surface) {
+    switch (prop) {
+    case VIEW_PROP_TITLE:
+      return view->xwayland_surface->title;
+    // case VIEW_PROP_CLASS:
+      // return view->wlr_xwayland_surface->class;
+    // case VIEW_PROP_INSTANCE:
+    //   return view->wlr_xwayland_surface->instance;
+    // case VIEW_PROP_WINDOW_ROLE:
+    //   return view->wlr_xwayland_surface->role;
+    default:
+      return NULL;
+    }
+
     return NULL;
   }
+
+  if (view->xdg_surface) {
+    switch (prop) {
+      case VIEW_PROP_TITLE:
+        return view->xdg_surface->toplevel->title;
+      case VIEW_PROP_APP_ID:
+        return view->xdg_surface->toplevel->app_id;
+      default:
+        return NULL;
+    }
+  }
+  return NULL;
 }
 
 void focus_view(struct tbx_view *view, struct wlr_surface *surface) {
@@ -23,6 +44,12 @@ void focus_view(struct tbx_view *view, struct wlr_surface *surface) {
   if (view == NULL) {
     return;
   }
+
+  // implement xwayland_surface!
+  if (!view->xdg_surface) {
+    return;
+  }
+
   struct tbx_server *server = view->server;
   struct wlr_seat *seat = server->seat->seat;
   struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
@@ -41,10 +68,12 @@ void focus_view(struct tbx_view *view, struct wlr_surface *surface) {
         wlr_xdg_surface_from_wlr_surface(seat->keyboard_state.focused_surface);
     wlr_xdg_toplevel_set_activated(previous, false);
   }
+
   struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
   /* Move the view to the front */
   wl_list_remove(&view->link);
   wl_list_insert(&server->views, &view->link);
+
   /* Activate the new surface */
   wlr_xdg_toplevel_set_activated(view->xdg_surface, true);
   /*
@@ -63,6 +92,12 @@ void focus_view_without_raising(struct tbx_view *view,
   if (view == NULL) {
     return;
   }
+
+  // implement xwayland_surface!
+  if (!view->xdg_surface) {
+    return;
+  }
+
   struct tbx_server *server = view->server;
   struct wlr_seat *seat = server->seat->seat;
   struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
@@ -97,6 +132,11 @@ void focus_view_without_raising(struct tbx_view *view,
 
 bool view_at(struct tbx_view *view, double lx, double ly,
              struct wlr_surface **surface, double *sx, double *sy) {
+    // implement xwayland_surface!
+  if (!view->xdg_surface) {
+    return false;
+  }
+
   /*
    * XDG toplevels may have nested surfaces, such as popup windows for context
    * menus or tooltips. This function tests if any of those are underneath the
@@ -187,6 +227,11 @@ bool hotspot_at(struct tbx_view *view, double lx, double ly,
 }
 
 bool view_is_visible(struct tbx_output *output, struct tbx_view *view) {
+    // implement xwayland_surface!
+  if (!view->xdg_surface) {
+    return false;
+  }
+
   struct wlr_box *box = wlr_output_layout_get_box(view->server->output_layout,
                                                   output->wlr_output);
 
@@ -237,6 +282,11 @@ void view_destroy(struct tbx_view *view) {
 }
 
 void view_close(struct tbx_view *view) {
+    // implement xwayland_surface!
+  if (!view->xdg_surface) {
+    return;
+  }
+
   struct wlr_xdg_surface *surface = view->xdg_surface;
   if (surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL && surface->toplevel) {
     wlr_xdg_toplevel_send_close(surface);

@@ -161,10 +161,10 @@ bool xdg_shell_setup(struct tbx_server *server) {
   server->xdg_shell->server = server;
   server->xdg_shell->wlr_xdg_shell = wlr_xdg_shell_create(server->wl_display);
   server->xdg_shell->new_xdg_surface.notify = server_new_xdg_surface;
-
-  wl_list_init(&server->views);
   wl_signal_add(&server->xdg_shell->wlr_xdg_shell->events.new_surface,
                 &server->xdg_shell->new_xdg_surface);
+
+  wl_list_init(&server->views);
 
   return true;
 }

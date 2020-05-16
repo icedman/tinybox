@@ -202,13 +202,11 @@ cairo_surface_t *cairo_image_from_xpm(char *path) {
       for (int i = 0; i < width; i++) {
         char color = line[i * index_size];
         uint32_t _color = colors[(int)color];
-        // if (_color) {}
 
-        float cls[4];
-        color_to_rgba(cls, _color);
-        int r = 255 * cls[0];
-        int g = 255 * cls[1];
-        int b = 255 * cls[2];
+        int r = ((_color >> 24) & 0xff);
+        int g = ((_color >> 16) & 0xff);
+        int b = ((_color >> 8) & 0xff);
+
         // row[i] = (r << 24) | (g << 16) | (b << 8) | 0xff;;
         row[i] = (r << 16) | (g << 8) | (b << 0); // | 0xff;
       }
@@ -234,7 +232,7 @@ cairo_surface_t *cairo_image_from_xpm(char *path) {
   }
 
   cairo_surface_mark_dirty(surface);
-  cairo_surface_write_to_png(surface, fname);
+  // cairo_surface_write_to_png(surface, fname);
 
   printf("%d %d %d %d\n", width, height, palette_size, index_size);
   return surface;

@@ -9,6 +9,7 @@
 #include "tinybox/render.h"
 #include "tinybox/seat.h"
 #include "tinybox/shell.h"
+#include "tinybox/xwayland.h"
 #include "tinybox/workspace.h"
 
 #include <getopt.h>
@@ -37,8 +38,10 @@ bool tbx_server_setup(struct tbx_server *server) {
   server->wl_event_loop = wl_display_get_event_loop(server->wl_display);
   server->renderer = wlr_backend_get_renderer(server->backend);
 
-  wlr_renderer_init_wl_display(server->renderer, server->wl_display);
-  wlr_compositor_create(server->wl_display, server->renderer);
+   wlr_renderer_init_wl_display(server->renderer, server->wl_display);
+ 
+  server->compositor = wlr_compositor_create(server->wl_display, server->renderer);
+ 
   wlr_data_device_manager_create(server->wl_display);
 
   // load config
@@ -47,6 +50,7 @@ bool tbx_server_setup(struct tbx_server *server) {
   // setup protocols
   output_setup(server);
   xdg_shell_setup(server);
+  xwayland_shell_setup(server);
   cursor_setup(server);
   seat_setup(server);
   decoration_setup(server);

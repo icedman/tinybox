@@ -26,6 +26,7 @@
 #include <wlr/render/gles2.h>
 
 #define ANIM_SPEED 0.75
+#define SWIPE_MIN (100 * 100)
 
 static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
                                     void *data) {
@@ -44,8 +45,10 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   float color[4] = {1, 0, 1, 1};
 
   int unfocus_offset = 0;
-  if (view->xdg_surface->surface != seat->keyboard_state.focused_surface) {
-    unfocus_offset++;
+  if (view->xdg_surface) {
+    if (view->xdg_surface->surface != seat->keyboard_state.focused_surface) {
+      unfocus_offset++;
+    }
   }
 
   float colorDebug1[4] = {0, 1, 1, 1};
@@ -60,7 +63,15 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
   struct wlr_box view_geometry;
   struct wlr_box box;
 
-  wlr_xdg_surface_get_geometry(view->xdg_surface, &view_geometry);
+  if (view->xdg_surface) {
+    wlr_xdg_surface_get_geometry(view->xdg_surface, &view_geometry);
+  } else {
+    //
+    view_geometry.x = 0;
+    view_geometry.y = 0;
+    view_geometry.width = 400;
+    view_geometry.height = 400;
+  }
 
   double ox = 0, oy = 0;
   wlr_output_layout_output_coords(view->server->output_layout, output, &ox,
@@ -177,15 +188,15 @@ static void render_view_decorations(struct wlr_surface *surface, int sx, int sy,
     box.width = view->title_box.width;
     box.height = view->title_box.height;
 
-    scissor_output(output, sc_box);
-
-    if (!unfocus_offset) {
-      render_texture(output, &box, view->title, output->scale);
-    } else {
-      render_texture(output, &box, view->title_unfocused, output->scale);
+    if (view->title) {
+      scissor_output(output, sc_box);
+      if (!unfocus_offset) {
+        render_texture(output, &box, view->title, output->scale);
+      } else {
+        render_texture(output, &box, view->title_unfocused, output->scale);
+      }
+      wlr_renderer_scissor(rdata->renderer, NULL);
     }
-
-    wlr_renderer_scissor(rdata->renderer, NULL);
   }
 
   // ----------------------
@@ -463,7 +474,10 @@ static void render_workspace(struct tbx_output *output,
     if (server->ws_animate) {
       box.x += server->ws_anim_x;
     } else {
-      box.x += server->cursor->swipe_x - server->cursor->swipe_begin_x;
+      float d = server->cursor->swipe_x - server->cursor->swipe_begin_x;
+      if (d * d > SWIPE_MIN) {
+        box.x += d;
+      }
     }
   }
 
@@ -571,6 +585,10 @@ static void output_frame(struct wl_listener *listener, void *data) {
           d += server->ws_anim_x;
         } else {
           d += cursor->swipe_x - cursor->swipe_begin_x;
+          float d = server->cursor->swipe_x - server->cursor->swipe_begin_x;
+          if (d * d < SWIPE_MIN) {
+            d = 0;
+          }      
         }
 
         workspace = get_workspace(output->server, view->workspace);
@@ -608,7 +626,7 @@ static void output_frame(struct wl_listener *listener, void *data) {
     }
 
     // content
-    if (!view->shaded) {
+    if (!view->shaded && view->xdg_surface) {
       wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
                                        &rdata);
     }

@@ -24,6 +24,8 @@ struct tbx_view {
 
   struct wlr_surface *surface; // NULL for unmapped views
   struct wlr_xdg_surface *xdg_surface;
+  struct wlr_xwayland_surface *xwayland_surface;
+
   struct wl_listener map;
   struct wl_listener unmap;
   struct wl_listener destroy;

@@ -19,6 +19,7 @@ struct tbx_server {
   struct wl_display *wl_display;
   struct wlr_backend *backend;
   struct wlr_renderer *renderer;
+  struct wlr_compositor *compositor;
   struct wl_event_loop *wl_event_loop;
 
   // output
@@ -30,6 +31,9 @@ struct tbx_server {
 
   // shell
   struct tbx_xdg_shell *xdg_shell;
+  struct tbx_xwayland_shell *xwayland_shell;
+
+  // decorations
   struct tbx_decoration_manager *decoration_manager;
 
   // views
