@@ -627,12 +627,12 @@ static void output_frame(struct wl_listener* listener, void* data)
         // content
         if (!view->shaded) {
 
-            if (view->view_type == VIEW_TYPE_XDG_SHELL) {
+            if (view->view_type == VIEW_TYPE_XDG) {
                 wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
                     &rdata);
             }
 
-            if (view->view_type == VIEW_TYPE_XWAYLAND_SHELL) {
+            if (view->view_type == VIEW_TYPE_XWAYLAND) {
                 render_view_content(view->surface, 0, 0, &rdata);
             }
         }

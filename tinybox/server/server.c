@@ -50,12 +50,16 @@ bool tbx_server_setup(struct tbx_server* server)
 
     // setup protocols
     output_setup(server);
+
+    // shells & views
+    wl_list_init(&server->views);
+    wl_list_init(&server->unmanaged);
     xdg_shell_setup(server);
     xwayland_shell_setup(server);
-    cursor_setup(server);
-    seat_setup(server);
     decoration_setup(server);
 
+    cursor_setup(server);
+    seat_setup(server);
     console_setup(server);
     command_setup(server);
 

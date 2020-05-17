@@ -38,6 +38,7 @@ struct tbx_server {
 
     // views
     struct wl_list views;
+    struct wl_list unmanaged;
 
     // workspaces
     struct wl_list workspaces;

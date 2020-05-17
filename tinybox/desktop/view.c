@@ -62,7 +62,7 @@ void view_set_focus(struct tbx_view* view, struct wlr_surface* surface)
 bool view_at(struct tbx_view* view, double lx, double ly,
     struct wlr_surface** surface, double* sx, double* sy)
 {
-    if (view->view_type == VIEW_TYPE_XWAYLAND_SHELL) {
+    if (view->view_type == VIEW_TYPE_XWAYLAND) {
         double w = view->width;
         double h = view->height;
         if (view->surface) {
@@ -81,7 +81,7 @@ bool view_at(struct tbx_view* view, double lx, double ly,
         }
     }
 
-    if (view->view_type == VIEW_TYPE_XDG_SHELL) {
+    if (view->view_type == VIEW_TYPE_XDG) {
         /*
        * XDG toplevels may have nested surfaces, such as popup windows for context
        * menus or tooltips. This function tests if any of those are underneath the

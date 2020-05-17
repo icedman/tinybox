@@ -241,7 +241,7 @@ static void server_new_xdg_surface(struct wl_listener* listener, void* data)
     /* Allocate a tbx_view for this surface */
     struct tbx_xdg_shell_view* xdg_shell_view = calloc(1, sizeof(struct tbx_xdg_shell_view));
     struct tbx_view* view = &xdg_shell_view->view;
-    view->view_type = VIEW_TYPE_XDG_SHELL;
+    view->view_type = VIEW_TYPE_XDG;
     view->interface = &xdg_view_interface;
 
     view->xdg_surface = xdg_surface;
@@ -289,8 +289,5 @@ bool xdg_shell_setup(struct tbx_server* server)
     server->xdg_shell->new_xdg_surface.notify = server_new_xdg_surface;
     wl_signal_add(&server->xdg_shell->wlr_xdg_shell->events.new_surface,
         &server->xdg_shell->new_xdg_surface);
-
-    wl_list_init(&server->views);
-
     return true;
 }
