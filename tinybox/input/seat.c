@@ -131,7 +131,7 @@ bool seat_setup(struct tbx_server* server)
     server->seat = calloc(1, sizeof(struct tbx_seat));
     server->seat->server = server;
     server->seat->keys_pressed = calloc(1, sizeof(struct tbx_keys_pressed));
-    clear_keys(server->seat->keys_pressed);
+    keys_clear(server->seat->keys_pressed);
 
     wl_list_init(&server->seat->input_devices);
     wl_list_init(&server->seat->keyboards);

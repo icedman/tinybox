@@ -22,12 +22,13 @@ struct tbx_workspace {
 };
 
 void workspace_setup(struct tbx_server* server);
+
 void move_to_workspace(struct tbx_server* server, struct tbx_view* view, int id,
     bool animate);
 
 void cycle_next_view(struct tbx_server* server);
 
-void activate_workspace(struct tbx_server* server, int id, bool animate);
+void workspace_activate(struct tbx_server* server, int id, bool animate);
 struct tbx_workspace* get_workspace(struct tbx_server* server, int id);
 
 #endif // TINYBOX_WORKSPACE_H

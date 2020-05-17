@@ -26,14 +26,10 @@ struct tbx_keyboard {
 void keyboard_attach(struct tbx_server* server,
     struct wlr_input_device* device);
 
-void add_key_by_name(struct tbx_keys_pressed* kp, char* name);
-void add_key(struct tbx_keys_pressed* kp, uint32_t k);
-void add_modifiers(struct tbx_keys_pressed* kp, uint32_t mod);
-void clear_keys(struct tbx_keys_pressed* kp);
-
-void dump_keys(struct tbx_keys_pressed* kp);
-
-uint32_t get_modifier_mask_by_name(const char* name);
-bool is_modifier(uint32_t modifier);
+void keys_add(struct tbx_keys_pressed* kp, uint32_t k);
+void keys_add_named(struct tbx_keys_pressed* kp, char* name);
+void keys_add_modifiers(struct tbx_keys_pressed* kp, uint32_t mod);
+void keys_clear(struct tbx_keys_pressed* kp);
+void keys_print(struct tbx_keys_pressed* kp);
 
 #endif // TINYBOX_KEYBOARD_H

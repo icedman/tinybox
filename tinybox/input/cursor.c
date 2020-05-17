@@ -11,6 +11,8 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 const char* cursor_images[] = {
+    "top_left_corner", // HS_EDGE_TOP,
+    "top_right_corner", // HS_EDGE_TOP,
     "bottom_left_corner", // HS_EDGE_BOTTOM,
     "bottom_right_corner", // HS_EDGE_BOTTOM,
     "top_side", // HS_EDGE_TOP,
@@ -19,8 +21,8 @@ const char* cursor_images[] = {
     "right_side", // HS_EDGE_RIGHT,
     "left_ptr", // HS_TITLEBAR,
     "left_ptr", // HS_HANDLE,
-    "left_ptr", // HS_GRIP_LEFT,
-    "left_ptr", // HS_GRIP_RIGHT,
+    "left_ptr", // HS_EDGE_BOTTOM_LEFT,
+    "left_ptr", // HS_EDGE_BOTTOM_RIGHT,
     // HS_COUNT
 };
 
@@ -112,7 +114,7 @@ static bool begin_interactive_sd(struct tbx_server* server,
 
         view->workspace = server->workspace;
 
-        focus_view(view, view->surface);
+        view_set_focus(view, view->surface);
         return true;
     }
 
@@ -176,23 +178,33 @@ static void process_cursor_resize(struct tbx_server* server, uint32_t time)
         }
     }
 
-    if (!view->xdg_surface) {
-        return;
-    }
-
-    struct wlr_box geo_box;
-    wlr_xdg_surface_get_geometry(view->xdg_surface, &geo_box);
-    view->x = new_left - geo_box.x;
-    view->y = new_top - geo_box.y;
-
     int new_width = new_right - new_left;
     int new_height = new_bottom - new_top;
-    wlr_xdg_toplevel_set_size(view->xdg_surface, new_width, new_height);
 
-    view->request_box.x = view->x;
-    view->request_box.y = view->y;
-    view->request_box.width = new_width;
-    view->request_box.height = new_height;
+    double minWidth;
+    double minHeight;
+    double maxWidth;
+    double maxHeight;
+
+    view->interface->get_constraints(view, &minWidth, &maxWidth, &minHeight, &maxHeight);
+    if (new_width < minWidth) {
+        new_width = minWidth;
+    }
+    if (new_width > maxWidth) {
+        new_width = maxWidth;
+    }
+    if (new_height < minHeight) {
+        new_height = minHeight;
+    }
+    if (new_height > maxHeight) {
+        new_height = maxHeight;
+    }
+    // grip
+    if (new_width < 68) {
+        new_width = 68;
+    }
+
+    view->interface->configure(view, new_left, new_top, new_width, new_height);
 }
 
 static void process_cursor_motion(struct tbx_server* server, uint32_t time)
@@ -306,7 +318,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
 
     } else {
         /* Focus that client if the button was _pressed_ */
-        focus_view(view, surface);
+        view_set_focus(view, surface);
         begin_interactive_sd(server, view);
     }
 }
@@ -358,7 +370,7 @@ static void server_cursor_swipe_begin(struct wl_listener* listener,
     // console_log("begin %d", (int)server->swipe_begin_x);
 
     if (event->fingers == 3) {
-        focus_view(view, surface);
+        view_set_focus(view, surface);
 
         if (!begin_interactive_sd(server, view)) {
             cursor->mode = TBX_CURSOR_PASSTHROUGH;
@@ -411,9 +423,9 @@ static void server_cursor_swipe_end(struct wl_listener* listener, void* data)
         double d = cursor->swipe_x - cursor->swipe_begin_x;
         int threshold = 50 + server->config.swipe_threshold;
         if (d < -threshold) {
-            activate_workspace(server, server->workspace + 1, true);
+            workspace_activate(server, server->workspace + 1, true);
         } else if (d > threshold) {
-            activate_workspace(server, server->workspace - 1, true);
+            workspace_activate(server, server->workspace - 1, true);
         }
 
         server->ws_animate = true;

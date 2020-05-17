@@ -29,7 +29,7 @@ void exec_workspace(struct tbx_command* cmd, int argc, char** argv)
             w = cmd->server->workspace + 1;
         }
 
-        activate_workspace(cmd->server, w, true);
+        workspace_activate(cmd->server, w, true);
     }
 }
 

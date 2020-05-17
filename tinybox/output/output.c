@@ -28,6 +28,16 @@
 #define ANIM_SPEED 0.75
 #define SWIPE_MIN (100 * 100)
 
+static void smoothen_geometry_when_resizing(struct tbx_view *view, struct wlr_box *box) {
+    // smoothen
+    if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT || view->server->cursor->resize_edges & WLR_EDGE_TOP) &&
+        (view->request_box.width > 20 && view->request_box.height > 20) &&
+        (view->request_box.width != box->width || view->request_box.height != box->height)) {
+        box->width = view->request_box.width;
+        box->height = view->request_box.height;
+    }
+}
+
 static void render_view_decorations(struct wlr_surface* surface, int sx, int sy,
     void* data)
 {
@@ -46,33 +56,14 @@ static void render_view_decorations(struct wlr_surface* surface, int sx, int sy,
     float color[4] = { 1, 0, 1, 1 };
 
     int unfocus_offset = 0;
-    if (view->xdg_surface) {
-        if (view->xdg_surface->surface != seat->keyboard_state.focused_surface) {
-            unfocus_offset++;
-        }
-    }
-
-    float colorDebug1[4] = { 0, 1, 1, 1 };
-    float colorDebug2[4] = { 1, 0, 1, 1 };
-    float colorDebug3[4] = { 1, 1, 1, 1 };
-    float colorDebug4[4] = { 1, 0, 0, 1 };
-
-    if (colorDebug1[0] || colorDebug2[0] || colorDebug3[0] || colorDebug4[4]) {
-        // suppress unused
+    if (view_from_surface(view->server, seat->keyboard_state.focused_surface) != view) {
+        unfocus_offset++;
     }
 
     struct wlr_box view_geometry;
     struct wlr_box box;
 
-    if (view->xdg_surface) {
-        wlr_xdg_surface_get_geometry(view->xdg_surface, &view_geometry);
-    } else {
-        // todo implement xwayland geometry
-        view_geometry.x = 0;
-        view_geometry.y = 0;
-        view_geometry.width = view->surface->current.width;
-        view_geometry.height = view->surface->current.height;
-    }
+    view->interface->get_geometry(view, &view_geometry);
 
     double ox = 0, oy = 0;
     wlr_output_layout_output_coords(view->server->output_layout, output, &ox,
@@ -87,14 +78,7 @@ static void render_view_decorations(struct wlr_surface* surface, int sx, int sy,
     view_geometry.x += view->x + ox + sx;
     view_geometry.y += view->y + oy + sy;
 
-    // view_geometry.width = surface->current.width;
-    // view_geometry.height = surface->current.height;
-
-    // smoothen resize from top & left edges
-    if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT || view->server->cursor->resize_edges & WLR_EDGE_TOP) && (view->request_box.width > 20 && view->request_box.height > 20) && (view->request_box.width != box.width || view->request_box.height != box.height)) {
-        view_geometry.width = view->request_box.width * output->scale;
-        view_geometry.height = view->request_box.height * output->scale;
-    }
+    smoothen_geometry_when_resizing(view, &view_geometry);
 
     int frameWidth = 2;
     int gripWidth = 28;
@@ -156,6 +140,15 @@ static void render_view_decorations(struct wlr_surface* surface, int sx, int sy,
         render_rect(output, &box, color, output->scale);
 
         memcpy(&view->hotspots[HS_TITLEBAR], &box, sizeof(struct wlr_box));
+        memcpy(&view->hotspots[HS_EDGE_TOP_LEFT], &box, sizeof(struct wlr_box));
+        memcpy(&view->hotspots[HS_EDGE_TOP_RIGHT], &box, sizeof(struct wlr_box));
+
+        int topCornerSize = 12;
+        view->hotspots[HS_EDGE_TOP_LEFT].width = topCornerSize;
+        view->hotspots[HS_EDGE_TOP_LEFT].height = topCornerSize;
+        view->hotspots[HS_EDGE_TOP_RIGHT].x = box.x + box.width - topCornerSize;
+        view->hotspots[HS_EDGE_TOP_RIGHT].width = topCornerSize;
+        view->hotspots[HS_EDGE_TOP_RIGHT].height = topCornerSize;
 
         // render the texture
         grow_box_hv(&box, -borderWidth, -borderWidth);
@@ -232,8 +225,8 @@ static void render_view_decorations(struct wlr_surface* surface, int sx, int sy,
                 output->scale);
             // render_rect(output, &box, colorDebug4, output->scale);
 
-            memcpy(&view->hotspots[HS_GRIP_LEFT], &box, sizeof(struct wlr_box));
-            grow_box_hv(&view->hotspots[HS_GRIP_LEFT], borderWidth, borderWidth);
+            memcpy(&view->hotspots[HS_EDGE_BOTTOM_LEFT], &box, sizeof(struct wlr_box));
+            grow_box_hv(&view->hotspots[HS_EDGE_BOTTOM_LEFT], borderWidth, borderWidth);
 
             box.x += view_geometry.width - gripWidth;
             render_texture(output, &box,
@@ -241,8 +234,8 @@ static void render_view_decorations(struct wlr_surface* surface, int sx, int sy,
                 output->scale);
             // render_rect(output, &box, colorDebug4, output->scale);
 
-            memcpy(&view->hotspots[HS_GRIP_RIGHT], &box, sizeof(struct wlr_box));
-            grow_box_hv(&view->hotspots[HS_GRIP_RIGHT], borderWidth, borderWidth);
+            memcpy(&view->hotspots[HS_EDGE_BOTTOM_RIGHT], &box, sizeof(struct wlr_box));
+            grow_box_hv(&view->hotspots[HS_EDGE_BOTTOM_RIGHT], borderWidth, borderWidth);
         }
     }
 
@@ -309,8 +302,8 @@ static void render_view_decorations(struct wlr_surface* surface, int sx, int sy,
         grow_box_lrtb(&view->hotspots[HS_EDGE_TOP], 0, 0, hs, 0);
         grow_box_lrtb(&view->hotspots[HS_EDGE_BOTTOM], 0, 0, 0, hs);
         if (gripWidth && handleWidth) {
-            grow_box_lrtb(&view->hotspots[HS_GRIP_LEFT], hs, 0, 0, hs);
-            grow_box_lrtb(&view->hotspots[HS_GRIP_RIGHT], 0, hs, 0, hs);
+            grow_box_lrtb(&view->hotspots[HS_EDGE_BOTTOM_LEFT], hs, 0, 0, hs);
+            grow_box_lrtb(&view->hotspots[HS_EDGE_BOTTOM_RIGHT], 0, hs, 0, hs);
         }
     }
 
@@ -334,6 +327,16 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
     struct tbx_view* view = rdata->view;
     struct wlr_output* output = rdata->output;
 
+    // commit from smooth move request
+    if (view->request_wait > 0 && view->request_box.x != 0 && view->request_box.y != 0) {
+        if (--view->request_wait == 0) {
+            view->x = view->request_box.x;
+            view->y = view->request_box.y;
+            view->request_box.x = 0;
+            view->request_box.y = 0;
+        }
+    }
+    
     /* We first obtain a wlr_texture, which is a GPU resource. wlroots
    * automatically handles negotiating these with the client. The underlying
    * resource could be an opaque handle passed from the client, or the client
@@ -345,15 +348,16 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
         return;
     }
 
-    // commit from smooth move request
-    if (view->request_wait > 0 && view->request_box.x != 0 && view->request_box.y != 0) {
-        if (--view->request_wait == 0) {
-            view->x = view->request_box.x;
-            view->y = view->request_box.y;
-            view->request_box.x = 0;
-            view->request_box.y = 0;
-        }
+    struct wlr_box view_geometry;
+    view->interface->get_geometry(view, &view_geometry);
+    
+    if (surface != view->surface) {
+        view_geometry.width = surface->current.width;
+        view_geometry.height = surface->current.height;
     }
+
+    smoothen_geometry_when_resizing(view, &view_geometry);
+    
 
     /* The view has a position in layout coordinates. If you have two displays,
    * one next to the other, both 1080p, a view on the rightmost display might
@@ -373,15 +377,9 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
     struct wlr_box box = {
         .x = ox * output->scale,
         .y = oy * output->scale,
-        .width = surface->current.width * output->scale,
-        .height = surface->current.height * output->scale,
+        .width = view_geometry.width * output->scale,
+        .height = view_geometry.height * output->scale
     };
-
-    // smoothen resize from top & left edges
-    if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT || view->server->cursor->resize_edges & WLR_EDGE_TOP) && (view->request_box.width > 20 && view->request_box.height > 20) && (view->request_box.width != box.width || view->request_box.height != box.height)) {
-        box.width = view->request_box.width * output->scale;
-        box.height = view->request_box.height * output->scale;
-    }
 
     /*
    * Those familiar with OpenGL are also familiar with the role of matricies
@@ -480,6 +478,11 @@ static void render_workspace(struct tbx_output* output,
         }
     }
 
+    struct wlr_box* layout_box = wlr_output_layout_get_box(
+        server->output_layout, output->wlr_output);
+    box.width = layout_box->width;
+    box.height = layout_box->height;
+
     render_texture(output->wlr_output, &box, texture, output->wlr_output->scale);
 }
 
@@ -525,7 +528,8 @@ static void output_frame(struct wl_listener* listener, void* data)
     wlr_renderer_begin(renderer, width, height);
 
     // render box
-    float color[4] = { 0.3, 0.3, 0.3, 1.0 };
+    // float color[4] = { 0.3, 0.3, 0.3, 1.0 };
+    float color[4] = { 0, 0, 0, 1.0 };
     wlr_renderer_clear(renderer, color);
 
     //-----------------
@@ -620,19 +624,18 @@ static void output_frame(struct wl_listener* listener, void* data)
 
         // decorations
         if (!view->csd) {
-            render_view_decorations((struct wlr_surface*)view->xdg_surface, 0, 0,
-                &rdata);
+            render_view_decorations(view->surface, 0, 0, &rdata);
         }
 
         // content
         if (!view->shaded) {
 
-            if (view->xdg_surface) {
+            if (view->view_type == VIEW_TYPE_XDG_SHELL) {
                 wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
                     &rdata);
             }
 
-            if (view->xwayland_surface && view->surface) {
+            if (view->view_type == VIEW_TYPE_XWAYLAND_SHELL) {
                 render_view_content(view->surface, 0, 0, &rdata);
             }
         }

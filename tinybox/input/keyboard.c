@@ -32,7 +32,7 @@ static struct modifier_key {
     { "Mod5", WLR_MODIFIER_MOD5 }, // Mod5
 };
 
-uint32_t get_modifier_mask_by_name(const char* name)
+static uint32_t get_modifier_mask_by_name(const char* name)
 {
     int i;
     for (i = 0; i < (int)(sizeof(modifiers) / sizeof(struct modifier_key)); ++i) {
@@ -43,7 +43,7 @@ uint32_t get_modifier_mask_by_name(const char* name)
     return 0;
 }
 
-bool compare_keys(struct tbx_keys_pressed* kp1, struct tbx_keys_pressed* kp2)
+static bool compare_keys(struct tbx_keys_pressed* kp1, struct tbx_keys_pressed* kp2)
 {
     for (int i = 0; i < KP_MAX_PRESSED - KP_RESERVED_SPACE; i++) {
         if (kp1->pressed[i] != kp2->pressed[i]) {
@@ -56,7 +56,7 @@ bool compare_keys(struct tbx_keys_pressed* kp1, struct tbx_keys_pressed* kp2)
     return true;
 }
 
-void dump_keys(struct tbx_keys_pressed* kp)
+void keys_print(struct tbx_keys_pressed* kp)
 {
     console_log("------");
     for (int i = 0; i < KP_MAX_PRESSED - KP_RESERVED_SPACE; i++) {
@@ -71,41 +71,41 @@ void dump_keys(struct tbx_keys_pressed* kp)
     }
 }
 
-void add_key_by_name(struct tbx_keys_pressed* kp, char* name)
+void keys_add_named(struct tbx_keys_pressed* kp, char* name)
 {
     if (strlen(name) == 1) {
-        add_key(kp, name[0]);
+        keys_add(kp, name[0]);
         return;
     }
 
     // modifier
     uint32_t m = get_modifier_mask_by_name(name);
     if (m) {
-        add_key(kp, m);
+        keys_add(kp, m);
         return;
     }
 
     // common name
     xkb_keysym_t keysym = xkb_keysym_from_name(name, XKB_KEYSYM_CASE_INSENSITIVE);
     if (keysym) {
-        add_key(kp, keysym);
+        keys_add(kp, keysym);
         return;
     }
 
-    add_key(kp, name[0]);
+    keys_add(kp, name[0]);
 }
 
-void add_modifiers(struct tbx_keys_pressed* kp, uint32_t mod)
+void keys_add_modifiers(struct tbx_keys_pressed* kp, uint32_t mod)
 {
     int i;
     for (i = 0; i < (int)(sizeof(modifiers) / sizeof(struct modifier_key)); ++i) {
         if ((modifiers[i].mod & mod)) {
-            add_key(kp, modifiers[i].mod);
+            keys_add(kp, modifiers[i].mod);
         }
     }
 }
 
-void add_key(struct tbx_keys_pressed* kp, uint32_t k)
+void keys_add(struct tbx_keys_pressed* kp, uint32_t k)
 {
 
     // modifiers (todo!)
@@ -131,7 +131,7 @@ void add_key(struct tbx_keys_pressed* kp, uint32_t k)
     }
 }
 
-void clear_keys(struct tbx_keys_pressed* kp)
+void keys_clear(struct tbx_keys_pressed* kp)
 {
     memset(kp, 0, sizeof(struct tbx_keys_pressed));
 }
@@ -148,7 +148,7 @@ static bool handle_keybinding(struct tbx_server* server,
         return true;
     }
 
-    // dump_keys(keys);
+    // keys_print(keys);
 
     struct tbx_config_keybinding* entry;
     wl_list_for_each(entry, &server->config.keybinding, link)
@@ -200,11 +200,10 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
     /* Translate libinput keycode -> xkbcommon */
     uint32_t keycode = event->keycode + 8;
     /* Get a list of keysyms based on the keymap for this keyboard */
-    const xkb_keysym_t* syms;
 
+    const xkb_keysym_t* syms;
     // int nsyms = xkb_state_key_get_syms(keyboard->device->keyboard->xkb_state,
     //                                    keycode, &syms);
-
     xkb_layout_index_t layout_index = xkb_state_key_get_layout(keyboard->device->keyboard->xkb_state, keycode);
 
     int nsyms = xkb_keymap_key_get_syms_by_level(
@@ -214,24 +213,19 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
     uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
 
     if (!modifiers && event->state == WLR_KEY_PRESSED && kp->pressed[1]) {
-        clear_keys(kp);
+        keys_clear(kp);
     }
 
     if (modifiers && event->state == WLR_KEY_PRESSED) {
-        add_modifiers(kp, modifiers);
+        keys_add_modifiers(kp, modifiers);
         for (int i = 0; i < nsyms; i++) {
             uint32_t k = syms[i];
-            // if (k > 255) {
-            // console_log("???%d", k);
-            // continue;
-            // }
-            add_key(kp, k);
+            keys_add(kp, k);
         }
         if (kp->pressed[1]) {
             handled = handle_keybinding(server, kp);
             if (handled) {
-                // consumexxxx
-                clear_keys(kp);
+                keys_clear(kp);
             }
         }
     }

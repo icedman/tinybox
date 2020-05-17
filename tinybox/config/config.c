@@ -15,7 +15,7 @@
 
 #include <wlr/types/wlr_keyboard.h>
 
-char* get_dictionary_value(struct tbx_server* server, char* name)
+char* config_dictionary_value(struct tbx_server* server, char* name)
 {
     if (!name) {
         return name;

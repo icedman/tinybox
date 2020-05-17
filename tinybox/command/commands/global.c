@@ -28,7 +28,7 @@ void exec_exec(struct tbx_command* cmd, int argc, char** argv)
         char* n = argv[i];
 
         if (n[0] == '$') {
-            n = get_dictionary_value(cmd->server, n);
+            n = config_dictionary_value(cmd->server, n);
         }
         if (!n) {
             n = argv[i];

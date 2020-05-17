@@ -51,8 +51,7 @@ void move_to_workspace(struct tbx_server* server, struct tbx_view* view, int id,
     view->workspace = id;
     // console_log("view at ws %d", view->workspace);
 
-    activate_workspace(server, id, animate);
-    focus_view_without_raising(view, view->surface);
+    workspace_activate(server, id, animate);
 
     // animate view
     if (animate) {
@@ -68,7 +67,7 @@ void move_to_workspace(struct tbx_server* server, struct tbx_view* view, int id,
     }
 }
 
-void activate_workspace(struct tbx_server* server, int id, bool animate)
+void workspace_activate(struct tbx_server* server, int id, bool animate)
 {
     struct tbx_config* config = &server->config;
 
@@ -89,10 +88,11 @@ void activate_workspace(struct tbx_server* server, int id, bool animate)
 
     if (prev != id) {
         struct tbx_view* view;
-        wl_list_for_each_reverse(view, &server->views, link)
+        wl_list_for_each(view, &server->views, link)
         {
             if (view->workspace == id) {
-                focus_view_without_raising(view, view->surface);
+                // activate top most
+                view->interface->set_activated(view, true);
                 break;
             }
         }
@@ -139,7 +139,7 @@ void cycle_next_view(struct tbx_server* server)
     struct tbx_view* next_view = wl_container_of(current_view->link.next, next_view, link);
 
     // implement xwayland_surface!
-    focus_view(next_view, next_view->surface);
+    view_set_focus(next_view, next_view->surface);
 
     /* Move the previous view to the end of the list */
     wl_list_remove(&current_view->link);

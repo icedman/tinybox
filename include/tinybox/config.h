@@ -77,7 +77,7 @@ struct tbx_config {
     struct tbx_server* server;
 };
 
-char* get_dictionary_value(struct tbx_server* server, char* name);
+char* config_dictionary_value(struct tbx_server* server, char* name);
 bool config_setup(struct tbx_server* server);
 void load_config(struct tbx_server* server, char* config);
 

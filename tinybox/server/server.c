@@ -91,7 +91,7 @@ bool tbx_server_start(struct tbx_server* server)
         return false;
     }
 
-    activate_workspace(server, 0, false);
+    workspace_activate(server, 0, false);
     server->started = true;
 
     return true;

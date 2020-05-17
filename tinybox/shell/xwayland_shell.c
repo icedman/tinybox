@@ -4,22 +4,132 @@
 #include "tinybox/view.h"
 #include "tinybox/xwayland.h"
 
+#include <float.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/xwayland.h>
 
-// static void xwayland_commit(struct wl_listener *listener, void *data) {
-//???
-// struct tbx_view *view = wl_container_of(listener, view, map);
-// struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
-// view->surface = xsurface->surface;
-// view->surface = data;
-// view->xwayland_surface = (struct wlr_xwayland_surface*)data;
-// }
+static void xwayland_get_constraints(struct tbx_view* view, double* min_width,
+    double* max_width, double* min_height, double* max_height)
+{
+    struct wlr_xwayland_surface* surface = view->xwayland_surface;
+    struct wlr_xwayland_surface_size_hints* size_hints = surface->size_hints;
+
+    if (size_hints == NULL) {
+        *min_width = DBL_MIN;
+        *max_width = DBL_MAX;
+        *min_height = DBL_MIN;
+        *max_height = DBL_MAX;
+        return;
+    }
+
+    *min_width = size_hints->min_width > 0 ? size_hints->min_width : DBL_MIN;
+    *max_width = size_hints->max_width > 0 ? size_hints->max_width : DBL_MAX;
+    *min_height = size_hints->min_height > 0 ? size_hints->min_height : DBL_MIN;
+    *max_height = size_hints->max_height > 0 ? size_hints->max_height : DBL_MAX;
+}
+
+static void xwayland_get_geometry(struct tbx_view *view, struct wlr_box *box) {
+    box->x = box->y = 0;
+    if (view->surface) {
+        box->width = view->surface->current.width;
+        box->height = view->surface->current.height;
+    } else {
+        box->width = 0;
+        box->height = 0;
+    }
+}
+
+static void xwayland_set_activated(struct tbx_view* view, bool activated)
+{
+    struct wlr_seat* seat = view->server->seat->seat;
+    struct wlr_xwayland* xwayland = view->server->xwayland_shell->wlr_xwayland;
+
+    if (activated) {
+        wlr_xwayland_set_seat(xwayland, seat);
+
+        struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(seat);
+        wlr_seat_keyboard_notify_enter(seat, view->surface, keyboard->keycodes,
+            keyboard->num_keycodes,
+            &keyboard->modifiers);
+    }
+
+    wlr_xwayland_surface_activate(view->xwayland_surface, true);
+}
+
+static void xwaylang_set_fullscreen(struct tbx_view* view, bool fullscreen)
+{
+}
+
+static const char* xwayland_get_string_prop(struct tbx_view* view, enum tbx_view_prop prop)
+{
+    switch (prop) {
+    case VIEW_PROP_TITLE:
+        return view->xwayland_surface->title;
+    // case VIEW_PROP_CLASS:
+    // return view->wlr_xwayland_surface->class;
+    // case VIEW_PROP_INSTANCE:
+    //   return view->wlr_xwayland_surface->instance;
+    // case VIEW_PROP_WINDOW_ROLE:
+    //   return view->wlr_xwayland_surface->role;
+    default:
+        return NULL;
+    }
+}
+
+uint32_t xwayland_get_int_prop(struct tbx_view* view, enum tbx_view_prop prop)
+{
+    return 0;
+}
+
+static uint32_t xwayland_view_configure(struct tbx_view* view, double lx, double ly,
+    int width, int height)
+{
+    wlr_xwayland_surface_configure(view->xwayland_surface, 0,
+        0, width, height);
+
+    view->x = lx;
+    view->y = ly;
+    // view->width = width;
+    // view->height = height;
+
+    view->request_box.x = lx;
+    view->request_box.y = ly;
+    view->request_box.width = width;
+    view->request_box.height = height;
+    return 0;
+}
+
+static void xwayland_close(struct tbx_view* view)
+{
+}
+
+static void xwayland_close_popups(struct tbx_view* view)
+{
+}
+
+static void xwayland_destroy(struct tbx_view* view)
+{
+    view_destroy(view);
+}
+
+static struct tbx_view_interface xwayland_view_interface = {
+    .get_constraints = xwayland_get_constraints,
+    .get_geometry = xwayland_get_geometry,
+    .get_string_prop = xwayland_get_string_prop,
+    .get_int_prop = xwayland_get_int_prop,
+    .configure = xwayland_view_configure,
+    .set_activated = xwayland_set_activated,
+    .set_fullscreen = xwaylang_set_fullscreen,
+    .close = xwayland_close,
+    .close_popups = xwayland_close_popups,
+    .destroy = xwayland_destroy
+};
 
 static void xwayland_surface_map(struct wl_listener* listener, void* data)
 {
@@ -27,42 +137,42 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
 
     struct wlr_xwayland_surface* xsurface = data;
 
-    struct tbx_view* view = wl_container_of(listener, view, map);
+    struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
+    struct tbx_view* view = &xwayland_view->view;
+
     view->mapped = true;
     view->title_dirty = true;
     view->surface = xsurface->surface;
     view->xwayland_surface = xsurface;
 
-    // Wire up the commit listener here, because xwayland map/unmap can change
-    // the underlying wlr_surface
-    // view->commit.notify = xwayland_commit;
-    // wl_signal_add(&xsurface->surface->events.commit, &view->commit);
-
-    focus_view(view, view->surface);
+    view_set_focus(view, view->surface);
 }
 
 static void xwayland_surface_unmap(struct wl_listener* listener, void* data)
 {
     /* Called when the surface is unmapped, and should no longer be shown. */
-    struct tbx_view* view = wl_container_of(listener, view, unmap);
-    console_log("unmap");
+    struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, unmap);
+    struct tbx_view* view = &xwayland_view->view;
     view->surface = NULL;
     view->mapped = false;
 }
 
-static void xwayland_destroy(struct wl_listener* listener, void* data)
+static void xwayland_surface_destroy(struct wl_listener* listener, void* data)
 {
     /* Called when the surface is destroyed and should never be shown again. */
-    struct tbx_view* view = wl_container_of(listener, view, destroy);
-    console_log("destroy");
-    view_destroy(view);
+    struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, destroy);
+    struct tbx_view* view = &xwayland_view->view;
+
+    view->interface->destroy(view);
 }
 
 static void xwayland_request_configure(struct wl_listener* listener,
     void* data)
 {
     /* Called when the surface is destroyed and should never be shown again. */
-    struct tbx_view* view = wl_container_of(listener, view, destroy);
+    struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_configure);
+    struct tbx_view* view = &xwayland_view->view;
+
     struct wlr_xwayland_surface_configure_event* ev = data;
     struct wlr_xwayland_surface* xsurface = view->xwayland_surface;
     // if (!xsurface->mapped) {
@@ -102,7 +212,11 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
     // }
 
     /* Allocate a tbx_view for this surface */
-    struct tbx_view* view = calloc(1, sizeof(struct tbx_view));
+    struct tbx_xwayland_view* xwayland_view = calloc(1, sizeof(struct tbx_xwayland_view));
+    struct tbx_view* view = &xwayland_view->view;
+    view->view_type = VIEW_TYPE_XWAYLAND_SHELL;
+    view->interface = &xwayland_view_interface;
+
     view->xwayland_surface = xwayland_surface;
     view->server = server;
 
@@ -111,31 +225,18 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
     view->y = 32 + (xwayland_shell->create_offset * 40);
 
     /* Listen to the various events it can emit */
-    view->map.notify = xwayland_surface_map;
-    wl_signal_add(&xwayland_surface->events.map, &view->map);
+    xwayland_view->map.notify = xwayland_surface_map;
+    wl_signal_add(&xwayland_surface->events.map, &xwayland_view->map);
 
-    view->unmap.notify = xwayland_surface_unmap;
-    wl_signal_add(&xwayland_surface->events.unmap, &view->unmap);
+    xwayland_view->unmap.notify = xwayland_surface_unmap;
+    wl_signal_add(&xwayland_surface->events.unmap, &xwayland_view->unmap);
 
-    view->destroy.notify = xwayland_destroy;
-    wl_signal_add(&xwayland_surface->events.destroy, &view->destroy);
+    xwayland_view->destroy.notify = xwayland_surface_destroy;
+    wl_signal_add(&xwayland_surface->events.destroy, &xwayland_view->destroy);
 
-    view->request_configure.notify = xwayland_request_configure;
+    xwayland_view->request_configure.notify = xwayland_request_configure;
     wl_signal_add(&xwayland_surface->events.request_configure,
-        &view->request_configure);
-
-    /* cotd */
-    /*
-  struct wlr_xdg_toplevel *toplevel = xdg_surface->toplevel;
-  view->request_move.notify = xdg_toplevel_request_move;
-  wl_signal_add(&toplevel->events.request_move, &view->request_move);
-  view->request_resize.notify = xdg_toplevel_request_resize;
-  wl_signal_add(&toplevel->events.request_resize, &view->request_resize);
-    */
-
-    /* title */
-    // view->set_title.notify = handle_set_title;
-    // wl_signal_add(&toplevel->events.set_title, &view->set_title);
+        &xwayland_view->request_configure);
 
     // move to workspace
     view->workspace = server->workspace;

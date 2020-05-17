@@ -55,7 +55,7 @@ static void exec_bind(struct tbx_command* cmd, int argc, char** argv)
     }
 
     entry->keys = calloc(1, sizeof(struct tbx_keys_pressed));
-    clear_keys(entry->keys);
+    keys_clear(entry->keys);
 
     int kargc = 0;
     char** kargv = split_args(keys, &kargc);
@@ -63,19 +63,19 @@ static void exec_bind(struct tbx_command* cmd, int argc, char** argv)
         char* n = kargv[i];
 
         if (n[0] == '$') {
-            n = get_dictionary_value(server, n);
+            n = config_dictionary_value(server, n);
         }
         if (!n) {
             n = argv[i];
         }
 
-        add_key_by_name(entry->keys, n);
+        keys_add_named(entry->keys, n);
     }
 
     free_argv(kargc, kargv);
 
     // console_log(">> bind %s?", entry->identifier);
-    // dump_keys(entry->keys);
+    // keys_print(entry->keys);
 
     //-------------------
     // extract command
@@ -86,7 +86,7 @@ static void exec_bind(struct tbx_command* cmd, int argc, char** argv)
         char* n = argv[i];
 
         if (n[0] == '$') {
-            n = get_dictionary_value(server, n);
+            n = config_dictionary_value(server, n);
         }
         if (!n) {
             n = argv[i];
