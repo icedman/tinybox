@@ -150,6 +150,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
     view->xwayland_surface = xsurface;
 
     view_set_focus(view, view->surface);
+    view_move_to_center(view, NULL);
 }
 
 static void xwayland_surface_unmap(struct wl_listener* listener, void* data)
@@ -179,10 +180,10 @@ static void xwayland_request_configure(struct wl_listener* listener,
 
     struct wlr_xwayland_surface_configure_event* ev = data;
     struct wlr_xwayland_surface* xsurface = view->xwayland_surface;
-    // if (!xsurface->mapped) {
-    wlr_xwayland_surface_configure(xsurface, ev->x, ev->y, ev->width, ev->height);
-    // return;
-    // }
+    
+    if (!xsurface->mapped) {
+        wlr_xwayland_surface_configure(xsurface, ev->x, ev->y, ev->width, ev->height);
+    }
 
     view->x = ev->x;
     view->y = ev->y;
@@ -223,10 +224,6 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
 
     view->xwayland_surface = xwayland_surface;
     view->server = server;
-
-    xwayland_shell->create_offset = (xwayland_shell->create_offset + 1) % 8;
-    view->x = 4 + (xwayland_shell->create_offset * 40);
-    view->y = 32 + (xwayland_shell->create_offset * 40);
 
     /* Listen to the various events it can emit */
     xwayland_view->map.notify = xwayland_surface_map;

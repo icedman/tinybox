@@ -82,7 +82,7 @@ void exec_move_window_to_workspace(struct tbx_command* cmd, int argc,
         w = strtol(argv[3], NULL, 10);
     }
 
-    view_send_to_workspace(cmd->server, current_view, w, true);
+    view_send_to_workspace(current_view, w, true);
 }
 
 void exec_shade_window(struct tbx_command* cmd, int argc, char** argv)

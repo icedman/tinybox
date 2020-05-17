@@ -111,7 +111,6 @@ void workspace_cycle_views(struct tbx_server* server, int workspace_id)
     struct tbx_view* current_view = workspace_get_top_view(server, workspace_id);
     if (!current_view) {
         return;
-
     }
 
     // get next

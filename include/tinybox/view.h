@@ -4,6 +4,7 @@
 #include "tinybox/server.h"
 
 struct tbx_view;
+struct tbx_output;
 
 enum tbx_view_hotspot {
     HS_EDGE_TOP_LEFT,
@@ -170,13 +171,17 @@ bool view_at(struct tbx_view* view, double lx, double ly,
 
 void view_set_focus(struct tbx_view* view, struct wlr_surface* surface);
 
+void view_move_to_center(struct tbx_view* view, struct tbx_output* output);
+
 bool view_hotspot_at(struct tbx_view* view, double lx, double ly,
     struct wlr_surface** surface, double* sx, double* sy);
 
-bool view_is_visible(struct tbx_output* output, struct tbx_view* view);
+int view_is_visible(struct tbx_view* view, struct tbx_output* output);
 
-void view_send_to_workspace(struct tbx_server* server, struct tbx_view* view, int id,
+void view_send_to_workspace(struct tbx_view* view, int id,
     bool animate);
+
+struct tbx_output* view_get_preferred_output(struct tbx_view* view);
 
 // create is at xdg_shell
 void view_destroy(struct tbx_view* view);

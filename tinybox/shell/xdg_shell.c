@@ -131,6 +131,7 @@ static void xdg_surface_map(struct wl_listener* listener, void* data)
     view->surface = (struct wlr_surface*)view->xdg_surface;
 
     view_set_focus(view, view->xdg_surface->surface);
+    view_move_to_center(view, NULL);
 }
 
 static void xdg_surface_unmap(struct wl_listener* listener, void* data)
@@ -245,10 +246,6 @@ static void server_new_xdg_surface(struct wl_listener* listener, void* data)
 
     view->xdg_surface = xdg_surface;
     view->server = server;
-
-    xdg_shell->create_offset = (xdg_shell->create_offset + 1) % 8;
-    view->x = 4 + (xdg_shell->create_offset * 40);
-    view->y = 32 + (xdg_shell->create_offset * 40);
 
     /* Listen to the various events it can emit */
     xdg_shell_view->map.notify = xdg_surface_map;

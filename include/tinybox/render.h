@@ -40,7 +40,6 @@ struct render_data {
     struct tbx_view* view;
     struct tbx_workspace* workspace;
     struct timespec* when;
-    bool in_main_output;
     double offset_x;
     double offset_y;
 };

@@ -118,13 +118,12 @@ struct tbx_view* desktop_view_at(struct tbx_server* server, double lx,
 
     struct wlr_box* main_box = wlr_output_layout_get_box(
         server->output_layout, server->main_output->wlr_output);
-
-    bool in_main_display = ((lx >= main_box->x && lx <= main_box->x + main_box->width) && (ly >= main_box->y && ly <= main_box->y + main_box->height));
+    bool in_main_output = ((lx >= main_box->x && lx <= main_box->x + main_box->width) && (ly >= main_box->y && ly <= main_box->y + main_box->height));
 
     wl_list_for_each(view, &server->views, link)
     {
 
-        if (in_main_display && view->workspace != server->workspace) {
+        if (in_main_output && view->workspace != server->workspace) {
             continue;
         }
 
@@ -175,50 +174,72 @@ bool view_hotspot_at(struct tbx_view* view, double lx, double ly,
     return false;
 }
 
-bool view_is_visible(struct tbx_output* output, struct tbx_view* view)
+int view_is_visible(struct tbx_view* view, struct tbx_output* output)
 {
-    // implement xwayland_surface!
-    if (!view->xdg_surface) {
-        return true;
-    }
-
     struct wlr_box* box = wlr_output_layout_get_box(view->server->output_layout,
         output->wlr_output);
 
     struct wlr_box geo;
-    wlr_xdg_surface_get_geometry(view->xdg_surface, &geo);
+    view->interface->get_geometry(view, &geo);
 
     geo.x += view->x;
     geo.y += view->y;
 
     // console_log("v:%d %d o:%d %d", geo.x, geo.y, box->x, box->y);
 
+    int visibility = 0;
+
     // top-left
     if (geo.x >= box->x && geo.x <= box->x + box->width && geo.y >= box->y && geo.y <= box->y + box->height) {
-        return true;
+        visibility++;
     }
     // top right
     if (geo.x + geo.width >= box->x && geo.x + geo.width <= box->x + box->width && geo.y >= box->y && geo.y <= box->y + box->height) {
-        return true;
+        visibility++;
     }
     // bottom-left
     if (geo.x >= box->x && geo.x <= box->x + box->width && geo.y + geo.height >= box->y && geo.y + geo.height <= box->y + box->height) {
-        return true;
+        visibility++;
     }
     // bottom right
     if (geo.x + geo.width >= box->x && geo.x + geo.width <= box->x + box->width && geo.y + geo.height >= box->y && geo.y + geo.height <= box->y + box->height) {
-        return true;
+        visibility++;
     }
 
-    return false;
+    return visibility;
 }
 
-void view_send_to_workspace(struct tbx_server* server, struct tbx_view* view, int id,
+struct tbx_output* view_get_preferred_output(struct tbx_view* view)
+{
+    struct tbx_server* server = view->server;
+    struct tbx_output* preferred = server->main_output;
+    int preferred_weight = 0;
+
+    struct tbx_output* output;
+    wl_list_for_each(output, &server->outputs, link)
+    {
+        if (!output->enabled) {
+            continue;
+        }
+
+        int w = view_is_visible(view, output);
+        if (w > preferred_weight) {
+            preferred = output;
+        }
+    }
+
+    return preferred;
+}
+
+void view_send_to_workspace(struct tbx_view* view, int id,
     bool animate)
 {
     if (!view) {
         return;
     }
+
+    struct tbx_server* server = view->server;
+
     struct tbx_config* config = &server->config;
     if (id < 0) {
         id = 0;
@@ -245,6 +266,25 @@ void view_send_to_workspace(struct tbx_server* server, struct tbx_view* view, in
         view->wsv_anim_x += dir * main_box->width;
         view->wsv_anim_y = 0;
     }
+}
+
+void view_move_to_center(struct tbx_view* view, struct tbx_output* output)
+{
+    if (!output) {
+        output = view_get_preferred_output(view);
+    }
+
+    struct tbx_server* server = view->server;
+    struct wlr_box* main_box = wlr_output_layout_get_box(
+        server->output_layout, output->wlr_output);
+
+    struct wlr_box view_geometry;
+    view->interface->get_geometry(view, &view_geometry);
+    int x = (main_box->width / 2) - (view_geometry.width / 2);
+    int y = (main_box->height / 2) - (view_geometry.height / 2);
+
+    view->x = x;
+    view->y = y;
 }
 
 void view_destroy(struct tbx_view* view)

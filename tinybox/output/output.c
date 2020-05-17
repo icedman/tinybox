@@ -578,7 +578,7 @@ static void output_frame(struct wl_listener* listener, void* data)
             if (animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
 
                 // is view in main_output
-                if (!view_is_visible(output, view)) {
+                if (!view_is_visible(view, output)) {
                     continue;
                 }
 
@@ -614,7 +614,6 @@ static void output_frame(struct wl_listener* listener, void* data)
             .view = view,
             .renderer = renderer,
             .workspace = workspace,
-            .in_main_output = in_main_output,
             .offset_x = offset_x,
             .offset_y = offset_y,
             .when = &now,
