@@ -112,10 +112,16 @@ void exec_shade_window(struct tbx_command* cmd, int argc, char** argv)
     current_view->shaded = shade;
 }
 
+void exec_cycle(struct tbx_command* cmd, int argc, char** argv)
+{
+    workspace_cycle_views(cmd->server, cmd->server->workspace);
+}
+
 void register_desktop_commands(struct tbx_server* server)
 {
     struct tbx_command* wks = register_command(server->command, "workspace", exec_workspace);
     register_command(wks, "background", exec_set_background);
     register_command(server->command, "move", exec_move_window_to_workspace);
     register_command(server->command, "shade", exec_shade_window);
+    register_command(server->command, "cycle", exec_cycle);
 }

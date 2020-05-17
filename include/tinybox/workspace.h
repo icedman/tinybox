@@ -23,7 +23,7 @@ struct tbx_workspace {
 
 void workspace_setup(struct tbx_server* server);
 
-void cycle_next_view(struct tbx_server* server);
+void workspace_cycle_views(struct tbx_server* server, int workspace_id);
 
 struct tbx_view* workspace_get_top_view(struct tbx_server* server, int workspace_id);
 

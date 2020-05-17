@@ -43,7 +43,7 @@ void workspace_activate(struct tbx_server* server, int id, bool animate)
         id = 0;
     }
     if (id >= config->workspaces) {
-        id = config->workspaces;
+        id = config->workspaces - 1;
     }
     server->workspace = id;
     // console_log("desktop at ws %d", server->workspace);
@@ -89,30 +89,49 @@ struct tbx_view* workspace_get_top_view(struct tbx_server* server, int workspace
     return NULL;
 }
 
-struct tbx_workspace* get_workspace(struct tbx_server* server, int id)
+struct tbx_workspace* get_workspace(struct tbx_server* server, int workspace_id)
 {
     struct tbx_workspace* workspace;
     wl_list_for_each(workspace, &server->workspaces, link)
     {
-        if (workspace->id == id) {
+        if (workspace->id == workspace_id) {
             return workspace;
         }
     }
     return NULL;
 }
 
-void cycle_next_view(struct tbx_server* server)
+void workspace_cycle_views(struct tbx_server* server, int workspace_id)
 {
     /* Cycle to the next view */
     if (wl_list_length(&server->views) < 2) {
         return;
     }
 
-    struct tbx_view* current_view = wl_container_of(server->views.next, current_view, link);
+    struct tbx_view* current_view = workspace_get_top_view(server, workspace_id);
+    if (!current_view) {
+        return;
 
-    struct tbx_view* next_view = wl_container_of(current_view->link.next, next_view, link);
+    }
 
-    // implement xwayland_surface!
+    // get next
+    struct tbx_view* next_view = NULL;
+    struct tbx_view* view;
+    wl_list_for_each(view, &server->views, link)
+    {
+        if (view == current_view) {
+            continue;
+        }
+        if (view->workspace == current_view->workspace) {
+            next_view = view;
+            break;
+        }
+    }
+
+    if (!next_view) {
+        return;
+    }
+
     view_set_focus(next_view, next_view->surface);
 
     /* Move the previous view to the end of the list */

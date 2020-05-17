@@ -25,7 +25,7 @@ tinybox_src = files(
   
   'desktop/view.c',
   'desktop/workspace.c',
-  'decoration/decoration.c',
+  'desktop/tree.c',
 
   'output/output.c',
   'output/render.c',
@@ -33,6 +33,7 @@ tinybox_src = files(
   'output/console.c',
 
   'server/server.c',
+  'shell/decoration.c',
   'shell/xdg_shell.c',
   'shell/xwayland_shell.c'
   )
