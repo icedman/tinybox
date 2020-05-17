@@ -45,15 +45,13 @@ bool tbx_server_setup(struct tbx_server* server)
 
     wlr_data_device_manager_create(server->wl_display);
 
+    wl_list_init(&server->views);
+
     // load config
     config_setup(server);
 
     // setup protocols
     output_setup(server);
-
-    // shells & views
-    wl_list_init(&server->views);
-    wl_list_init(&server->unmanaged);
     xdg_shell_setup(server);
     xwayland_shell_setup(server);
     decoration_setup(server);

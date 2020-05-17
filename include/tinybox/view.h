@@ -37,8 +37,7 @@ enum tbx_view_prop {
 enum tbx_view_type {
     VIEW_TYPE_XDG,
     // #if HAVE_XWAYLAND
-    VIEW_TYPE_XWAYLAND,
-    VIEW_TYPE_XWAYLAND_UNMANAGED,
+    VIEW_TYPE_XWAYLAND
     // #endif
 };
 
@@ -81,8 +80,8 @@ struct tbx_view {
 
     bool mapped;
     int x, y;
-    int width, height; // xwayland
-
+    int width, height;  // xwayland
+    bool override_redirect;
     bool shaded;
     bool csd;
 
@@ -147,19 +146,6 @@ struct tbx_xwayland_view {
     struct wl_listener destroy;
 };
 
-struct tbx_xwayland_unmanaged {
-    struct wl_list link;
-    struct tbx_server* server;
-
-    struct wlr_xwayland_surface* wlr_xwayland_surface;
-
-    struct wl_listener request_configure;
-    struct wl_listener request_fullscreen;
-    struct wl_listener commit;
-    struct wl_listener map;
-    struct wl_listener unmap;
-    struct wl_listener destroy;
-};
 // #endif
 struct tbx_view* view_from_surface(struct tbx_server* server, struct wlr_surface* surface);
 

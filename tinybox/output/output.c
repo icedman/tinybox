@@ -322,7 +322,6 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
 {
     /* This function is called for every surface that needs to be rendered. */
     struct render_data* rdata = data;
-    // struct tbx_workspace *workspace = rdata->workspace;
     struct tbx_view* view = rdata->view;
     struct wlr_output* output = rdata->output;
 
@@ -344,6 +343,7 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
 
     struct wlr_texture* texture = wlr_surface_get_texture(surface);
     if (texture == NULL) {
+        // console_log("!");
         return;
     }
 
@@ -608,7 +608,6 @@ static void output_frame(struct wl_listener* listener, void* data)
         //-----------------
         // render the view
         //-----------------
-
         struct render_data rdata = {
             .output = output->wlr_output,
             .view = view,
