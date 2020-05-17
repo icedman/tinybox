@@ -28,11 +28,10 @@
 #define ANIM_SPEED 0.75
 #define SWIPE_MIN (100 * 100)
 
-static void smoothen_geometry_when_resizing(struct tbx_view *view, struct wlr_box *box) {
+static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
+{
     // smoothen
-    if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT || view->server->cursor->resize_edges & WLR_EDGE_TOP) &&
-        (view->request_box.width > 20 && view->request_box.height > 20) &&
-        (view->request_box.width != box->width || view->request_box.height != box->height)) {
+    if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT || view->server->cursor->resize_edges & WLR_EDGE_TOP) && (view->request_box.width > 20 && view->request_box.height > 20) && (view->request_box.width != box->width || view->request_box.height != box->height)) {
         box->width = view->request_box.width;
         box->height = view->request_box.height;
     }
@@ -336,7 +335,7 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
             view->request_box.y = 0;
         }
     }
-    
+
     /* We first obtain a wlr_texture, which is a GPU resource. wlroots
    * automatically handles negotiating these with the client. The underlying
    * resource could be an opaque handle passed from the client, or the client
@@ -350,14 +349,13 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
 
     struct wlr_box view_geometry;
     view->interface->get_geometry(view, &view_geometry);
-    
+
     if (surface != view->surface) {
         view_geometry.width = surface->current.width;
         view_geometry.height = surface->current.height;
     }
 
     smoothen_geometry_when_resizing(view, &view_geometry);
-    
 
     /* The view has a position in layout coordinates. If you have two displays,
    * one next to the other, both 1080p, a view on the rightmost display might

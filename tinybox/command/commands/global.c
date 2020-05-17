@@ -5,6 +5,7 @@
 #include "tinybox/seat.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
+#include "tinybox/workspace.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,11 +51,9 @@ void exec_exec(struct tbx_command* cmd, int argc, char** argv)
 
 void exec_kill(struct tbx_command* cmd, int argc, char** argv)
 {
-
-    struct tbx_view* current_view = wl_container_of(cmd->server->views.next, current_view, link);
-
-    if (current_view) {
-        view_close(current_view);
+    struct tbx_view* top = workspace_get_top_view(cmd->server, cmd->server->workspace);
+    if (top) {
+        view_close(top);
     }
 }
 

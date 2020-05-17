@@ -67,7 +67,7 @@ struct tbx_view {
     struct tbx_server* server;
 
     enum tbx_view_type view_type;
-    struct tbx_view_interface *interface;
+    struct tbx_view_interface* interface;
 
     struct wlr_surface* surface; // NULL for unmapped views
     struct wlr_xdg_surface* xdg_surface;
@@ -146,7 +146,7 @@ struct tbx_xwayland_view {
 };
 
 struct tbx_xwayland_unmanaged {
-    struct wlr_xwayland_surface *wlr_xwayland_surface;
+    struct wlr_xwayland_surface* wlr_xwayland_surface;
     struct wl_list link;
 
     int lx, ly;
@@ -159,7 +159,7 @@ struct tbx_xwayland_unmanaged {
     struct wl_listener destroy;
 };
 // #endif
-struct tbx_view *view_from_surface(struct tbx_server *server, struct wlr_surface *surface);
+struct tbx_view* view_from_surface(struct tbx_server* server, struct wlr_surface* surface);
 
 struct tbx_view* desktop_view_at(struct tbx_server* server, double lx,
     double ly, struct wlr_surface** surface,
@@ -174,6 +174,9 @@ bool view_hotspot_at(struct tbx_view* view, double lx, double ly,
     struct wlr_surface** surface, double* sx, double* sy);
 
 bool view_is_visible(struct tbx_output* output, struct tbx_view* view);
+
+void view_send_to_workspace(struct tbx_server* server, struct tbx_view* view, int id,
+    bool animate);
 
 // create is at xdg_shell
 void view_destroy(struct tbx_view* view);

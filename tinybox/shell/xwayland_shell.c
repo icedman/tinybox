@@ -34,7 +34,8 @@ static void xwayland_get_constraints(struct tbx_view* view, double* min_width,
     *max_height = size_hints->max_height > 0 ? size_hints->max_height : DBL_MAX;
 }
 
-static void xwayland_get_geometry(struct tbx_view *view, struct wlr_box *box) {
+static void xwayland_get_geometry(struct tbx_view* view, struct wlr_box* box)
+{
     box->x = box->y = 0;
     if (view->surface) {
         box->width = view->surface->current.width;
@@ -50,9 +51,12 @@ static void xwayland_set_activated(struct tbx_view* view, bool activated)
     struct wlr_seat* seat = view->server->seat->seat;
     struct wlr_xwayland* xwayland = view->server->xwayland_shell->wlr_xwayland;
 
+    if (!view->xwayland_surface || !view->surface) {
+        return;
+    }
+
     if (activated) {
         wlr_xwayland_set_seat(xwayland, seat);
-
         struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(seat);
         wlr_seat_keyboard_notify_enter(seat, view->surface, keyboard->keycodes,
             keyboard->num_keycodes,
@@ -243,6 +247,8 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
 
     /* Add it to the list of views. */
     wl_list_insert(&server->views, &view->link);
+
+    xwayland_set_activated(view, true);
 }
 
 bool xwayland_shell_setup(struct tbx_server* server)

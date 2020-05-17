@@ -1,5 +1,6 @@
 #include "tinybox/view.h"
 #include "tinybox/output.h"
+#include "tinybox/workspace.h"
 #include "tinybox/xwayland.h"
 
 #include <stdlib.h>
@@ -9,13 +10,12 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/xwayland.h>
 
-struct tbx_view *view_from_surface(struct tbx_server *server, struct wlr_surface *surface) {
+struct tbx_view* view_from_surface(struct tbx_server* server, struct wlr_surface* surface)
+{
     struct tbx_view* view;
     wl_list_for_each(view, &server->views, link)
     {
-        if (view->surface == surface ||
-            (view->xdg_surface && view->xdg_surface->surface == surface) ||
-            (view->xwayland_surface && view->xwayland_surface->surface == surface)) {
+        if (view->surface == surface || (view->xdg_surface && view->xdg_surface->surface == surface) || (view->xwayland_surface && view->xwayland_surface->surface == surface)) {
             return view;
         }
     }
@@ -30,22 +30,25 @@ void view_set_focus(struct tbx_view* view, struct wlr_surface* surface)
     }
 
     struct tbx_server* server = view->server;
-    struct wlr_seat* seat = server->seat->seat;
-    struct wlr_surface* prev_surface = seat->keyboard_state.focused_surface;
-    if (prev_surface == surface) {
-        /* Don't re-focus an already focused surface. */
-        return;
-    }
 
-    if (prev_surface) {
-        /*
-     * Deactivate the previously focused surface. This lets the client know
-     * it no longer has focus and the client will repaint accordingly, e.g.
-     * stop displaying a caret.
-     */
-        struct tbx_view* previous_view = view_from_surface(view->server, seat->keyboard_state.focused_surface);
-        if (previous_view) {
-            previous_view->interface->set_activated(previous_view, false);
+    if (surface) {
+        struct wlr_seat* seat = server->seat->seat;
+        struct wlr_surface* prev_surface = seat->keyboard_state.focused_surface;
+        if (prev_surface == surface) {
+            /* Don't re-focus an already focused surface. */
+            return;
+        }
+
+        if (prev_surface) {
+            /*
+         * Deactivate the previously focused surface. This lets the client know
+         * it no longer has focus and the client will repaint accordingly, e.g.
+         * stop displaying a caret.
+         */
+            struct tbx_view* previous_view = view_from_surface(view->server, seat->keyboard_state.focused_surface);
+            if (previous_view) {
+                previous_view->interface->set_activated(previous_view, false);
+            }
         }
     }
 
@@ -67,7 +70,7 @@ bool view_at(struct tbx_view* view, double lx, double ly,
             h = view->surface->current.height;
 
             if (lx >= view->x && lx <= view->x + w && ly >= view->y && ly <= view->y + h) {
-                
+
                 // console_log("%d %d %d %d", (int)lx, (int)ly, (int)view->x, (int)view->y);
 
                 *sx = lx - view->x;
@@ -100,7 +103,6 @@ bool view_at(struct tbx_view* view, double lx, double ly,
             *surface = _surface;
             return true;
         }
-
     }
 
     return false;
@@ -150,7 +152,8 @@ bool view_hotspot_at(struct tbx_view* view, double lx, double ly,
         WLR_EDGE_TOP,
         WLR_EDGE_BOTTOM,
         WLR_EDGE_LEFT,
-        WLR_EDGE_RIGHT };
+        WLR_EDGE_RIGHT
+    };
 
     view->hotspot = HS_NONE;
     view->hotspot_edges = WLR_EDGE_NONE;
@@ -210,9 +213,44 @@ bool view_is_visible(struct tbx_output* output, struct tbx_view* view)
     return false;
 }
 
+void view_send_to_workspace(struct tbx_server* server, struct tbx_view* view, int id,
+    bool animate)
+{
+    if (!view) {
+        return;
+    }
+    struct tbx_config* config = &server->config;
+    if (id < 0) {
+        id = 0;
+    }
+    if (id >= config->workspaces) {
+        id = config->workspaces;
+    }
+
+    int prev = view->workspace;
+    view->workspace = id;
+    // console_log("view at ws %d", view->workspace);
+
+    workspace_activate(server, id, animate);
+
+    // animate view
+    if (animate) {
+
+        // recompute workspaces
+        struct wlr_box* main_box = wlr_output_layout_get_box(
+            server->output_layout, server->main_output->wlr_output);
+
+        int dir = id - prev;
+        view->wsv_animate = true;
+        view->wsv_anim_x += dir * main_box->width;
+        view->wsv_anim_y = 0;
+    }
+}
+
 void view_destroy(struct tbx_view* view)
 {
     console_log("view destroy");
+    int workspace = view->workspace;
 
     if (view->title) {
         wlr_texture_destroy(view->title);
@@ -222,6 +260,14 @@ void view_destroy(struct tbx_view* view)
     }
 
     wl_list_remove(&view->link);
+
+    // focus next view
+    struct tbx_view* top = workspace_get_top_view(view->server, workspace);
+    if (top) {
+        view_set_focus(top, NULL);
+        view->interface->set_activated(top, true);
+    }
+
     free(view);
 }
 

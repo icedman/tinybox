@@ -64,11 +64,14 @@ void exec_move_window_to_workspace(struct tbx_command* cmd, int argc,
         return;
     }
 
-    struct tbx_view* current_view = wl_container_of(cmd->server->views.next, current_view, link);
-
+    // activate top most
+    struct tbx_view* current_view = workspace_get_top_view(cmd->server, cmd->server->workspace);
     if (!current_view) {
         return;
     }
+
+    // current_view->interface->set_activated(current_view, true);
+    view_set_focus(current_view, NULL);
 
     int w = 0;
     if (strcmp(argv[3], "left") == 0) {
@@ -79,7 +82,7 @@ void exec_move_window_to_workspace(struct tbx_command* cmd, int argc,
         w = strtol(argv[3], NULL, 10);
     }
 
-    move_to_workspace(cmd->server, current_view, w, true);
+    view_send_to_workspace(cmd->server, current_view, w, true);
 }
 
 void exec_shade_window(struct tbx_command* cmd, int argc, char** argv)

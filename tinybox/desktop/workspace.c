@@ -33,40 +33,6 @@ void workspace_setup(struct tbx_server* server)
     // console_log("workspaces %d", config->workspaces);
 }
 
-void move_to_workspace(struct tbx_server* server, struct tbx_view* view, int id,
-    bool animate)
-{
-    if (!view) {
-        return;
-    }
-    struct tbx_config* config = &server->config;
-    if (id < 0) {
-        id = 0;
-    }
-    if (id >= config->workspaces) {
-        id = config->workspaces;
-    }
-
-    int prev = view->workspace;
-    view->workspace = id;
-    // console_log("view at ws %d", view->workspace);
-
-    workspace_activate(server, id, animate);
-
-    // animate view
-    if (animate) {
-
-        // recompute workspaces
-        struct wlr_box* main_box = wlr_output_layout_get_box(
-            server->output_layout, server->main_output->wlr_output);
-
-        int dir = id - prev;
-        view->wsv_animate = true;
-        view->wsv_anim_x += dir * main_box->width;
-        view->wsv_anim_y = 0;
-    }
-}
-
 void workspace_activate(struct tbx_server* server, int id, bool animate)
 {
     struct tbx_config* config = &server->config;
@@ -87,14 +53,10 @@ void workspace_activate(struct tbx_server* server, int id, bool animate)
         server->output_layout, server->main_output->wlr_output);
 
     if (prev != id) {
-        struct tbx_view* view;
-        wl_list_for_each(view, &server->views, link)
-        {
-            if (view->workspace == id) {
-                // activate top most
-                view->interface->set_activated(view, true);
-                break;
-            }
+        // activate top most
+        struct tbx_view* view = workspace_get_top_view(server, id);
+        if (view) {
+            view->interface->set_activated(view, true);
         }
 
         struct tbx_workspace* workspace;
@@ -113,6 +75,18 @@ void workspace_activate(struct tbx_server* server, int id, bool animate)
         server->ws_anim_x += dir * main_box->width;
         server->ws_anim_y = 0;
     }
+}
+
+struct tbx_view* workspace_get_top_view(struct tbx_server* server, int workspace_id)
+{
+    struct tbx_view* view;
+    wl_list_for_each(view, &server->views, link)
+    {
+        if (view->workspace == workspace_id) {
+            return view;
+        }
+    }
+    return NULL;
 }
 
 struct tbx_workspace* get_workspace(struct tbx_server* server, int id)

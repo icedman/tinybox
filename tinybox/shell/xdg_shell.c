@@ -30,7 +30,8 @@ static void xdg_get_constraints(struct tbx_view* view, double* min_width,
     *max_height = state->max_height > 0 ? state->max_height : DBL_MAX;
 }
 
-static void xdg_get_geometry(struct tbx_view *view, struct wlr_box *box) {
+static void xdg_get_geometry(struct tbx_view* view, struct wlr_box* box)
+{
     wlr_xdg_surface_get_geometry(view->xdg_surface, box);
 }
 
@@ -38,6 +39,10 @@ static void xdg_set_activated(struct tbx_view* view, bool activated)
 {
     struct wlr_seat* seat = view->server->seat->seat;
     struct wlr_keyboard* keyboard = wlr_seat_get_keyboard(seat);
+
+    if (!view->xdg_surface || !view->xdg_surface->surface) {
+        return;
+    }
 
     /*
      * Tell the seat to have the keyboard enter this surface. wlroots will keep
@@ -269,6 +274,8 @@ static void server_new_xdg_surface(struct wl_listener* listener, void* data)
 
     /* Add it to the list of views. */
     wl_list_insert(&server->views, &view->link);
+
+    xdg_set_activated(view, true);
 }
 
 bool xdg_shell_setup(struct tbx_server* server)
