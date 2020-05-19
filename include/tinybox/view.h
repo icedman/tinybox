@@ -85,6 +85,14 @@ struct tbx_view {
     int lx, ly;
     bool shaded;
     bool csd;
+    bool fullscreen;
+    
+    struct {
+        int x;
+        int y;
+        int width;
+        int height;
+    } restore;
 
     struct tbx_view *parent;
 
@@ -114,14 +122,15 @@ struct tbx_view {
 struct tbx_xdg_shell_view {
     struct tbx_view view;
 
-    struct wl_listener commit;
+    struct wl_listener _first;
+    // struct wl_listener commit;
     struct wl_listener request_move;
     struct wl_listener request_resize;
-    struct wl_listener request_maximize;
+    // struct wl_listener request_maximize;
     struct wl_listener request_fullscreen;
     struct wl_listener set_title;
-    struct wl_listener set_app_id;
-    struct wl_listener new_popup;
+    // struct wl_listener set_app_id;
+    // struct wl_listener new_popup;
     struct wl_listener map;
     struct wl_listener unmap;
     struct wl_listener destroy;
@@ -131,19 +140,20 @@ struct tbx_xdg_shell_view {
 struct tbx_xwayland_view {
     struct tbx_view view;
 
-    struct wl_listener commit;
-    struct wl_listener request_move;
-    struct wl_listener request_resize;
-    struct wl_listener request_maximize;
+    struct wl_listener _first;
+    // struct wl_listener commit;
+    // struct wl_listener request_move;
+    // struct wl_listener request_resize;
+    // struct wl_listener request_maximize;
     struct wl_listener request_configure;
     struct wl_listener request_fullscreen;
-    struct wl_listener request_activate;
+    // struct wl_listener request_activate;
     struct wl_listener set_title;
-    struct wl_listener set_class;
-    struct wl_listener set_role;
-    struct wl_listener set_window_type;
-    struct wl_listener set_hints;
-    struct wl_listener set_decorations;
+    // struct wl_listener set_class;
+    // struct wl_listener set_role;
+    // struct wl_listener set_window_type;
+    // struct wl_listener set_hints;
+    // struct wl_listener set_decorations;
     struct wl_listener map;
     struct wl_listener unmap;
     struct wl_listener destroy;

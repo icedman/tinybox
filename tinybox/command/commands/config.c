@@ -89,6 +89,10 @@ static void exec_console(struct tbx_command* cmd, int argc, char** argv)
     } else {
         config->console = !config->console;
     }
+    if (config->console) {
+        console_clear();
+        console_log("console enabled");
+    }
 }
 
 void register_config_commands(struct tbx_server* server)

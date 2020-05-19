@@ -1,6 +1,7 @@
 #include "tinybox/server.h"
 #include "tinybox/shell.h"
 #include "tinybox/view.h"
+#include "tinybox/output.h"
 
 #include <float.h>
 #include <stdlib.h>
@@ -58,10 +59,6 @@ static void xdg_set_activated(struct tbx_view* view, bool activated)
     wlr_xdg_toplevel_set_activated(view->xdg_surface, activated);
 }
 
-static void xdg_set_fullscreen(struct tbx_view* view, bool fullscreen)
-{
-}
-
 static const char* xdg_get_string_prop(struct tbx_view* view, enum tbx_view_prop prop)
 {
     switch (prop) {
@@ -95,6 +92,48 @@ static uint32_t xdg_view_configure(struct tbx_view* view, double lx, double ly,
     return 0;
 }
 
+
+static void xdg_set_fullscreen(struct tbx_view* view, bool fullscreen)
+{
+    if (!view->xdg_surface) {
+        return;
+    }
+
+    console_log("xdg fullscreen %d", fullscreen);
+    
+    if (fullscreen) {
+        view->fullscreen = fullscreen;
+        view->restore.x = view->x;
+        view->restore.y = view->y;
+
+        struct wlr_box window_box;
+        xdg_get_geometry(view, &window_box);
+        view->restore.width = window_box.width;
+        view->restore.height = window_box.height;
+
+        // todo get output from view
+        struct wlr_box* full_box = wlr_output_layout_get_box(
+            view->server->output_layout, view->server->main_output->wlr_output);
+
+        view->x = 0;
+        view->y = 0;
+        view->width = full_box->width;
+        view->height = full_box->height;
+        xdg_view_configure(view,
+            0, 0, full_box->width, full_box->height);
+    } else {
+        view->fullscreen = fullscreen;
+        view->x = view->restore.x;
+        view->y = view->restore.y;
+        view->width = view->restore.width;
+        view->height = view->restore.height;
+        xdg_view_configure(view, 0,
+            0, view->restore.width, view->restore.height);
+    }
+
+    // wlr_xdg_furface_set_fullscreen(view->xdg_furface, fullscreen);
+}
+
 static void xdg_close(struct tbx_view* view)
 {
     struct wlr_xdg_surface* surface = view->xdg_surface;
@@ -109,6 +148,17 @@ static void xdg_close_popups(struct tbx_view* view)
 
 static void xdg_destroy(struct tbx_view* view)
 {
+    struct tbx_xdg_shell_view *xview = (struct tbx_xdg_shell_view *)view;
+    
+    struct wl_listener *l = &xview->_first;
+    while(++l) {
+        if (!l->link.prev || l ==& xview->destroy) {
+            break;
+        }
+        // console_log("xdg unlisten");
+        wl_list_remove(&l->link);
+    }
+
     view_destroy(view);
 }
 
@@ -208,6 +258,19 @@ static void xdg_toplevel_request_move(struct wl_listener* listener,
     begin_interactive(view, TBX_CURSOR_MOVE, 0);
 }
 
+static void xdg_toplevel_request_fullscreen(struct wl_listener* listener,
+    void* data)
+{
+    /* This event is raised when a client would like to begin an interactive
+   * move, typically because the user clicked on their client-side
+   * decorations. Note that a more sophisticated compositor should check the
+   * provied serial against a list of button press serials sent to this
+   * client, to prevent the client from requesting this whenever they want. */
+    struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_move);
+    struct tbx_view* view = &xdg_shell_view->view;
+    xdg_set_fullscreen(view, !view->fullscreen);
+}
+
 static void xdg_toplevel_request_resize(struct wl_listener* listener,
     void* data)
 {
@@ -222,7 +285,7 @@ static void xdg_toplevel_request_resize(struct wl_listener* listener,
     begin_interactive(view, TBX_CURSOR_RESIZE, event->edges);
 }
 
-static void handle_set_title(struct wl_listener* listener, void* data)
+static void xdg_set_title(struct wl_listener* listener, void* data)
 {
     struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, set_title);
     struct tbx_view* view = &xdg_shell_view->view;
@@ -265,9 +328,11 @@ static void server_new_xdg_surface(struct wl_listener* listener, void* data)
     wl_signal_add(&toplevel->events.request_move, &xdg_shell_view->request_move);
     xdg_shell_view->request_resize.notify = xdg_toplevel_request_resize;
     wl_signal_add(&toplevel->events.request_resize, &xdg_shell_view->request_resize);
+    xdg_shell_view->request_fullscreen.notify = xdg_toplevel_request_fullscreen;
+    wl_signal_add(&toplevel->events.request_fullscreen, &xdg_shell_view->request_fullscreen);
 
     /* title */
-    xdg_shell_view->set_title.notify = handle_set_title;
+    xdg_shell_view->set_title.notify = xdg_set_title;
     wl_signal_add(&toplevel->events.set_title, &xdg_shell_view->set_title);
 
     // move to workspace

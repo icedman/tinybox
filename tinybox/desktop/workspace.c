@@ -91,6 +91,9 @@ struct tbx_view* workspace_get_top_view(struct tbx_server* server, int workspace
 
 struct tbx_workspace* get_workspace(struct tbx_server* server, int workspace_id)
 {
+    if (workspace_id >= server->config.workspaces) {
+        return NULL;
+    }
     struct tbx_workspace* workspace;
     wl_list_for_each(workspace, &server->workspaces, link)
     {

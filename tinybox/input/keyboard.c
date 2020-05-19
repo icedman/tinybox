@@ -16,35 +16,6 @@
 #include <strings.h>
 #include <xkbcommon/xkbcommon.h>
 
-#if 0
-static struct xf86xk_key = {
-    char* name;
-    uint32_t sym;
-} xf86xk_names[] = {
-/* Backlight controls. */
-    { "XF86MonBrightnessUp"   ,0x1008FF02 },   /* Monitor/panel brightness */
-    { "XF86MonBrightnessDown" ,0x1008FF03 },   /* Monitor/panel brightness */
-    { "XF86KbdLightOnOff"     ,0x1008FF04 },   /* Keyboards may be lit     */
-    { "XF86KbdBrightnessUp"   ,0x1008FF05 },   /* Keyboards may be lit     */
-    { "XF86KbdBrightnessDown" ,0x1008FF06 },   /* Keyboards may be lit     */
-
-/* Keys found on some "Internet" keyboards. */
-    { "XF86Standby"      ,0x1008FF10 },    /* System into standby mode   */
-    { "XF86AudioLowerVolume" ,0x1008FF11 },    /* Volume control down        */
-    { "XF86AudioMute"    ,0x1008FF12 },    /* Mute sound from the system */
-    { "XF86AudioRaiseVolume" ,0x1008FF13 },    /* Volume control up          */
-    { "XF86AudioPlay"    ,0x1008FF14 },    /* Start playing of audio >   */
-    { "XF86AudioStop"    ,0x1008FF15 },    /* Stop playing audio         */
-    { "XF86AudioPrev"    ,0x1008FF16 },    /* Previous track             */
-    { "XF86AudioNext"    ,0x1008FF17 },    /* Next track                 */
-    { "XF86HomePage"     ,0x1008FF18 },    /* Display user's home page   */
-    { "XF86Mail"     ,0x1008FF19 },    /* Invoke user's mail program */
-    { "XF86Start"        ,0x1008FF1A },    /* Start application          */
-    { "XF86Search"       ,0x1008FF1B },    /* Search                     */
-    { "XF86AudioRecord"  ,0x1008FF1C },    /* Record audio application   */
-};
-#endif
-
 static struct modifier_key {
     char* name;
     uint32_t mod;
@@ -85,16 +56,6 @@ static bool compare_keys(struct tbx_keys_pressed* kp1, struct tbx_keys_pressed* 
     return true;
 }
 
-#if 0
-static bool compare_single_keys(struct tbx_keys_pressed* kp1, struct tbx_keys_pressed* kp2)
-{
-    if (kp1->pressed[1] != 0 || kp2->pressed[1] != 0) {
-        return false;
-    }
-    return kp1->pressed[0] != kp2->pressed[0];
-}
-#endif
-
 void keys_print(struct tbx_keys_pressed* kp)
 {
     console_log("------");
@@ -117,15 +78,14 @@ void keys_add_named(struct tbx_keys_pressed* kp, char* name)
         return;
     }
 
-    // 
-    if (strlen(name) >= 4 && name[1] == 'x') { 
-        name+=2;
-        char *ptr;
-        uint32_t uk = strtoul(name, &ptr, 16);
-        keys_add(kp, uk);
-        console_log("%s %d added", name, uk);
-        return;
-    }
+    // if (strlen(name) >= 4 && name[1] == 'x') { 
+    //     name+=2;
+    //     char *ptr;
+    //     uint32_t uk = strtoul(name, &ptr, 16);
+    //     keys_add(kp, uk);
+    //     // console_log("%s %d added", name, uk);
+    //     return;
+    // }
 
     // modifier
     uint32_t m = get_modifier_mask_by_name(name);
@@ -205,7 +165,6 @@ static bool handle_keybinding(struct tbx_server* server,
             struct tbx_command* ctx = server->command;
             command_execute(ctx, entry->argc, entry->argv);
             // console_log("key binding found! %s", entry->identifier);
-
             return true;
         }
     }
@@ -281,7 +240,7 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
         struct tbx_keys_pressed k = {
             .pressed = { syms[0], 0 }
         };
-        handle_keybinding(server, &k); // do not consume
+        handle_keybinding(server, &k);
     }
 
     if (!handled) {

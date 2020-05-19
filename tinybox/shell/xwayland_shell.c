@@ -4,6 +4,7 @@
 #include "tinybox/view.h"
 #include "tinybox/xwayland.h"
 #include "tinybox/workspace.h"
+#include "tinybox/output.h"
 
 #include <float.h>
 #include <getopt.h>
@@ -14,22 +15,6 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/xwayland.h>
-
-/*
-static const char *atom_map[ATOM_LAST] = {
-    "_NET_WM_WINDOW_TYPE_NORMAL",
-    "_NET_WM_WINDOW_TYPE_DIALOG",
-    "_NET_WM_WINDOW_TYPE_UTILITY",
-    "_NET_WM_WINDOW_TYPE_TOOLBAR",
-    "_NET_WM_WINDOW_TYPE_SPLASH",
-    "_NET_WM_WINDOW_TYPE_MENU",
-    "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU",
-    "_NET_WM_WINDOW_TYPE_POPUP_MENU",
-    "_NET_WM_WINDOW_TYPE_TOOLTIP",
-    "_NET_WM_WINDOW_TYPE_NOTIFICATION",
-    "_NET_WM_STATE_MODAL",
-};
-*/
 
 static void xwayland_get_constraints(struct tbx_view* view, double* min_width,
     double* max_width, double* min_height, double* max_height)
@@ -65,6 +50,8 @@ static void xwayland_get_geometry(struct tbx_view* view, struct wlr_box* box)
 
 static void xwayland_set_activated(struct tbx_view* view, bool activated)
 {
+    console_log("set activated");
+
     struct wlr_seat* seat = view->server->seat->seat;
     struct wlr_xwayland* xwayland = view->server->xwayland_shell->wlr_xwayland;
 
@@ -83,9 +70,45 @@ static void xwayland_set_activated(struct tbx_view* view, bool activated)
     wlr_xwayland_surface_activate(view->xwayland_surface, activated);
 }
 
-static void xwaylang_set_fullscreen(struct tbx_view* view, bool fullscreen)
+static void xwaylan_set_fullscreen(struct tbx_view* view, bool fullscreen)
 {
-    console_log("requesting fullscreen");
+    if (!view->xwayland_surface) {
+        return;
+    }
+
+    console_log("fullscreen %d", fullscreen);
+    
+    if (fullscreen) {
+        view->fullscreen = fullscreen;
+        view->restore.x = view->x;
+        view->restore.y = view->y;
+
+        struct wlr_box window_box;
+        xwayland_get_geometry(view, &window_box);
+        view->restore.width = window_box.width;
+        view->restore.height = window_box.height;
+
+        // todo get output from view
+        struct wlr_box* full_box = wlr_output_layout_get_box(
+            view->server->output_layout, view->server->main_output->wlr_output);
+
+        view->x = 0;
+        view->y = 0;
+        view->width = full_box->width;
+        view->height = full_box->height;
+        wlr_xwayland_surface_configure(view->xwayland_surface,
+            0, 0, full_box->width, full_box->height);
+    } else {
+        view->fullscreen = fullscreen;
+        view->x = view->restore.x;
+        view->y = view->restore.y;
+        view->width = view->restore.width;
+        view->height = view->restore.height;
+        wlr_xwayland_surface_configure(view->xwayland_surface, 0,
+            0, view->restore.width, view->restore.height);
+    }
+
+    wlr_xwayland_surface_set_fullscreen(view->xwayland_surface, fullscreen);
 }
 
 static const char* xwayland_get_string_prop(struct tbx_view* view, enum tbx_view_prop prop)
@@ -156,6 +179,18 @@ static void xwayland_close_popups(struct tbx_view* view)
 
 static void xwayland_destroy(struct tbx_view* view)
 {
+    struct tbx_xwayland_view *xview = (struct tbx_xwayland_view *)view;
+
+    struct wl_listener *l = &xview->_first;
+    while(++l) {
+        if (!l->link.prev || l ==& xview->destroy) {
+            break;
+        }
+        wl_list_remove(&l->link);
+        // console_log("xway unlisten");
+    }
+
+    // free all listeners here!
     view_destroy(view);
 }
 
@@ -179,7 +214,7 @@ struct tbx_view_interface xwayland_view_interface = {
     .get_int_prop = xwayland_get_int_prop,
     .configure = xwayland_view_configure,
     .set_activated = xwayland_set_activated,
-    .set_fullscreen = xwaylang_set_fullscreen,
+    .set_fullscreen = xwaylan_set_fullscreen,
     .is_transient_for = xwayland_is_transient_for,
     .close = xwayland_close,
     .close_popups = xwayland_close_popups,
@@ -191,15 +226,13 @@ static void xwayland_surface_destroy(struct wl_listener* listener, void* data)
     /* Called when the surface is destroyed and should never be shown again. */
     struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, destroy);
     struct tbx_view* view = &xwayland_view->view;
-
-    // uint32_t wid = xwayland_get_int_prop(view, VIEW_PROP_X11_WINDOW_ID);
-    // console_log("destroy >%d ", wid);
-
     view->interface->destroy(view);
 }
 
 static void xwayland_surface_map(struct wl_listener* listener, void* data)
 {
+    console_log("map");
+
     /* Called when the surface is mapped, or ready to display on-screen. */
     struct wlr_xwayland_surface* xsurface = data;
 
@@ -208,19 +241,12 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
 
     view->mapped = true;
     view->title_dirty = true;
-    // view->surface = view->xwayland_surface->surface;
+    view->surface = view->xwayland_surface->surface;
 
-    view->xwayland_surface = xsurface;
-    view->surface = xsurface->surface;
-
-    // console_log("%d %d", xsurface->x, xsurface->y);
+    // view->xwayland_surface = xsurface;
+    // view->surface = xsurface->surface;
     
-    // uint32_t wt = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
-    // uint32_t wid = xwayland_get_int_prop(view, VIEW_PROP_X11_WINDOW_ID);
-    // uint32_t pid = xwayland_get_int_prop(view, VIEW_PROP_X11_PARENT_ID);
-    // int has_parent = (xsurface->parent)!=NULL;
-    // console_log("mapped >%d %d %d %d", wt, wid, pid, has_parent);
-    // view_set_focus(view, view->surface);
+    uint32_t window_type = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
     
     // if override redirect .. position as requested
     if (view->override_redirect) {
@@ -234,6 +260,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                         view->parent = ancestor;
                         view->x = xsurface->x + ancestor->x;
                         view->y = xsurface->y + ancestor->y;
+                        console_log("found parent?");
                         break;
                     }
                 }
@@ -241,38 +268,46 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
 
         } else {
 
-            // adopt a parent?
-            struct tbx_view *focused = view_from_surface(view->server, 
-                view->server->seat->seat->keyboard_state.focused_surface);
-            
-            if (!focused || focused->view_type != VIEW_TYPE_XWAYLAND) {
-                struct tbx_view* ancestor;
-                wl_list_for_each(ancestor, &view->server->views, link) {
-                    if (ancestor == view || !ancestor->x || ancestor->width < view->width) {
-                        continue;
-                    }
-                    if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
-                        focused = ancestor;
-                        break;
+            // popup? needs a parent
+            if (window_type != 0) {
+                //-------------------------
+                // hacky: adopt a parent?
+                //-------------------------
+                struct tbx_view *focused = view_from_surface(view->server, 
+                    view->server->seat->seat->keyboard_state.focused_surface);
+                
+                if (!focused || focused->view_type != VIEW_TYPE_XWAYLAND) {
+                    struct tbx_view* ancestor;
+                    wl_list_for_each(ancestor, &view->server->views, link) {
+                        if (ancestor == view || !ancestor->x || ancestor->width < view->width) {
+                            continue;
+                        }
+                        if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
+                            focused = ancestor;
+                            break;
+                        }
                     }
                 }
-            }
 
-            if (focused && focused->view_type == VIEW_TYPE_XWAYLAND) {
-                console_log("adopted %d %d %d %d", xsurface->x, xsurface->width, focused->x, focused->y);
-                // view->parent = focused;
-                view->x = xsurface->x + focused->x;
-                view->y = xsurface->y + focused->y;
+                if (focused && focused->view_type == VIEW_TYPE_XWAYLAND) {
+                    // console_log("adopted %d %d %d %d", xsurface->x, xsurface->width, focused->x, focused->y);
+                    // view->parent = focused;
+                    view->x = xsurface->x + focused->x;
+                    view->y = xsurface->y + focused->y;
+                    return;
+                }
+
             }
         }
 
+        view_set_focus(view, view->surface);
         return;
     }
-
-    view_move_to_center(view, NULL);
-    xwayland_set_activated(view, true);
+    
+    view_set_focus(view, view->surface);
 
     // always set to zero
+    view_move_to_center(view, NULL);
     wlr_xwayland_surface_configure(view->xwayland_surface, 0,
     0, view->width, view->height);
 }
@@ -312,6 +347,47 @@ static void xwayland_request_configure(struct wl_listener* listener,
     }
 }
 
+static void xwayland_request_fullscreen(struct wl_listener* listener,
+    void* data)
+{
+    struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, request_fullscreen);
+    struct tbx_view* view = &xwayland_view->view;
+    view->interface->set_fullscreen(view, !view->fullscreen);
+}
+
+static void xwayland_set_title(struct wl_listener* listener, void* data)
+{
+    struct tbx_xwayland_view* xview = wl_container_of(listener, xview, set_title);
+    struct tbx_view* view = &xview->view;
+    view->title_dirty = true;
+}
+
+/*
+static void xwayland_set_class(struct wl_listener* listener, void* data)
+{
+    struct tbx_xwayland_view* xview = wl_container_of(listener, xview, set_class);
+    struct tbx_view* view = &xview->view;
+
+    console_log("set_class %s", xwayland_get_string_prop(view, VIEW_PROP_CLASS));
+}
+
+static void xwayland_set_role(struct wl_listener* listener, void* data)
+{
+    struct tbx_xwayland_view* xview = wl_container_of(listener, xview, set_role);
+    struct tbx_view* view = &xview->view;
+
+    console_log("set_role %s", xwayland_get_string_prop(view, VIEW_PROP_WINDOW_ROLE));
+}
+
+static void xwayland_set_window_type(struct wl_listener* listener, void* data)
+{
+    console_log("set_window_type");
+    struct tbx_xwayland_view* xview = wl_container_of(listener, xview, set_window_type);
+    struct tbx_view* view = &xview->view;
+    console_log("set_window_type %d", xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE));
+}
+*/
+
 static void new_xwayland_surface(struct wl_listener* listener, void* data)
 {
     struct wlr_xwayland_surface* xsurface = data;
@@ -343,6 +419,28 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
     xwayland_view->request_configure.notify = xwayland_request_configure;
     wl_signal_add(&xsurface->events.request_configure,
         &xwayland_view->request_configure);
+
+    xwayland_view->request_fullscreen.notify = xwayland_request_fullscreen;
+    wl_signal_add(&xsurface->events.request_fullscreen,
+        &xwayland_view->request_fullscreen);
+
+    xwayland_view->set_title.notify = xwayland_set_title;
+    wl_signal_add(&xsurface->events.set_title,
+        &xwayland_view->set_title);
+
+    /*
+    xwayland_view->set_class.notify = xwayland_set_class;
+    wl_signal_add(&xsurface->events.set_class,
+        &xwayland_view->set_class);
+
+    xwayland_view->set_role.notify = xwayland_set_role;
+    wl_signal_add(&xsurface->events.set_role,
+        &xwayland_view->set_role);
+
+    xwayland_view->set_window_type.notify = xwayland_set_window_type;
+    wl_signal_add(&xsurface->events.set_window_type,
+        &xwayland_view->set_window_type);
+    */
 
     // move to workspace
     view->workspace = server->workspace;
