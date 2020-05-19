@@ -14,6 +14,15 @@
 
 void view_close(struct tbx_view* view);
 
+void exec_log(struct tbx_command* cmd, int argc, char** argv)
+{
+    if (!command_check_args(cmd, argc, 1)) {
+        return;
+    }
+
+    console_log("%s", argv[0]);
+}
+
 void exec_exec(struct tbx_command* cmd, int argc, char** argv)
 {
     if (!command_check_args(cmd, argc, 1)) {
@@ -61,4 +70,5 @@ void register_global_commands(struct tbx_server* server)
 {
     register_command(server->command, "exec", exec_exec);
     register_command(server->command, "kill", exec_kill);
+    register_command(server->command, "log", exec_log);
 }

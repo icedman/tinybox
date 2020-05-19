@@ -55,6 +55,7 @@ bool parse_color_rgb(const char* spec, uint32_t* color)
     char red[8] = "";
     char green[8] = "";
     char blue[8] = "";
+    // char alpha[8] = "";
 
     // red
     if (!token) return false;
@@ -69,6 +70,10 @@ bool parse_color_rgb(const char* spec, uint32_t* color)
     // blue
     if (!token) return false;
     rpad(blue, token, token[0], 2);
+
+    // alpha
+    // if (!token) return false;
+    // rpad(alpha, token, token[0], 2);
     
     *color = make_cokor((strtol(red, NULL, 16)), (strtol(green, NULL, 16)),
         (strtol(blue, NULL, 16)));

@@ -67,18 +67,14 @@ static bool begin_interactive_sd(struct tbx_server* server,
             cursor->grab_y += handleWidth;
         }
 
-        if (view->xdg_surface) {
-            wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
-        } else {
-            // todo xwayland
-            cursor->grab_box.width = view->surface->current.width;
-            cursor->grab_box.height = view->surface->current.height;
-        }
-
+        view->interface->get_geometry(view, &cursor->grab_box);
         cursor->grab_box.x = view->x;
         cursor->grab_box.y = view->y;
+
         view->hotspot = HS_NONE;
         view->hotspot_edges = WLR_EDGE_NONE;
+
+        view_set_focus(view, view->surface);
         return true;
     }
 
@@ -99,16 +95,11 @@ static bool begin_interactive_sd(struct tbx_server* server,
         cursor->grab_x = cursor->cursor->x - view->x;
         cursor->grab_y = cursor->cursor->y - view->y;
 
-        if (view->xdg_surface) {
-            wlr_xdg_surface_get_geometry(view->xdg_surface, &cursor->grab_box);
-        } else {
-            // todo xwayland
-            cursor->grab_box.width = view->surface->current.width;
-            cursor->grab_box.height = view->surface->current.height;
-        }
 
+        view->interface->get_geometry(view, &cursor->grab_box);
         cursor->grab_box.x = view->x;
         cursor->grab_box.y = view->y;
+        
         view->hotspot = -1;
         view->hotspot_edges = WLR_EDGE_NONE;
 

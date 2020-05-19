@@ -245,10 +245,10 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
             struct tbx_view *focused = view_from_surface(view->server, 
                 view->server->seat->seat->keyboard_state.focused_surface);
             
-            if (!focused) {
+            if (!focused || focused->view_type != VIEW_TYPE_XWAYLAND) {
                 struct tbx_view* ancestor;
                 wl_list_for_each(ancestor, &view->server->views, link) {
-                    if (ancestor == view || !view->mapped) {
+                    if (ancestor == view || !ancestor->x || ancestor->width < view->width) {
                         continue;
                     }
                     if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
@@ -259,8 +259,8 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
             }
 
             if (focused && focused->view_type == VIEW_TYPE_XWAYLAND) {
-                // console_log("adopted %d %d %d %d", xsurface->x, xsurface->y, focused->x, focused->y);
-                view->parent = focused;
+                console_log("adopted %d %d %d %d", xsurface->x, xsurface->width, focused->x, focused->y);
+                // view->parent = focused;
                 view->x = xsurface->x + focused->x;
                 view->y = xsurface->y + focused->y;
             }

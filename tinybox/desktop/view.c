@@ -72,9 +72,6 @@ bool view_at(struct tbx_view* view, double lx, double ly,
             h = view->surface->current.height;
 
             if (lx >= view->x && lx <= view->x + w && ly >= view->y && ly <= view->y + h) {
-
-                // console_log("%d %d %d %d", (int)lx, (int)ly, (int)view->x, (int)view->y);
-
                 *sx = lx - view->x;
                 *sy = ly - view->y;
                 *surface = view->surface;

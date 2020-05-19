@@ -112,5 +112,6 @@ static void exec_bind(struct tbx_command* cmd, int argc, char** argv)
 
 void register_keybinding_commands(struct tbx_server* server)
 {
-    register_command(server->command, "bind", exec_bind);
+    // register_command(server->command, "bind", exec_bind);
+    register_command(server->command, "bindsym", exec_bind);
 }
