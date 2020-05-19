@@ -97,6 +97,10 @@ static uint32_t xdg_view_configure(struct tbx_view* view, double lx, double ly,
 
 static void xdg_close(struct tbx_view* view)
 {
+    struct wlr_xdg_surface* surface = view->xdg_surface;
+    if (surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL && surface->toplevel) {
+        wlr_xdg_toplevel_send_close(surface);
+    }
 }
 
 static void xdg_close_popups(struct tbx_view* view)
@@ -269,10 +273,11 @@ static void server_new_xdg_surface(struct wl_listener* listener, void* data)
     // move to workspace
     view->workspace = server->workspace;
 
+    xdg_set_activated(view, true);
+
     /* Add it to the list of views. */
     wl_list_insert(&server->views, &view->link);
-
-    xdg_set_activated(view, true);
+    view_setup(view);
 }
 
 bool xdg_shell_setup(struct tbx_server* server)

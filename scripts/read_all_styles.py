@@ -20,12 +20,13 @@ def process_theme(path, name):
         m = re.match(pat, l)
         if not m is None:
             # print(m.group(0))
-            nn = m.group(0)
+            nn = m.group(0);
+            nn = nn.lower()
             if nn not in config_types:
                  config_types[nn] = {}
             config_types[nn][current_type] = current_type
             if nn not in configs:
-                configs.append(m.group(0))
+                configs.append(nn)
 
 def process_file(path, name):
     if name.endswith(".xpm") or name.endswith(".xbm"): 

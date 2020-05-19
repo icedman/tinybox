@@ -15,11 +15,11 @@
 #include "common/util.h"
 #include "tinybox/style.h"
 
-#define MAKE_COLOR(r, g, b) (r << 24) | (g << 16) | (b << 8) | 0xff;
+uint32_t make_cokor(int r, int g, int b) { return (r << 24) | (g << 16) | (b << 8) | 0xff; }
 
 int wrap(int i, int max) { return ((i % max) + max) % max; }
 
-bool xparse_colorname(const char* spec, uint32_t* color)
+bool parse_color_name(const char* spec, uint32_t* color)
 {
     for (int i = 0;; i++) {
         colorEntry* e = &colorTable[i];
@@ -27,7 +27,7 @@ bool xparse_colorname(const char* spec, uint32_t* color)
             break;
         }
         if (strcmp(e->name, spec) == 0) {
-            *color = MAKE_COLOR(e->r, e->g, e->b);
+            *color = make_cokor(e->r, e->g, e->b);
             return true;
         }
     }
@@ -38,56 +38,50 @@ char* rpad(char* dest, const char* src, const char pad, const size_t sz)
 {
     memset(dest, pad, sz);
     dest[sz] = 0x0;
-    memcpy(dest, src, strlen(src));
+    int l = strlen(src);
+    if (l>3) l=3;
+    memcpy(dest, src, l);
     return dest;
 }
 
-bool xparse_color(const char* spec, uint32_t* color)
+bool parse_color_rgb(const char* spec, uint32_t* color)
 {
-
-    // int red;
-    // int green;
-    // int blue;
-
-    char spec2[32];
-    for (int i = 0; i < 32; i++) {
-        char c = spec[i];
-        if (c == ':' || c == '/') {
-            c = ' ';
-        }
-        spec2[i] = c;
-        if (c == 0) {
-            break;
-        }
-    }
-
-    int argc = 0;
-    char** argv = split_args(spec2, &argc);
-
-    if (argc != 4) {
-        return false;
-    }
+    char* token = strtok((char*)spec, ":");
+    
+    // rgb:
+    if (!token) return false;
+    token = strtok(NULL, "/");
 
     char red[8] = "";
     char green[8] = "";
     char blue[8] = "";
 
-    rpad(red, argv[1], argv[1][0], 2);
-    rpad(green, argv[2], argv[2][0], 2);
-    rpad(blue, argv[3], argv[3][0], 2);
+    // red
+    if (!token) return false;
+    rpad(red, token, token[0], 2);
+    token = strtok(NULL, "/");
+    
+    // green
+    if (!token) return false;
+    rpad(green, token, token[0], 2);
+    token = strtok(NULL, "/");
 
-    *color = MAKE_COLOR((strtol(red, NULL, 16)), (strtol(green, NULL, 16)),
+    // blue
+    if (!token) return false;
+    rpad(blue, token, token[0], 2);
+    
+    *color = make_cokor((strtol(red, NULL, 16)), (strtol(green, NULL, 16)),
         (strtol(blue, NULL, 16)));
     return true;
 }
 
 bool parse_color(const char* color, uint32_t* result)
 {
-    if (xparse_color(color, result)) {
+    if (parse_color_rgb(color, result)) {
         return true;
     }
 
-    if (xparse_colorname(color, result)) {
+    if (parse_color_name(color, result)) {
         return true;
     }
 

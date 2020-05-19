@@ -40,7 +40,6 @@ static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_bo
 static void render_view_decorations(struct wlr_surface* surface, int sx, int sy,
     void* data)
 {
-
     // renders the decorations and positions hotspots
 
     /* This function is called for every surface that needs to be rendered. */
@@ -632,7 +631,12 @@ static void output_frame(struct wl_listener* listener, void* data)
             }
 
             if (view->view_type == VIEW_TYPE_XWAYLAND) {
-                render_view_content(view->surface, 0, 0, &rdata);
+
+                if (view->override_redirect) {
+                    // console_log("%d %d", (int)view->lx, (int)view->ly);
+                }
+                
+                render_view_content(view->surface, view->lx, view->ly, &rdata);
             }
         }
     }

@@ -83,12 +83,12 @@ static void exec_swipe_threshold(struct tbx_command* cmd, int argc,
 
 static void exec_console(struct tbx_command* cmd, int argc, char** argv)
 {
-    if (!command_check_args(cmd, argc, 1)) {
-        return;
-    }
-
     struct tbx_config* config = &cmd->server->config;
-    config->console = parse_boolean(argv[0], false);
+    if (argc) {
+        config->console = parse_boolean(argv[0], false);
+    } else {
+        config->console = !config->console;
+    }
 }
 
 void register_config_commands(struct tbx_server* server)

@@ -10,6 +10,8 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/xwayland.h>
 
+static int views_online = 0;
+
 struct tbx_view* view_from_surface(struct tbx_server* server, struct wlr_surface* surface)
 {
     struct tbx_view* view;
@@ -40,7 +42,7 @@ void view_set_focus(struct tbx_view* view, struct wlr_surface* surface)
         }
 
         if (prev_surface) {
-            /*
+        /*
          * Deactivate the previously focused surface. This lets the client know
          * it no longer has focus and the client will repaint accordingly, e.g.
          * stop displaying a caret.
@@ -287,9 +289,13 @@ void view_move_to_center(struct tbx_view* view, struct tbx_output* output)
     view->y = y;
 }
 
+void view_setup(struct tbx_view *view)
+{
+    views_online++;
+}
+
 void view_destroy(struct tbx_view* view)
 {
-    console_log("view destroy");
     int workspace = view->workspace;
 
     if (view->title) {
@@ -301,6 +307,8 @@ void view_destroy(struct tbx_view* view)
 
     wl_list_remove(&view->link);
 
+    // remove all listeners
+
     // focus next view
     struct tbx_view* top = workspace_get_top_view(view->server, workspace);
     if (top) {
@@ -309,17 +317,12 @@ void view_destroy(struct tbx_view* view)
     }
 
     free(view);
+
+    views_online--;
+    console_log("view destroy ..%d", views_online);
 }
 
 void view_close(struct tbx_view* view)
 {
-    // implement xwayland_surface!
-    if (!view->xdg_surface) {
-        return;
-    }
-
-    struct wlr_xdg_surface* surface = view->xdg_surface;
-    if (surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL && surface->toplevel) {
-        wlr_xdg_toplevel_send_close(surface);
-    }
+    view->interface->close(view);
 }
