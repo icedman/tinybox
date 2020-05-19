@@ -260,7 +260,6 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                         view->parent = ancestor;
                         view->x = xsurface->x + ancestor->x;
                         view->y = xsurface->y + ancestor->y;
-                        console_log("found parent?");
                         break;
                     }
                 }
@@ -300,7 +299,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
             }
         }
 
-        view_set_focus(view, view->surface);
+        // view_set_focus(view, view->surface);
         return;
     }
     
