@@ -8,33 +8,50 @@ set $down j
 set $up k
 set $right l
 
+set $browser google-chrome-stable
 set $term termite
-set $menu dmenu_path | dmenu | xargs swaymsg exec --
+set $menu "dmenu_path | dmenu_run"
 
-bind $mod+ctrl+return exec $term
+bindsym $mod+ctrl+return exec $term
+bindsym $mod+ctrl+shift+return exec $browser
+bindsym $mod+ctrl+d exec $menu
 
 workspaces 4
 animate true
+swipe_threshold 200
 
-bind $mod+ctrl+1 workspace 0
-bind $mod+ctrl+2 workspace 1
-bind $mod+ctrl+3 workspace 2
-bind $mod+ctrl+4 workspace 3
+#console enabled
 
-bind $mod+ctrl+shift+1 move window to workspace 0
-bind $mod+ctrl+shift+2 move window to workspace 1
-bind $mod+ctrl+shift+3 move window to workspace 2
-bind $mod+ctrl+shift+4 move window to workspace 3
+bindsym $mod+ctrl+1 workspace 0
+bindsym $mod+ctrl+2 workspace 1
+bindsym $mod+ctrl+3 workspace 2
+bindsym $mod+ctrl+4 workspace 3
 
-bind $mod+ctrl+left workspace left
-bind $mod+ctrl+right workspace right
+bindsym $mod+ctrl+shift+1 move window to workspace 0
+bindsym $mod+ctrl+shift+2 move window to workspace 1
+bindsym $mod+ctrl+shift+3 move window to workspace 2
+bindsym $mod+ctrl+shift+4 move window to workspace 3
 
-bind $mod+ctrl+shift+left move window to workspace left
-bind $mod+ctrl+shift+right move window to workspace right
+bindsym $mod+ctrl+left workspace left
+bindsym $mod+ctrl+right workspace right
 
-bind $mod+ctrl+up shade up
-bind $mod+ctrl+down shade down
-bind $mod+ctrl+space shade
+bindsym $mod+ctrl+shift+left move window to workspace left
+bindsym $mod+ctrl+shift+right move window to workspace right
+
+bindsym $mod+ctrl+up shade up
+bindsym $mod+ctrl+down shade down
+bindsym $mod+ctrl+space shade
+
+bindsym $mod+tab cycle
+bindsym $mod+ctrl+z console
+bindsym $mod+q kill
+
+bindsym XF86AudioRaiseVolume exec pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
+bindsym XF86AudioMicMute exec pactl set-source-mute @DEFAULT_SOURCE@ toggle
+bindsym XF86MonBrightnessDown exec brightnessctl set 15%-
+bindsym XF86MonBrightnessUp exec brightnessctl set +15%
 
 input 1739:30382:DLL0704:01_06CB:76AE_Touchpad {
     tap enabled
@@ -52,11 +69,8 @@ output DP-1 {
 }
 
 workspace 0 {
-    background /usr/share/backgrounds/lambo2.jpg
+    background ~/Pictures/bg.png
 }
 
-workspace 1 {
-    background /usr/share/backgrounds/lambo4.jpg
-}
 
-style ~/.sway/styles/Nyz 
+style ~/.sway/styles/Twice
