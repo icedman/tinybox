@@ -41,7 +41,8 @@ void view_set_focus(struct tbx_view* view, struct wlr_surface* surface)
             return;
         }
 
-        if (prev_surface) {
+        if (prev_surface &&
+            !(view->parent && view->parent->surface == prev_surface)) {
         /*
          * Deactivate the previously focused surface. This lets the client know
          * it no longer has focus and the client will repaint accordingly, e.g.

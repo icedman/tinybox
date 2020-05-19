@@ -299,7 +299,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
             }
         }
 
-        // view_set_focus(view, view->surface);
+        view_set_focus(view, view->surface);
         return;
     }
     

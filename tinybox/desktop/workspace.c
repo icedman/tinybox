@@ -82,6 +82,9 @@ struct tbx_view* workspace_get_top_view(struct tbx_server* server, int workspace
     struct tbx_view* view;
     wl_list_for_each(view, &server->views, link)
     {
+        if (!view->mapped) {
+            continue;
+        }
         if (view->workspace == workspace_id) {
             return view;
         }
@@ -121,6 +124,9 @@ void workspace_cycle_views(struct tbx_server* server, int workspace_id)
     struct tbx_view* view;
     wl_list_for_each(view, &server->views, link)
     {
+        if (!view->mapped || view->parent) {
+            continue;
+        }
         if (view == current_view) {
             continue;
         }
