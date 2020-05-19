@@ -221,6 +221,15 @@ struct tbx_view_interface xwayland_view_interface = {
     .destroy = xwayland_destroy
 };
 
+
+static void xwayland_surface_commit(struct wl_listener* listener, void* data)
+{
+    console_log("commit xwayland");
+    struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, commit);
+    struct tbx_view* view = &xwayland_view->view;
+    view_damage(view);
+}
+
 static void xwayland_surface_destroy(struct wl_listener* listener, void* data)
 {
     /* Called when the surface is destroyed and should never be shown again. */
@@ -245,7 +254,12 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
 
     // view->xwayland_surface = xsurface;
     // view->surface = xsurface->surface;
-    
+
+    xwayland_view->commit.notify = xwayland_surface_commit;
+    if (xsurface->surface) {
+        wl_signal_add(&xsurface->surface->events.commit, &xwayland_view->commit);
+    }
+
     uint32_t window_type = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
     
     // if override redirect .. position as requested
@@ -300,6 +314,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
         }
 
         view_set_focus(view, view->surface);
+        view_damage(view);
         return;
     }
     
@@ -309,6 +324,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
     view_move_to_center(view, NULL);
     wlr_xwayland_surface_configure(view->xwayland_surface, 0,
     0, view->width, view->height);
+    view_damage(view);
 }
 
 static void xwayland_surface_unmap(struct wl_listener* listener, void* data)
@@ -318,6 +334,11 @@ static void xwayland_surface_unmap(struct wl_listener* listener, void* data)
     struct tbx_view* view = &xwayland_view->view;
     view->surface = NULL;
     view->mapped = false;
+    view_damage(view);
+
+    if (view->xwayland_surface->surface) {
+        wl_list_remove(&xwayland_view->commit.link);
+    }
 }
 
 static void xwayland_request_configure(struct wl_listener* listener,
@@ -448,7 +469,7 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
 
     /* Add it to the list of views. */
     if (xsurface->override_redirect) {
-        view->csd = true;
+        view->csd = true;   // implement decoration listener
         view->override_redirect = true;
     }
 

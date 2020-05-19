@@ -37,7 +37,7 @@ static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_bo
     }
 }
 
-static void render_view_decorations(struct wlr_surface* surface, int sx, int sy,
+static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
     void* data)
 {
     // renders the decorations and positions hotspots
@@ -524,8 +524,44 @@ static void output_frame(struct wl_listener* listener, void* data)
     /* Begin the renderer (calls glViewport and some other GL sanity checks) */
     wlr_renderer_begin(renderer, width, height);
 
+
+#if 0
+// implement double buffer first
+    // primitive damage tracking
+    int damages = 0;
+    struct tbx_view* damage_view;
+    struct wlr_box damage_box;
+    float damage_color[4] = { 1.0, 0, 1.0, 1.0 };
+    wl_list_for_each(damage_view, &server->views, link)
+    {
+        if (damage_view->damage.width == 0) {
+            continue;
+        }
+
+        memcpy(&damage_box, &damage_view->damage, sizeof(struct wlr_box));
+        grow_box_hv(&damage_box, 8, 8);
+        render_rect(output->wlr_output, &damage_box, damage_color, output->wlr_output->scale);
+
+        // console_log("d: %d %d %d %d", damage_view->damage.x, damage_view->damage.y,
+        //         damage_view->damage.width, damage_view->damage.height);
+
+        damage_view->damage.width = 0;
+        damages++;
+    }
+
+    if (!damages) {
+        struct tbx_view* view;
+        wl_list_for_each(view, &server->views, link) {
+            if (view->mapped && view->surface) {
+                wlr_surface_send_frame_done(view->surface, &now);
+            }
+        }
+
+        goto end_render;
+    }
+#endif
+
     // render box
-    // float color[4] = { 0.3, 0.3, 0.3, 1.0 };
     float color[4] = { 0, 0, 0, 1.0 };
     wlr_renderer_clear(renderer, color);
 
@@ -618,8 +654,8 @@ static void output_frame(struct wl_listener* listener, void* data)
         };
 
         // decorations
-        if (!view->csd) {
-            render_view_decorations(view->surface, 0, 0, &rdata);
+        if (!view->csd && !view->fullscreen) {
+            render_view_frame(view->surface, 0, 0, &rdata);
         }
 
         // content
@@ -631,15 +667,12 @@ static void output_frame(struct wl_listener* listener, void* data)
             }
 
             if (view->view_type == VIEW_TYPE_XWAYLAND) {
-
-                if (view->override_redirect) {
-                    // console_log("%d %d", (int)view->lx, (int)view->ly);
-                }
-                
-                render_view_content(view->surface, view->lx, view->ly, &rdata);
+                render_view_content(view->surface, 0, 0, &rdata);
             }
         }
     }
+
+//    end_render:
 
     /* Hardware cursors are rendered by the GPU on a separate plane, and can be
    * moved around without re-rendering what's beneath them - which is more

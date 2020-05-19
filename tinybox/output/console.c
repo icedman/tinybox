@@ -89,7 +89,8 @@ void console_dump()
     console_log(header, "views");
     wl_list_for_each_reverse(view, &server->views, link)
     {
-        console_log("v: %s\n", view->xdg_surface->toplevel->title);
+        const char *title = view->interface->get_string_prop(view, VIEW_PROP_TITLE);
+        console_log("v: %s\n", title);
     }
 
     struct tbx_workspace* workspace;

@@ -324,3 +324,10 @@ void view_close(struct tbx_view* view)
 {
     view->interface->close(view);
 }
+
+void view_damage(struct tbx_view* view)
+{
+    view->interface->get_geometry(view, &view->damage);
+    view->damage.x = view->x;
+    view->damage.y = view->y;
+}

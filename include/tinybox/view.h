@@ -74,15 +74,14 @@ struct tbx_view {
     struct wlr_xdg_surface* xdg_surface;
     struct wlr_xwayland_surface* xwayland_surface;
 
-    // xwayland
-    struct wl_listener request_configure;
-    struct wl_listener commit;
-
     bool mapped;
     int x, y;
-    int width, height;  // xwayland
+    int lx, ly;      // last x, y for damage?
+    
+    // xwayland
+    int width, height;
     bool override_redirect;
-    int lx, ly;
+
     bool shaded;
     bool csd;
     bool fullscreen;
@@ -117,13 +116,17 @@ struct tbx_view {
 
     // workspace
     int workspace;
+
+    // damage tracking
+    struct wlr_box damage;
 };
 
 struct tbx_xdg_shell_view {
     struct tbx_view view;
 
+    struct wl_listener commit;
+
     struct wl_listener _first;
-    // struct wl_listener commit;
     struct wl_listener request_move;
     struct wl_listener request_resize;
     // struct wl_listener request_maximize;
@@ -140,8 +143,9 @@ struct tbx_xdg_shell_view {
 struct tbx_xwayland_view {
     struct tbx_view view;
 
+    struct wl_listener commit;
+
     struct wl_listener _first;
-    // struct wl_listener commit;
     // struct wl_listener request_move;
     // struct wl_listener request_resize;
     // struct wl_listener request_maximize;
@@ -186,5 +190,7 @@ struct tbx_output* view_get_preferred_output(struct tbx_view* view);
 void view_setup(struct tbx_view *view);
 
 void view_destroy(struct tbx_view* view);
+
+void view_damage(struct tbx_view* view);
 
 #endif // TINYBOX_VIEW_H

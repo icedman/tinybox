@@ -36,8 +36,14 @@ static void xdg_get_constraints(struct tbx_view* view, double* min_width,
 }
 
 static void xdg_get_geometry(struct tbx_view* view, struct wlr_box* box)
-{
-    wlr_xdg_surface_get_geometry(view->xdg_surface, box);
+{   
+    if (view->surface) {
+        wlr_xdg_surface_get_geometry(view->xdg_surface, box);
+        box->x = box->y = 0;
+    } else {
+        box->width = 0;
+        box->height = 0;
+    }
 }
 
 static void xdg_set_activated(struct tbx_view* view, bool activated)
@@ -180,36 +186,6 @@ static struct tbx_view_interface xdg_view_interface = {
     .destroy = xdg_destroy
 };
 
-static void xdg_surface_map(struct wl_listener* listener, void* data)
-{
-    /* Called when the surface is mapped, or ready to display on-screen. */
-    struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
-    struct tbx_view* view = &xdg_shell_view->view;
-    view->mapped = true;
-    view->title_dirty = true;
-    view->surface = (struct wlr_surface*)view->xdg_surface;
-
-    view_set_focus(view, view->xdg_surface->surface);
-    view_move_to_center(view, NULL);
-}
-
-static void xdg_surface_unmap(struct wl_listener* listener, void* data)
-{
-    /* Called when the surface is unmapped, and should no longer be shown. */
-    struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
-    struct tbx_view* view = &xdg_shell_view->view;
-    view->surface = NULL;
-    view->mapped = false;
-}
-
-static void xdg_surface_destroy(struct wl_listener* listener, void* data)
-{
-    /* Called when the surface is destroyed and should never be shown again. */
-    struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, destroy);
-    struct tbx_view* view = &xdg_shell_view->view;
-    view->interface->destroy(view);
-}
-
 static void begin_interactive(struct tbx_view* view, enum tbx_cursor_mode mode,
     uint32_t edges)
 {
@@ -248,6 +224,52 @@ static void begin_interactive(struct tbx_view* view, enum tbx_cursor_mode mode,
 
         cursor->resize_edges = edges;
     }
+}
+
+static void xdg_surface_commit(struct wl_listener* listener, void* data)
+{
+    struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
+    struct tbx_view* view = &xdg_shell_view->view;
+    view_damage(view);
+}
+
+static void xdg_surface_map(struct wl_listener* listener, void* data)
+{
+    /* Called when the surface is mapped, or ready to display on-screen. */
+    struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
+    struct tbx_view* view = &xdg_shell_view->view;
+    view->mapped = true;
+    view->title_dirty = true;
+    view->surface = (struct wlr_surface*)view->xdg_surface;
+    view_set_focus(view, view->xdg_surface->surface);
+    view_move_to_center(view, NULL);
+    view_damage(view);
+
+    xdg_shell_view->commit.notify = xdg_surface_commit;
+    if (view->xdg_surface->surface) {
+        wl_signal_add(&view->xdg_surface->surface->events.commit, &xdg_shell_view->commit);
+    }
+}
+
+static void xdg_surface_unmap(struct wl_listener* listener, void* data)
+{
+    /* Called when the surface is unmapped, and should no longer be shown. */
+    struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
+    struct tbx_view* view = &xdg_shell_view->view;
+    view->surface = NULL;
+    view->mapped = false;
+    view_damage(view);
+    if (view->xdg_surface->surface) {
+        wl_list_remove(&xdg_shell_view->commit.link);
+    }
+}
+
+static void xdg_surface_destroy(struct wl_listener* listener, void* data)
+{
+    /* Called when the surface is destroyed and should never be shown again. */
+    struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, destroy);
+    struct tbx_view* view = &xdg_shell_view->view;
+    view->interface->destroy(view);
 }
 
 static void xdg_toplevel_request_move(struct wl_listener* listener,
