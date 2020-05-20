@@ -39,7 +39,8 @@ char* rpad(char* dest, const char* src, const char pad, const size_t sz)
     memset(dest, pad, sz);
     dest[sz] = 0x0;
     int l = strlen(src);
-    if (l>3) l=3;
+    if (l > 3)
+        l = 3;
     memcpy(dest, src, l);
     return dest;
 }
@@ -47,9 +48,10 @@ char* rpad(char* dest, const char* src, const char pad, const size_t sz)
 bool parse_color_rgb(const char* spec, uint32_t* color)
 {
     char* token = strtok((char*)spec, ":");
-    
+
     // rgb:
-    if (!token) return false;
+    if (!token)
+        return false;
     token = strtok(NULL, "/");
 
     char red[8] = "";
@@ -58,23 +60,26 @@ bool parse_color_rgb(const char* spec, uint32_t* color)
     // char alpha[8] = "";
 
     // red
-    if (!token) return false;
+    if (!token)
+        return false;
     rpad(red, token, token[0], 2);
     token = strtok(NULL, "/");
-    
+
     // green
-    if (!token) return false;
+    if (!token)
+        return false;
     rpad(green, token, token[0], 2);
     token = strtok(NULL, "/");
 
     // blue
-    if (!token) return false;
+    if (!token)
+        return false;
     rpad(blue, token, token[0], 2);
 
     // alpha
     // if (!token) return false;
     // rpad(alpha, token, token[0], 2);
-    
+
     *color = make_cokor((strtol(red, NULL, 16)), (strtol(green, NULL, 16)),
         (strtol(blue, NULL, 16)));
     return true;

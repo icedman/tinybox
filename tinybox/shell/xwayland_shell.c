@@ -1,10 +1,10 @@
 #define _POSIX_C_SOURCE 200112L
 
+#include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
-#include "tinybox/xwayland.h"
 #include "tinybox/workspace.h"
-#include "tinybox/output.h"
+#include "tinybox/xwayland.h"
 
 #include <float.h>
 #include <getopt.h>
@@ -77,7 +77,7 @@ static void xwaylan_set_fullscreen(struct tbx_view* view, bool fullscreen)
     }
 
     console_log("fullscreen %d", fullscreen);
-    
+
     if (fullscreen) {
         view->fullscreen = fullscreen;
         view->restore.x = view->x;
@@ -117,11 +117,11 @@ static const char* xwayland_get_string_prop(struct tbx_view* view, enum tbx_view
     case VIEW_PROP_TITLE:
         return view->xwayland_surface->title;
     case VIEW_PROP_CLASS:
-    return view->xwayland_surface->class;
+        return view->xwayland_surface->class;
     case VIEW_PROP_INSTANCE:
-      return view->xwayland_surface->instance;
+        return view->xwayland_surface->instance;
     case VIEW_PROP_WINDOW_ROLE:
-      return view->xwayland_surface->role;
+        return view->xwayland_surface->role;
     default:
         return NULL;
     }
@@ -179,11 +179,11 @@ static void xwayland_close_popups(struct tbx_view* view)
 
 static void xwayland_destroy(struct tbx_view* view)
 {
-    struct tbx_xwayland_view *xview = (struct tbx_xwayland_view *)view;
+    struct tbx_xwayland_view* xview = (struct tbx_xwayland_view*)view;
 
-    struct wl_listener *l = &xview->_first;
-    while(++l) {
-        if (!l->link.prev || l ==& xview->destroy) {
+    struct wl_listener* l = &xview->_first;
+    while (++l) {
+        if (!l->link.prev || l == &xview->destroy) {
             break;
         }
         wl_list_remove(&l->link);
@@ -194,10 +194,11 @@ static void xwayland_destroy(struct tbx_view* view)
     view_destroy(view);
 }
 
-static bool xwayland_is_transient_for(struct tbx_view *child,
-        struct tbx_view *ancestor) {
+static bool xwayland_is_transient_for(struct tbx_view* child,
+    struct tbx_view* ancestor)
+{
 
-    struct wlr_xwayland_surface *surface = child->xwayland_surface;
+    struct wlr_xwayland_surface* surface = child->xwayland_surface;
     while (surface) {
         if (surface->parent == ancestor->xwayland_surface) {
             return true;
@@ -221,10 +222,9 @@ struct tbx_view_interface xwayland_view_interface = {
     .destroy = xwayland_destroy
 };
 
-
 static void xwayland_surface_commit(struct wl_listener* listener, void* data)
 {
-    console_log("commit xwayland");
+    // console_log("commit xwayland");
     struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, commit);
     struct tbx_view* view = &xwayland_view->view;
     view_damage(view);
@@ -261,14 +261,15 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
     }
 
     uint32_t window_type = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
-    
+
     // if override redirect .. position as requested
     if (view->override_redirect) {
 
         if (view->xwayland_surface->parent) {
-        
+
             struct tbx_view* ancestor;
-            wl_list_for_each(ancestor, &view->server->views, link) {
+            wl_list_for_each(ancestor, &view->server->views, link)
+            {
                 if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
                     if (view->interface->is_transient_for(view, ancestor)) {
                         view->parent = ancestor;
@@ -286,12 +287,13 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                 //-------------------------
                 // hacky: adopt a parent?
                 //-------------------------
-                struct tbx_view *focused = view_from_surface(view->server, 
+                struct tbx_view* focused = view_from_surface(view->server,
                     view->server->seat->seat->keyboard_state.focused_surface);
-                
+
                 if (!focused || focused->view_type != VIEW_TYPE_XWAYLAND) {
                     struct tbx_view* ancestor;
-                    wl_list_for_each(ancestor, &view->server->views, link) {
+                    wl_list_for_each(ancestor, &view->server->views, link)
+                    {
                         if (ancestor == view || !ancestor->x || ancestor->width < view->width) {
                             continue;
                         }
@@ -309,7 +311,6 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                     view->y = xsurface->y + focused->y;
                     return;
                 }
-
             }
         }
 
@@ -317,13 +318,13 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
         view_damage(view);
         return;
     }
-    
+
     view_set_focus(view, view->surface);
 
     // always set to zero
     view_move_to_center(view, NULL);
     wlr_xwayland_surface_configure(view->xwayland_surface, 0,
-    0, view->width, view->height);
+        0, view->width, view->height);
     view_damage(view);
 }
 
@@ -350,7 +351,7 @@ static void xwayland_request_configure(struct wl_listener* listener,
 
     struct wlr_xwayland_surface_configure_event* ev = data;
     struct wlr_xwayland_surface* xsurface = view->xwayland_surface;
-    
+
     if (!xsurface->mapped) {
         wlr_xwayland_surface_configure(xsurface, ev->x, ev->y, ev->width, ev->height);
     }
@@ -469,7 +470,7 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
 
     /* Add it to the list of views. */
     if (xsurface->override_redirect) {
-        view->csd = true;   // implement decoration listener
+        view->csd = true; // implement decoration listener
         view->override_redirect = true;
     }
 

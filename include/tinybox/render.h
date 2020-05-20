@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 
+#define ANIM_SPEED 0.75
+#define SWIPE_MIN (100 * 100)
+
 struct wlr_output;
 struct wlr_renderer;
 struct wlr_box;

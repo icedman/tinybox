@@ -2,20 +2,29 @@
 #include "common/cairo.h"
 #include "common/util.h"
 #include "tinybox/output.h"
+#include "tinybox/render.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
 
-#include <GLES2/gl2.h>
-#include <cairo/cairo.h>
-#include <wlr/render/wlr_renderer.h>
-#include <wlr/types/wlr_output.h>
-#include <wlr/types/wlr_output_layout.h>
-#include <wlr/types/wlr_xdg_shell.h>
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <wayland-server-core.h>
+#include <wlr/backend.h>
+#include <wlr/render/wlr_renderer.h>
+#include <wlr/types/wlr_compositor.h>
+#include <wlr/types/wlr_matrix.h>
+#include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_xdg_shell.h>
+
+#include <GLES2/gl2.h>
+#include <cairo/cairo.h>
+#include <pango/pangocairo.h>
+#include <wlr/render/gles2.h>
 
 static struct tbx_console theConsole = { 0 };
 
@@ -89,7 +98,7 @@ void console_dump()
     console_log(header, "views");
     wl_list_for_each_reverse(view, &server->views, link)
     {
-        const char *title = view->interface->get_string_prop(view, VIEW_PROP_TITLE);
+        const char* title = view->interface->get_string_prop(view, VIEW_PROP_TITLE);
         console_log("v: %s\n", title);
     }
 
@@ -130,7 +139,7 @@ void console_dump()
     }
 }
 
-void console_render(struct tbx_output* output)
+static void console_render_cache(struct tbx_output* output)
 {
     struct tbx_console* console = &theConsole;
     struct tbx_server* server = output->server;
@@ -201,4 +210,27 @@ void console_render(struct tbx_output* output)
 
     cairo_destroy(cx);
     console->dirty = false;
+}
+
+void render_console(struct tbx_output* output)
+{
+    if (!output->server->config.console) {
+        return;
+    }
+
+    // -----------------------
+    // render the console
+    // -----------------------
+    if (output->server->console->dirty) {
+        console_render_cache(output);
+    }
+
+    // console
+    if (output->server->console->texture) {
+        struct wlr_box console_box = {
+            .x = 10, .y = 10, .width = CONSOLE_WIDTH, .height = CONSOLE_HEIGHT
+        };
+        render_texture(output->wlr_output, &console_box,
+            output->server->console->texture, output->wlr_output->scale);
+    }
 }

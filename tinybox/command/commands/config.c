@@ -34,11 +34,39 @@ static void exec_set(struct tbx_command* cmd, int argc, char** argv)
     entry = calloc(1, sizeof(struct tbx_config_dictionary));
     entry->identifier = calloc(strlen(argv[0]) + 1, sizeof(char));
     strcpy(entry->identifier, argv[0]);
-    entry->value = calloc(strlen(argv[1]) + 1, sizeof(char));
-    strcpy(entry->value, argv[1]);
     entry->type = TBX_CONFIG_DICTIONARY;
 
     // console_log("set %s :\"%s\"", argv[0], argv[1]);
+
+#if 0
+    char command_line[512];
+    char* ptr = command_line;
+    for (int i = 1; i < argc; i++) {
+        char* n = argv[i];
+
+        if (n[0] == '$') {
+            n = config_dictionary_value(cmd->server, n);
+        }
+        if (!n) {
+            n = argv[i];
+        }
+
+        strcpy(ptr, n);
+        ptr += strlen(n);
+        ptr[0] = ' ';
+        ptr[1] = 0;
+        ptr++;
+    }
+
+    // console_log(">>>%s", argv[1]);
+    // console_log(">>>%s", command_line);
+
+    entry->value = calloc(strlen(command_line) + 1, sizeof(char));
+    strcpy(entry->value, command_line);
+#endif
+
+    entry->value = calloc(strlen(argv[1]) + 1, sizeof(char));
+    strcpy(entry->value, argv[1]);
 
     cmd->data = entry;
     wl_list_insert(&server->config.dictionary, &entry->link);

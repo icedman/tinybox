@@ -55,6 +55,13 @@ struct tbx_server {
     struct tbx_config config;
     struct tbx_style style;
     struct tbx_console* console;
+
+    //
+    struct tbx_menu* menu;
+    struct tbx_menu* menu_hovered;
+    struct tbx_menu* menu_navigation_grab;
+    struct tbx_menu* menu_context; // use only during parsing the menu tree
+    struct wl_list menus;
 };
 
 bool tbx_server_setup(struct tbx_server* server);

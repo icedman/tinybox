@@ -1,14 +1,25 @@
 #include "tinybox/workspace.h"
 #include "tinybox/output.h"
+#include "tinybox/render.h"
 #include "tinybox/view.h"
 
 #include <stdlib.h>
 #include <string.h>
 
+#include <wayland-server-core.h>
+#include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
+#include <wlr/types/wlr_compositor.h>
+#include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
+
+#include <GLES2/gl2.h>
+#include <cairo/cairo.h>
+#include <pango/pangocairo.h>
+#include <wlr/render/gles2.h>
 
 static struct tbx_workspace* create_workspace(struct tbx_server* server)
 {
@@ -145,4 +156,62 @@ void workspace_cycle_views(struct tbx_server* server, int workspace_id)
     /* Move the previous view to the end of the list */
     wl_list_remove(&current_view->link);
     wl_list_insert(server->views.prev, &current_view->link);
+}
+
+void render_workspace(struct tbx_output* output,
+    struct tbx_workspace* workspace)
+{
+    if (!workspace) {
+        return;
+    }
+
+    struct tbx_server* server = output->server;
+    struct tbx_cursor* cursor = server->cursor;
+    // struct wlr_renderer *renderer = server->renderer;
+
+    bool in_main_output = (output == server->main_output);
+
+    struct wlr_texture* texture = 0;
+    int texture_id = tx_workspace_1 + workspace->id;
+
+    texture = get_texture_cache(texture_id);
+    if (!texture && workspace->background) {
+        // generate and try again
+        generate_background(output, workspace);
+        texture = get_texture_cache(texture_id);
+        if (!texture) {
+            // invalid image
+            workspace->background = 0;
+        }
+    }
+
+    // fallback default background of workspace_1
+    if (!texture) {
+        texture = get_texture_cache(tx_workspace_1);
+    }
+
+    if (!texture) {
+        return;
+    }
+
+    struct wlr_box box;
+    memcpy(&box, &workspace->box, sizeof(struct wlr_box));
+
+    if (server->config.animate && in_main_output && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+        if (server->ws_animate) {
+            box.x += server->ws_anim_x;
+        } else {
+            float d = server->cursor->swipe_x - server->cursor->swipe_begin_x;
+            if (d * d > SWIPE_MIN) {
+                box.x += d;
+            }
+        }
+    }
+
+    struct wlr_box* layout_box = wlr_output_layout_get_box(
+        server->output_layout, output->wlr_output);
+    box.width = layout_box->width;
+    box.height = layout_box->height;
+
+    render_texture(output->wlr_output, &box, texture, output->wlr_output->scale);
 }

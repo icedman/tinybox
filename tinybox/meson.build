@@ -14,6 +14,7 @@ tinybox_src = files(
   'command/commands/style.c',
   'command/commands/keybindings.c',
   'command/commands/desktop.c',
+  'command/commands/menu.c',
   
   'config/config.c',
   'style/style.c',
@@ -31,6 +32,8 @@ tinybox_src = files(
   'output/render.c',
   'output/layout.c',
   'output/console.c',
+  
+  'menu/menu.c',
 
   'server/server.c',
   'shell/decoration.c',

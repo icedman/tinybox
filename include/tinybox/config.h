@@ -44,8 +44,6 @@ struct tbx_config_keybinding {
 
     struct tbx_keys_pressed* keys;
     char* command;
-    // struct tbx_command *command;
-    char* command_identifier;
     int argc;
     char** argv;
 };

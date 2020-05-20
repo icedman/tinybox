@@ -29,8 +29,8 @@ enum tbx_view_prop {
     VIEW_PROP_WINDOW_TYPE,
     VIEW_PROP_WINDOW_ROLE,
     // #if HAVE_XWAYLAND
-        VIEW_PROP_X11_WINDOW_ID,
-        VIEW_PROP_X11_PARENT_ID,
+    VIEW_PROP_X11_WINDOW_ID,
+    VIEW_PROP_X11_PARENT_ID,
     // #endif
 };
 
@@ -56,8 +56,8 @@ struct tbx_view_interface {
     //     wlr_surface_iterator_func_t iterator, void *user_data);
     // void (*for_each_popup)(struct tbx_view *view,
     //     wlr_surface_iterator_func_t iterator, void *user_data);
-    bool (*is_transient_for)(struct tbx_view *child,
-            struct tbx_view *ancestor);
+    bool (*is_transient_for)(struct tbx_view* child,
+        struct tbx_view* ancestor);
     void (*close)(struct tbx_view* view);
     void (*close_popups)(struct tbx_view* view);
     void (*destroy)(struct tbx_view* view);
@@ -76,8 +76,8 @@ struct tbx_view {
 
     bool mapped;
     int x, y;
-    int lx, ly;      // last x, y for damage?
-    
+    int lx, ly; // last x, y for damage?
+
     // xwayland
     int width, height;
     bool override_redirect;
@@ -85,7 +85,7 @@ struct tbx_view {
     bool shaded;
     bool csd;
     bool fullscreen;
-    
+
     struct {
         int x;
         int y;
@@ -93,7 +93,7 @@ struct tbx_view {
         int height;
     } restore;
 
-    struct tbx_view *parent;
+    struct tbx_view* parent;
 
     // animate
     bool wsv_animate;
@@ -187,7 +187,7 @@ void view_send_to_workspace(struct tbx_view* view, int id,
 
 struct tbx_output* view_get_preferred_output(struct tbx_view* view);
 
-void view_setup(struct tbx_view *view);
+void view_setup(struct tbx_view* view);
 
 void view_destroy(struct tbx_view* view);
 

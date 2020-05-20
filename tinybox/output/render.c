@@ -104,9 +104,7 @@ static void generate_texture_pixmap(struct wlr_renderer* renderer, int idx,
 
     console_log("we got ourselves a pixmap");
 
-    /*
-  draw_gradient_rect(cx, flags, w, h, color, colorTo);
-  */
+    /* draw_gradient_rect(cx, flags, w, h, color, colorTo); */
 
     unsigned char* data = cairo_image_surface_get_data(surf);
     texture_cache[idx] = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
@@ -218,6 +216,7 @@ void generate_view_title_texture(struct tbx_output* output,
     }
 
     const char* font = style->font;
+    float color[4] = { 1.0, 0.0, 0.0, 1.0 };
 
     char title[128];
     char appId[64];
@@ -233,66 +232,26 @@ void generate_view_title_texture(struct tbx_output* output,
 
     // console_log("%s %s", appId, title);
 
-    float scale = 1.0f;
     int w = 400;
     int h = 32;
 
-    // We must use a non-nil cairo_t for cairo_set_font_options to work.
-    // Therefore, we cannot use cairo_create(NULL).
-    cairo_surface_t* dummy_surface = cairo_image_surface_create(WL_SHM_FORMAT_ARGB8888, 0, 0);
-    cairo_t* c = cairo_create(dummy_surface);
-    cairo_set_antialias(c, CAIRO_ANTIALIAS_BEST);
-    cairo_font_options_t* fo = cairo_font_options_create();
-    cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_FULL);
-    if (output->wlr_output->subpixel == WL_OUTPUT_SUBPIXEL_NONE) {
-        cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_GRAY);
-    } else {
-        cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
-
-        // cairo.c
-        cairo_font_options_set_subpixel_order(
-            fo, to_cairo_subpixel_order(output->wlr_output->subpixel));
-    }
-    cairo_set_font_options(c, fo);
-    get_text_size(c, font, &w, NULL, NULL, scale, true, "%s", title);
-    cairo_surface_destroy(dummy_surface);
-    cairo_destroy(c);
-
-    float color[4];
-
-    cairo_surface_t* surf = cairo_image_surface_create(WL_SHM_FORMAT_ARGB8888, w, h);
-    cairo_t* cx = cairo_create(surf);
-
-    cairo_set_font_options(cx, fo);
-    cairo_font_options_destroy(fo);
-
-    PangoContext* pango = pango_cairo_create_context(cx);
-    cairo_move_to(cx, 0, 0);
-
     color_to_rgba(color, style->window_label_focus_textColor);
-    cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
-    pango_printf(cx, font, scale, true, "%s", title);
+    cairo_surface_t* title1 = cairo_image_from_text((char*)title,
+        &w, &h, (char*)font, color, output->wlr_output->subpixel);
 
-    unsigned char* data = cairo_image_surface_get_data(surf);
-
+    unsigned char* data = cairo_image_surface_get_data(title1);
     view->title = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
-        cairo_image_surface_get_stride(surf), w, h, data);
+        cairo_image_surface_get_stride(title1), w, h, data);
 
-    // clear
-    cairo_save(cx);
-    cairo_set_source_rgba(cx, 0.0, 0.0, 0.0, 0.0);
-    cairo_set_operator(cx, CAIRO_OPERATOR_CLEAR);
-    cairo_rectangle(cx, 0, 0, w, h);
-    cairo_paint(cx);
-    cairo_restore(cx);
-
+    w = 400;
+    h = 32;
     color_to_rgba(color, style->window_label_unfocus_textColor);
-    cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
-    pango_printf(cx, font, scale, true, "%s", title);
+    cairo_surface_t* title2 = cairo_image_from_text((char*)title,
+        &w, &h, (char*)font, color, output->wlr_output->subpixel);
 
-    data = cairo_image_surface_get_data(surf);
+    data = cairo_image_surface_get_data(title2);
     view->title_unfocused = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
-        cairo_image_surface_get_stride(surf), w, h, data);
+        cairo_image_surface_get_stride(title2), w, h, data);
 
     view->title_box.width = w;
     view->title_box.height = h;
@@ -302,9 +261,8 @@ void generate_view_title_texture(struct tbx_output* output,
     // sprintf(fname, "/tmp/text_%s.png", appId);
     // cairo_surface_write_to_png(surf, fname);
 
-    g_object_unref(pango);
-    cairo_destroy(cx);
-    cairo_surface_destroy(surf);
+    cairo_surface_destroy(title1);
+    cairo_surface_destroy(title2);
 }
 
 void generate_background(struct tbx_output* output,

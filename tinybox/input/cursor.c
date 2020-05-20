@@ -1,5 +1,6 @@
 #include "tinybox/cursor.h"
 #include "tinybox/keyboard.h"
+#include "tinybox/menu.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
 
@@ -95,11 +96,10 @@ static bool begin_interactive_sd(struct tbx_server* server,
         cursor->grab_x = cursor->cursor->x - view->x;
         cursor->grab_y = cursor->cursor->y - view->y;
 
-
         view->interface->get_geometry(view, &cursor->grab_box);
         cursor->grab_box.x = view->x;
         cursor->grab_box.y = view->y;
-        
+
         view->hotspot = -1;
         view->hotspot_edges = WLR_EDGE_NONE;
 
@@ -211,6 +211,17 @@ static void process_cursor_motion(struct tbx_server* server, uint32_t time)
         return;
     }
 
+    // process menu
+    if (server->menu->shown) {
+        struct tbx_menu* menu = menut_at(server, cursor->cursor->x, cursor->cursor->y);
+        if (menu) {
+            if (menu->hovered && menu->hovered->menu_type == TBX_MENU) {
+                menu_show_submenu(menu, menu->hovered);
+            }
+            return;
+        }
+    }
+
     /* Otherwise, find the view under the pointer and send the event along. */
     double sx, sy;
     struct wlr_seat* seat = server->seat->seat;
@@ -296,6 +307,15 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
     double sx, sy;
     struct wlr_surface* surface;
 
+    struct tbx_menu* menu = menut_at(server, cursor->cursor->x, cursor->cursor->y);
+    if (menu) {
+        if (server->menu_hovered && event->state == WLR_BUTTON_RELEASED) {
+            // make pressed
+            console_log("pressed %s", server->menu_hovered->label);
+        }
+        return;
+    }
+
     struct tbx_view* view = desktop_view_at(
         cursor->server, cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
 
@@ -303,9 +323,12 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
         /* If you released any buttons, we exit interactive move/resize mode. */
         cursor->mode = TBX_CURSOR_PASSTHROUGH;
         cursor->resize_edges = WLR_EDGE_NONE;
-
         wlr_xcursor_manager_set_cursor_image(server->cursor->xcursor_manager,
             "left_ptr", server->cursor->cursor);
+
+        if (!view) {
+            menu_show(server->menu, cursor->cursor->x, cursor->cursor->y, !server->menu->shown);
+        }
 
     } else {
         /* Focus that client if the button was _pressed_ */

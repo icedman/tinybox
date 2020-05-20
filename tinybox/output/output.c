@@ -2,7 +2,9 @@
 #include "tinybox/render.h"
 
 #include "common/util.h"
+#include "tinybox/command.h"
 #include "tinybox/cursor.h"
+#include "tinybox/menu.h"
 #include "tinybox/output.h"
 #include "tinybox/render.h"
 #include "tinybox/server.h"
@@ -24,9 +26,6 @@
 #include <cairo/cairo.h>
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
-
-#define ANIM_SPEED 0.75
-#define SWIPE_MIN (100 * 100)
 
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
 {
@@ -78,15 +77,17 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
 
     smoothen_geometry_when_resizing(view, &view_geometry);
 
+    // read these from style file
     int frameWidth = 2;
     int gripWidth = 28;
     int borderWidth = 3;
     int handleWidth = 8;
     int titlebarHeight = 24;
+
     int margin = frameWidth ? frameWidth : borderWidth;
 
     if (view->title) {
-        titlebarHeight = view->title_box.height - 4;
+        titlebarHeight = view->title_box.height + (margin + borderWidth) * 2;
     }
 
     memset(&view->hotspots, 0, sizeof(struct wlr_box) * HS_COUNT);
@@ -402,87 +403,6 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
     wlr_surface_send_frame_done(surface, rdata->when);
 }
 
-static void render_console(struct tbx_output* output)
-{
-    if (!output->server->config.console) {
-        return;
-    }
-
-    // -----------------------
-    // render the console
-    // -----------------------
-    if (output->server->console->dirty) {
-        console_render(output);
-    }
-
-    // console
-    if (output->server->console->texture) {
-        struct wlr_box console_box = {
-            .x = 10, .y = 10, .width = CONSOLE_WIDTH, .height = CONSOLE_HEIGHT
-        };
-        render_texture(output->wlr_output, &console_box,
-            output->server->console->texture, output->wlr_output->scale);
-    }
-}
-
-static void render_workspace(struct tbx_output* output,
-    struct tbx_workspace* workspace)
-{
-    if (!workspace) {
-        return;
-    }
-
-    struct tbx_server* server = output->server;
-    struct tbx_cursor* cursor = server->cursor;
-    // struct wlr_renderer *renderer = server->renderer;
-
-    bool in_main_output = (output == server->main_output);
-
-    struct wlr_texture* texture = 0;
-    int texture_id = tx_workspace_1 + workspace->id;
-
-    texture = get_texture_cache(texture_id);
-    if (!texture && workspace->background) {
-        // generate and try again
-        generate_background(output, workspace);
-        texture = get_texture_cache(texture_id);
-        if (!texture) {
-            // invalid image
-            workspace->background = 0;
-        }
-    }
-
-    // fallback default background of workspace_1
-    if (!texture) {
-        texture = get_texture_cache(tx_workspace_1);
-    }
-
-    if (!texture) {
-        return;
-    }
-
-    struct wlr_box box;
-    memcpy(&box, &workspace->box, sizeof(struct wlr_box));
-
-    if (server->config.animate && in_main_output && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
-        if (server->ws_animate) {
-            box.x += server->ws_anim_x;
-        } else {
-            float d = server->cursor->swipe_x - server->cursor->swipe_begin_x;
-            if (d * d > SWIPE_MIN) {
-                box.x += d;
-            }
-        }
-    }
-
-    struct wlr_box* layout_box = wlr_output_layout_get_box(
-        server->output_layout, output->wlr_output);
-    box.width = layout_box->width;
-    box.height = layout_box->height;
-
-    render_texture(output->wlr_output, &box, texture, output->wlr_output->scale);
-}
-
 static void output_frame(struct wl_listener* listener, void* data)
 {
     /* This function is called every time an output is ready to display a frame,
@@ -524,43 +444,6 @@ static void output_frame(struct wl_listener* listener, void* data)
     /* Begin the renderer (calls glViewport and some other GL sanity checks) */
     wlr_renderer_begin(renderer, width, height);
 
-
-#if 0
-// implement double buffer first
-    // primitive damage tracking
-    int damages = 0;
-    struct tbx_view* damage_view;
-    struct wlr_box damage_box;
-    float damage_color[4] = { 1.0, 0, 1.0, 1.0 };
-    wl_list_for_each(damage_view, &server->views, link)
-    {
-        if (damage_view->damage.width == 0) {
-            continue;
-        }
-
-        memcpy(&damage_box, &damage_view->damage, sizeof(struct wlr_box));
-        grow_box_hv(&damage_box, 8, 8);
-        render_rect(output->wlr_output, &damage_box, damage_color, output->wlr_output->scale);
-
-        // console_log("d: %d %d %d %d", damage_view->damage.x, damage_view->damage.y,
-        //         damage_view->damage.width, damage_view->damage.height);
-
-        damage_view->damage.width = 0;
-        damages++;
-    }
-
-    if (!damages) {
-        struct tbx_view* view;
-        wl_list_for_each(view, &server->views, link) {
-            if (view->mapped && view->surface) {
-                wlr_surface_send_frame_done(view->surface, &now);
-            }
-        }
-
-        goto end_render;
-    }
-#endif
-
     // render box
     float color[4] = { 0, 0, 0, 1.0 };
     wlr_renderer_clear(renderer, color);
@@ -578,7 +461,9 @@ static void output_frame(struct wl_listener* listener, void* data)
         render_console(output);
     }
 
-    // render all views!
+    //-----------------
+    // render views
+    //-----------------
     /* Each subsequent window we render is rendered on top of the last. Because
    * our view list is ordered front-to-back, we iterate over it backwards. */
     struct tbx_view* view;
@@ -672,7 +557,10 @@ static void output_frame(struct wl_listener* listener, void* data)
         }
     }
 
-//    end_render:
+    //-----------------
+    // render menus
+    //-----------------
+    render_menus(output);
 
     /* Hardware cursors are rendered by the GPU on a separate plane, and can be
    * moved around without re-rendering what's beneath them - which is more
@@ -782,3 +670,39 @@ bool output_setup(struct tbx_server* server)
     wl_signal_add(&server->backend->events.new_output, &server->new_output);
     return true;
 }
+
+/* damage code 
+// implement double buffer first? or understand wl_ buffering
+// primitive damage tracking
+int damages = 0;
+struct tbx_view* damage_view;
+struct wlr_box damage_box;
+float damage_color[4] = { 1.0, 0, 1.0, 1.0 };
+wl_list_for_each(damage_view, &server->views, link)
+{
+if (damage_view->damage.width == 0) {
+    continue;
+}
+
+memcpy(&damage_box, &damage_view->damage, sizeof(struct wlr_box));
+grow_box_hv(&damage_box, 8, 8);
+render_rect(output->wlr_output, &damage_box, damage_color, output->wlr_output->scale);
+
+// console_log("d: %d %d %d %d", damage_view->damage.x, damage_view->damage.y,
+//         damage_view->damage.width, damage_view->damage.height);
+
+damage_view->damage.width = 0;
+damages++;
+}
+
+if (!damages) {
+struct tbx_view* view;
+wl_list_for_each(view, &server->views, link) {
+    if (view->mapped && view->surface) {
+        wlr_surface_send_frame_done(view->surface, &now);
+    }
+}
+
+goto end_render;
+}
+*/

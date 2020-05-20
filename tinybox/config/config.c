@@ -32,43 +32,61 @@ char* config_dictionary_value(struct tbx_server* server, char* name)
     return name;
 }
 
-void load_config(struct tbx_server* server, char* path)
+FILE* open_file(char* path)
 {
+    FILE* fp = 0;
 
     char* expanded = calloc((strlen(path) + 1), sizeof(char));
     strcpy(expanded, path);
     expand_path(&expanded);
 
-    FILE* f = fopen(expanded, "r");
-    if (!f) {
-        free(expanded);
-        return;
-    }
-
+    fp = fopen(expanded, "r");
     free(expanded);
 
-    struct tbx_command* ctx = server->command;
+    return fp;
+}
 
+void parse_file(struct tbx_command* ctx, FILE* fp)
+{
     char* line = NULL;
     size_t line_size = 0;
     size_t nread;
-    while (!feof(f)) {
-        nread = getline(&line, &line_size, f);
+    while (!feof(fp)) {
+        nread = getline(&line, &line_size, fp);
         if (!nread) {
             continue;
         }
 
         if (!ctx) {
-            ctx = server->command;
+            // oops!!
+            break;
         }
 
         int argc;
         char** argv = split_args(line, &argc);
-        ctx = command_execute(ctx, argc, argv);
+        if (argc && strcmp(argv[0], "include") == 0) {
+            FILE* fp2 = open_file(argv[1]);
+            if (fp2) {
+                parse_file(ctx, fp2);
+                fclose(fp2);
+            }
+        } else {
+            ctx = command_execute(ctx, argc, argv);
+        }
+
         free_argv(argc, argv);
     }
+}
 
-    fclose(f);
+void load_config(struct tbx_server* server, char* path)
+{
+    struct tbx_command* ctx = server->command;
+
+    FILE* fp = open_file(path);
+    if (fp) {
+        parse_file(ctx, fp);
+        fclose(fp);
+    }
 }
 
 bool config_setup(struct tbx_server* server)

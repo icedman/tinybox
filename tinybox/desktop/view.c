@@ -41,9 +41,8 @@ void view_set_focus(struct tbx_view* view, struct wlr_surface* surface)
             return;
         }
 
-        if (prev_surface &&
-            !(view->parent && view->parent->surface == prev_surface)) {
-        /*
+        if (prev_surface && !(view->parent && view->parent->surface == prev_surface)) {
+            /*
          * Deactivate the previously focused surface. This lets the client know
          * it no longer has focus and the client will repaint accordingly, e.g.
          * stop displaying a caret.
@@ -287,7 +286,7 @@ void view_move_to_center(struct tbx_view* view, struct tbx_output* output)
     view->y = y;
 }
 
-void view_setup(struct tbx_view *view)
+void view_setup(struct tbx_view* view)
 {
     views_online++;
 }

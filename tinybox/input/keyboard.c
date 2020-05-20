@@ -78,7 +78,7 @@ void keys_add_named(struct tbx_keys_pressed* kp, char* name)
         return;
     }
 
-    // if (strlen(name) >= 4 && name[1] == 'x') { 
+    // if (strlen(name) >= 4 && name[1] == 'x') {
     //     name+=2;
     //     char *ptr;
     //     uint32_t uk = strtoul(name, &ptr, 16);
@@ -197,6 +197,11 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
     struct tbx_server* server = keyboard->server;
     struct wlr_event_keyboard_key* event = data;
     struct wlr_seat* seat = server->seat->seat;
+
+    if (server->menu_navigation_grab) {
+        // handle menu navigation
+        return;
+    }
 
     // uint32_t super_key = server->config.super_key;
 

@@ -30,4 +30,7 @@ struct tbx_view* workspace_get_top_view(struct tbx_server* server, int workspace
 void workspace_activate(struct tbx_server* server, int id, bool animate);
 struct tbx_workspace* get_workspace(struct tbx_server* server, int workspace_id);
 
+void render_workspace(struct tbx_output* output,
+    struct tbx_workspace* workspace);
+
 #endif // TINYBOX_WORKSPACE_H

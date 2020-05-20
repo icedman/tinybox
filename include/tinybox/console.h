@@ -26,6 +26,6 @@ void console_clear();
 void console_log(const char* format, ...);
 void console_dump();
 
-void console_render(struct tbx_output* output);
+void render_console(struct tbx_output* output);
 
 #endif // TINYBOX_CONSOLE_H

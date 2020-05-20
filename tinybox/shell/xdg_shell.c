@@ -1,7 +1,7 @@
+#include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/shell.h"
 #include "tinybox/view.h"
-#include "tinybox/output.h"
 
 #include <float.h>
 #include <stdlib.h>
@@ -19,8 +19,8 @@
 //     wlr_surface_iterator_func_t iterator, void *user_data);
 */
 
-static bool xdg_is_transient_for(struct tbx_view *child,
-        struct tbx_view *ancestor)
+static bool xdg_is_transient_for(struct tbx_view* child,
+    struct tbx_view* ancestor)
 {
     return false;
 }
@@ -36,7 +36,7 @@ static void xdg_get_constraints(struct tbx_view* view, double* min_width,
 }
 
 static void xdg_get_geometry(struct tbx_view* view, struct wlr_box* box)
-{   
+{
     if (view->surface) {
         wlr_xdg_surface_get_geometry(view->xdg_surface, box);
         box->x = box->y = 0;
@@ -102,7 +102,6 @@ static uint32_t xdg_view_configure(struct tbx_view* view, double lx, double ly,
     return 0;
 }
 
-
 static void xdg_set_fullscreen(struct tbx_view* view, bool fullscreen)
 {
     if (!view->xdg_surface) {
@@ -110,7 +109,7 @@ static void xdg_set_fullscreen(struct tbx_view* view, bool fullscreen)
     }
 
     console_log("xdg fullscreen %d", fullscreen);
-    
+
     if (fullscreen) {
         view->fullscreen = fullscreen;
         view->restore.x = view->x;
@@ -158,11 +157,11 @@ static void xdg_close_popups(struct tbx_view* view)
 
 static void xdg_destroy(struct tbx_view* view)
 {
-    struct tbx_xdg_shell_view *xview = (struct tbx_xdg_shell_view *)view;
-    
-    struct wl_listener *l = &xview->_first;
-    while(++l) {
-        if (!l->link.prev || l ==& xview->destroy) {
+    struct tbx_xdg_shell_view* xview = (struct tbx_xdg_shell_view*)view;
+
+    struct wl_listener* l = &xview->_first;
+    while (++l) {
+        if (!l->link.prev || l == &xview->destroy) {
             break;
         }
         // console_log("xdg unlisten");

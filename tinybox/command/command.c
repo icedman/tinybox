@@ -14,6 +14,7 @@ void register_output_commands(struct tbx_server* server);
 void register_keybinding_commands(struct tbx_server* server);
 void register_global_commands(struct tbx_server* server);
 void register_desktop_commands(struct tbx_server* server);
+void register_menu_commands(struct tbx_server* server);
 
 // global command
 
@@ -23,7 +24,7 @@ static struct tbx_command* context_create(struct tbx_server* server)
 
     wl_list_init(&cmd->commands);
     cmd->server = server;
-    cmd->name = 0;
+    cmd->identifier = 0;
     cmd->exec = 0;
     cmd->context = 0;
     return cmd;
@@ -34,9 +35,9 @@ struct tbx_command* register_command(struct tbx_command* context, char* name,
 {
     struct tbx_command* cmd = context_create(context->server);
     cmd->exec = exec;
-    cmd->name = calloc(strlen(name) + 1, sizeof(char));
+    cmd->identifier = calloc(strlen(name) + 1, sizeof(char));
     cmd->context = context;
-    strcpy(cmd->name, name);
+    strcpy(cmd->identifier, name);
     wl_list_insert(&context->commands, &cmd->link);
 
     return cmd;
@@ -45,7 +46,7 @@ struct tbx_command* register_command(struct tbx_command* context, char* name,
 bool command_check_args(struct tbx_command* context, int argc, int min)
 {
     if (argc < min) {
-        console_log("%s %d arguments expected\n", context->name, min);
+        console_log("%s %d arguments expected\n", context->identifier, min);
         return false;
     }
 
@@ -65,22 +66,28 @@ struct tbx_command* command_execute(struct tbx_command* context, int argc,
         return context;
     }
 
-    if (strcmp("}", argv[0]) == 0) {
-        return context->context;
-    }
-
     struct tbx_command* cmd;
     wl_list_for_each(cmd, &context->commands, link)
     {
-        if (strcmp(cmd->name, argv[0]) == 0) {
+        if (strcmp(cmd->identifier, argv[0]) == 0) {
             if (cmd->exec) {
                 cmd->exec(cmd, argc - 1, &argv[1]);
             }
-            if (wl_list_length(&cmd->commands) > 0) {
+            if (wl_list_length(&cmd->commands) > 0 || cmd->exec_custom) {
                 return cmd;
             }
             break;
         }
+    }
+
+    if (context->exec_custom) {
+        context->exec_custom(context, argc, argv);
+        return context;
+    }
+
+    // can't be more elagant than this
+    if (strcmp("}", argv[0]) == 0) {
+        return context->context;
     }
 
     return context;
@@ -96,4 +103,5 @@ void command_setup(struct tbx_server* server)
     register_keybinding_commands(server);
     register_global_commands(server);
     register_desktop_commands(server);
+    register_menu_commands(server);
 }

@@ -17,5 +17,8 @@ void draw_gradient_rect(cairo_t* cx, int flags, int w, int h,
     float color[static 4], float colorTo[static 4]);
 
 cairo_surface_t* cairo_image_from_xpm(char* path);
+cairo_surface_t* cairo_image_from_text(char* text,
+    int* w, int* h,
+    char* font, float color[static 4], enum wl_output_subpixel subpixel);
 
 #endif // TINYBOX_CAIRO_H
