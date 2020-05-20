@@ -27,14 +27,14 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-void menu_execute(struct tbx_server* server, struct tbx_menu *item)
+void menu_execute(struct tbx_server* server, struct tbx_menu* item)
 {
     if (!item->execute) {
         return;
     }
 
     console_log("pressed %s", item->execute);
-    
+
     menu_show(server->menu, 0, 0, false);
     struct tbx_command* ctx = server->command;
     command_execute(ctx, item->argc, item->argv);
@@ -151,8 +151,9 @@ struct tbx_menu* menut_at(struct tbx_server* server, int x, int y)
     return res;
 }
 
-cairo_surface_t* generate_item_texture(struct tbx_output* tbx_output, struct tbx_menu* menu, bool hilite) {
-    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, menu->width, menu->height);
+cairo_surface_t* generate_item_texture(struct tbx_output* tbx_output, struct tbx_menu* menu, bool hilite)
+{
+    cairo_surface_t* surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, menu->width, menu->height);
     cairo_t* cx = cairo_create(surface);
 
     // style
@@ -212,11 +213,11 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     int tw = 400;
     int th = 32;
     color_to_rgba(color, style->menu_title_textColor);
-    char *title = menu->title;
+    char* title = menu->title;
     if (!title) {
         title = menu->label;
     }
-    cairo_surface_t *title_text = cairo_image_from_text(title, &tw, &th, font, color, 
+    cairo_surface_t* title_text = cairo_image_from_text(title, &tw, &th, font, color,
         tbx_output->wlr_output->subpixel);
 
     menu_width = tw + 8;
@@ -232,7 +233,8 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
         int h = 32;
 
         item->text_image = cairo_image_from_text(item->label, &w, &h, font, color, tbx_output->wlr_output->subpixel);
-        w = 300; h = 32;
+        w = 300;
+        h = 32;
         item->text_hilite_image = cairo_image_from_text(item->label, &w, &h, font, color, tbx_output->wlr_output->subpixel);
         item->width = w + 8;
         item->height = h + 4;
@@ -256,7 +258,7 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     menu->menu_height = menu_height;
 
     // create the menu texture
-    cairo_surface_t *menu_image = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, menu_width, menu_height);
+    cairo_surface_t* menu_image = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, menu_width, menu_height);
     cairo_t* cx = cairo_create(menu_image);
 
     // borders
@@ -264,8 +266,8 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     uint32_t flags = style->menu_title;
     color_to_rgba(color, style->menu_title_color);
     color_to_rgba(colorTo, style->menu_title_colorTo);
-    draw_gradient_rect_xy(cx, flags, 0, 0, 
-            menu_width, title_height, color, colorTo);
+    draw_gradient_rect_xy(cx, flags, 0, 0,
+        menu_width, title_height, color, colorTo);
 
     // draw title text
     if (title_text) {
@@ -282,8 +284,8 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     flags = style->menu_frame;
     color_to_rgba(color, style->menu_frame_color);
     color_to_rgba(colorTo, style->menu_frame_colorTo);
-    draw_gradient_rect_xy(cx, flags, 0, title_height, 
-            menu_width, menu_height - title_height, color, colorTo);
+    draw_gradient_rect_xy(cx, flags, 0, title_height,
+        menu_width, menu_height - title_height, color, colorTo);
 
     int item_offset_y = title_height;
 
@@ -294,12 +296,12 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     {
         struct tbx_menu* item = (struct tbx_menu*)cmd;
         // make all item widths equal
-        
+
         // create item with background
         item->width = menu_width;
         item->y += item_offset_y;
 
-        cairo_surface_t *item_image = generate_item_texture(tbx_output, item, false);
+        cairo_surface_t* item_image = generate_item_texture(tbx_output, item, false);
         cairo_set_source_surface(cx, item_image, 0, 0);
         cairo_translate(cx, 0, item->height);
         cairo_paint(cx);
@@ -319,7 +321,6 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
         cairo_surface_destroy(item_image);
         cairo_surface_destroy(item->text_image);
         cairo_surface_destroy(item->text_hilite_image);
-        
     }
     cairo_restore(cx);
     cairo_destroy(cx);
@@ -416,7 +417,8 @@ static void render_menu_recursive(struct tbx_output* output, struct tbx_menu* me
     }
 }
 
-static void menu_focus_item(struct tbx_server *server, struct tbx_menu *item) {
+static void menu_focus_item(struct tbx_server* server, struct tbx_menu* item)
+{
     if (!item) {
         return;
     }
@@ -425,7 +427,8 @@ static void menu_focus_item(struct tbx_server *server, struct tbx_menu *item) {
         item->parent->hovered = item;
     }
 }
-static void menu_walk(struct tbx_server *server, struct tbx_menu *item, int dir_x, int dir_y) {
+static void menu_walk(struct tbx_server* server, struct tbx_menu* item, int dir_x, int dir_y)
+{
     if (!server->menu_navigation_grab) {
         return;
     }
@@ -434,8 +437,9 @@ static void menu_walk(struct tbx_server *server, struct tbx_menu *item, int dir_
     if (!item) {
         item = server->menu_navigation_grab->hovered;
         if (!item) {
-            struct tbx_command *cmd;
-            wl_list_for_each_reverse(cmd, &server->menu_navigation_grab->items, link) {
+            struct tbx_command* cmd;
+            wl_list_for_each_reverse(cmd, &server->menu_navigation_grab->items, link)
+            {
                 item = (struct tbx_menu*)cmd;
                 menu_focus_item(server, item);
                 return;
@@ -443,12 +447,12 @@ static void menu_walk(struct tbx_server *server, struct tbx_menu *item, int dir_
         }
     }
 
-
     if (dir_y != 0) {
-        struct tbx_menu *prev = NULL;
-        struct tbx_command *cmd;
-        wl_list_for_each_reverse(cmd, &server->menu_navigation_grab->items, link) {
-            struct tbx_menu *n = (struct tbx_menu*)cmd;
+        struct tbx_menu* prev = NULL;
+        struct tbx_command* cmd;
+        wl_list_for_each_reverse(cmd, &server->menu_navigation_grab->items, link)
+        {
+            struct tbx_menu* n = (struct tbx_menu*)cmd;
             if (dir_y == 1 && prev == item) {
                 menu_focus_item(server, n);
                 return;
@@ -470,35 +474,34 @@ static void menu_walk(struct tbx_server *server, struct tbx_menu *item, int dir_
             menu_show(item->parent, 0, 0, false);
         }
     }
-
 }
 
-void menu_navigation(struct tbx_server *server, uint32_t keycode)
+void menu_navigation(struct tbx_server* server, uint32_t keycode)
 {
-    struct tbx_menu *item = server->menu_hovered;
+    struct tbx_menu* item = server->menu_hovered;
 
-    switch(keycode) {
-        case XKB_KEY_Escape:
+    switch (keycode) {
+    case XKB_KEY_Escape:
         menu_show(server->menu, 0, 0, false);
         break;
 
-        case XKB_KEY_space:
-        case XKB_KEY_Return:
+    case XKB_KEY_space:
+    case XKB_KEY_Return:
         menu_execute(server, item);
         break;
 
-        case XKB_KEY_Up:
+    case XKB_KEY_Up:
         menu_walk(server, item, 0, -1);
         break;
 
-        case XKB_KEY_Down:
+    case XKB_KEY_Down:
         menu_walk(server, item, 0, 1);
         break;
 
-        case XKB_KEY_Left:
+    case XKB_KEY_Left:
         menu_walk(server, item, -1, 0);
         break;
-        case XKB_KEY_Right:
+    case XKB_KEY_Right:
         menu_walk(server, item, 1, 0);
         break;
     }

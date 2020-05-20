@@ -1,9 +1,9 @@
 #include "tinybox/keyboard.h"
 #include "tinybox/command.h"
 #include "tinybox/console.h"
+#include "tinybox/menu.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
-#include "tinybox/menu.h"
 
 #include <stdio.h>
 #include <stdlib.h>

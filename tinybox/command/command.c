@@ -18,7 +18,8 @@ void register_menu_commands(struct tbx_server* server);
 
 // global command
 static char merged_args[512];
-const char* command_merge_args(struct tbx_server *server, int argc, char **argv) {
+const char* command_merge_args(struct tbx_server* server, int argc, char** argv)
+{
     char* ptr = merged_args;
     for (int i = 0; i < argc; i++) {
         char* n = argv[i];

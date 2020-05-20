@@ -29,7 +29,7 @@ void exec_exec(struct tbx_command* cmd, int argc, char** argv)
         return;
     }
 
-    #if 0
+#if 0
     //-------------------
     // extract command
     //-------------------
@@ -52,9 +52,9 @@ void exec_exec(struct tbx_command* cmd, int argc, char** argv)
         ptr++;
     }
     console_log("%s", command_line);
-    #endif
+#endif
 
-    const char *command_line = command_merge_args(cmd->server, argc, argv);
+    const char* command_line = command_merge_args(cmd->server, argc, argv);
 
     console_log("%s", command_line);
 

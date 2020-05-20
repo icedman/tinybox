@@ -70,7 +70,7 @@ void draw_gradient_rect_xy(cairo_t* cx, int flags, int x, int y, int w, int h,
         cairo_restore(cx);
         return;
     }
-    
+
     cairo_pattern_t* pat = 0;
 
     cairo_set_antialias(cx, CAIRO_ANTIALIAS_BEST);
@@ -102,7 +102,6 @@ void draw_gradient_rect_xy(cairo_t* cx, int flags, int x, int y, int w, int h,
         cairo_fill(cx);
     }
 };
-
 
 void draw_gradient_rect(cairo_t* cx, int flags, int w, int h,
     float color[static 4], float colorTo[static 4])

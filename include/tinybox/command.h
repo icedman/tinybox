@@ -25,7 +25,7 @@ struct tbx_command {
     void* data;
 };
 
-const char* command_merge_args(struct tbx_server *server, int argc, char **argv);
+const char* command_merge_args(struct tbx_server* server, int argc, char** argv);
 
 void command_setup(struct tbx_server* server);
 bool command_check_args(struct tbx_command* context, int argc, int min);

@@ -310,7 +310,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
     struct tbx_menu* menu = menut_at(server, cursor->cursor->x, cursor->cursor->y);
     if (menu) {
         if (server->menu_hovered && event->state == WLR_BUTTON_RELEASED) {
-            struct tbx_menu *item = server->menu_hovered;
+            struct tbx_menu* item = server->menu_hovered;
             if (item->execute) {
                 menu_execute(server, item);
             }
