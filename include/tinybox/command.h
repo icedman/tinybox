@@ -8,9 +8,7 @@ struct tbx_command;
 typedef void tbx_exec(struct tbx_command* context, int argc, char** argv);
 
 enum tbx_command_type {
-    TBX_COMMAND,
-    TBX_COMMAND_MENU,
-    TBX_COMMAND_MENU_ITEM
+    TBX_COMMAND
 };
 
 struct tbx_command {
@@ -26,6 +24,8 @@ struct tbx_command {
     char* description;
     void* data;
 };
+
+const char* command_merge_args(struct tbx_server *server, int argc, char **argv);
 
 void command_setup(struct tbx_server* server);
 bool command_check_args(struct tbx_command* context, int argc, int min);

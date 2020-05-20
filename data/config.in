@@ -1,3 +1,5 @@
+console enable
+
 # Mod1 = Alt
 # Mod4 = Logo
 
@@ -10,17 +12,16 @@ set $right l
 
 set $browser google-chrome-stable
 set $term termite
-set $menu "dmenu_path | dmenu_run"
+set $menu "dmenu_run -b"
 
 bindsym $mod+ctrl+return exec $term
 bindsym $mod+ctrl+shift+return exec $browser
 bindsym $mod+ctrl+d exec $menu
+bindsym $mod+ctrl+m menu 40 40
 
 workspaces 4
 animate true
 swipe_threshold 200
-
-#console enabled
 
 bindsym $mod+ctrl+1 workspace 0
 bindsym $mod+ctrl+2 workspace 1
@@ -72,5 +73,11 @@ workspace 0 {
     background ~/Pictures/bg.png
 }
 
+include ~/.tinybox/menu
 
-style ~/.sway/styles/Twice
+#style ~/.tinybox/styles/Nyz
+include ~/.tinybox/style
+
+# menu 40 40
+
+

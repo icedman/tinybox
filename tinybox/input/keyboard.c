@@ -3,6 +3,7 @@
 #include "tinybox/console.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
+#include "tinybox/menu.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -198,13 +199,6 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
     struct wlr_event_keyboard_key* event = data;
     struct wlr_seat* seat = server->seat->seat;
 
-    if (server->menu_navigation_grab) {
-        // handle menu navigation
-        return;
-    }
-
-    // uint32_t super_key = server->config.super_key;
-
     server->seat->last_keyboard = keyboard;
     struct tbx_keys_pressed* kp = server->seat->keys_pressed;
 
@@ -248,8 +242,14 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
         handle_keybinding(server, &k);
     }
 
-    if (!handled) {
+    if (!handled && server->menu_navigation_grab && event->state == WLR_KEY_PRESSED) {
+        for (int i = 0; i < nsyms; i++) {
+            menu_navigation(server, syms[i]);
+        }
+        return;
+    }
 
+    if (!handled) {
         /* Otherwise, we pass it along to the client. */
         wlr_seat_set_keyboard(seat, keyboard->device);
         wlr_seat_keyboard_notify_key(seat, event->time_msec, event->keycode,

@@ -17,6 +17,28 @@ void register_desktop_commands(struct tbx_server* server);
 void register_menu_commands(struct tbx_server* server);
 
 // global command
+static char merged_args[512];
+const char* command_merge_args(struct tbx_server *server, int argc, char **argv) {
+    char* ptr = merged_args;
+    for (int i = 0; i < argc; i++) {
+        char* n = argv[i];
+
+        if (server && n[0] == '$') {
+            n = config_dictionary_value(server, n);
+        }
+        if (!n) {
+            n = argv[i];
+        }
+
+        strcpy(ptr, n);
+        ptr += strlen(n);
+        ptr[0] = ' ';
+        ptr[1] = 0;
+        ptr++;
+    }
+
+    return (const char*)merged_args;
+}
 
 static struct tbx_command* context_create(struct tbx_server* server)
 {

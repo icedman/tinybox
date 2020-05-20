@@ -310,14 +310,20 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
     struct tbx_menu* menu = menut_at(server, cursor->cursor->x, cursor->cursor->y);
     if (menu) {
         if (server->menu_hovered && event->state == WLR_BUTTON_RELEASED) {
-            // make pressed
-            console_log("pressed %s", server->menu_hovered->label);
+            struct tbx_menu *item = server->menu_hovered;
+            if (item->execute) {
+                menu_execute(server, item);
+            }
         }
         return;
     }
 
     struct tbx_view* view = desktop_view_at(
         cursor->server, cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
+
+    if (view && cursor->server->menu->shown) {
+        menu_show(cursor->server->menu, 0, 0, false);
+    }
 
     if (event->state == WLR_BUTTON_RELEASED) {
         /* If you released any buttons, we exit interactive move/resize mode. */

@@ -58,9 +58,19 @@ cairo_surface_t* cairo_image_surface_scale(cairo_surface_t* image, int width,
     return new;
 }
 
-void draw_gradient_rect(cairo_t* cx, int flags, int w, int h,
+void draw_gradient_rect_xy(cairo_t* cx, int flags, int x, int y, int w, int h,
     float color[static 4], float colorTo[static 4])
 {
+    if (flags == 0) {
+        cairo_save(cx);
+        cairo_set_source_rgba(cx, 0.0, 0.0, 0.0, 0.0);
+        cairo_set_operator(cx, CAIRO_OPERATOR_CLEAR);
+        cairo_rectangle(cx, 0, 0, w, h);
+        cairo_paint(cx);
+        cairo_restore(cx);
+        return;
+    }
+    
     cairo_pattern_t* pat = 0;
 
     cairo_set_antialias(cx, CAIRO_ANTIALIAS_BEST);
@@ -80,7 +90,7 @@ void draw_gradient_rect(cairo_t* cx, int flags, int w, int h,
         cairo_pattern_add_color_stop_rgb(pat, 1.0, colorTo[0], colorTo[1],
             colorTo[2]);
 
-        cairo_rectangle(cx, 0.0, 0.0, w, h);
+        cairo_rectangle(cx, x, y, w, h);
         cairo_set_source(cx, pat);
         cairo_fill(cx);
 
@@ -92,6 +102,13 @@ void draw_gradient_rect(cairo_t* cx, int flags, int w, int h,
         cairo_fill(cx);
     }
 };
+
+
+void draw_gradient_rect(cairo_t* cx, int flags, int w, int h,
+    float color[static 4], float colorTo[static 4])
+{
+    draw_gradient_rect_xy(cx, flags, 0, 0, w, h, color, colorTo);
+}
 
 cairo_surface_t* cairo_image_from_xpm(char* path)
 {

@@ -53,55 +53,19 @@
 #
 # example:
 
-[begin] (Blackbox)
-  [exec] (xterm)    {xterm -ls}
-  [exec] (rxvt)     {rxvt}
+[begin] (Tinybox)
+  [exec] (terminal) {termite}
+  [exec] (google chrome) {google-chrome-stable}
 
-  [exec] (StarOffice) {soffice}
-  [exec] (XEmacs)     {xemacs}
-  [exec] (Acroread)   {acroread}
+  [submenu] (Styles)  {Choose a style...}
+    [style] (Nyz)     {~/.tinybox/styles/Nyz}
+    [style] (Twice)   {~/.tinybox/styles/Twice}
+  [end]
 
   [submenu] (Graphics)
     [exec] (The GIMP)     {gimp}
     [exec] (Image Magick) {display}
   [end]
 
-  [submenu] (Mozilla)
-    [exec] (Mozilla Navigator)  {mozilla}
-    [submenu] (More...)
-      [exec] (Mozilla Mail)     {mozilla -mail}
-      [exec] (Mozilla News)     {mozilla -news}
-      [exec] (Mozilla Composer) {mozilla -edit}
-    [end]
-  [end]
-
-  [submenu] (X Utilities)
-    [exec] (Xfontsel) {xfontsel}
-    [exec] (Xman)     {xman}
-    [exec] (Xcalc)    {xcalc}
-    [exec] (Xload)    {xload}
-  [end]
- 
-  [submenu] (Styles) {Choose a style...}
-    [stylesdir] (@pkgdatadir@/styles)
-  [end]
-
-  [workspaces] (Workspace List)
-  [config] (Configuration)
-
-  [reconfig] (Reconfigure)
-  [restart] (Restart)
-  [submenu] (Others)              {Other Window Managers}
-    [restart] (Start FVWM)        {fvwm}
-    [restart] (Start WindowMaker) {wmaker}
-    [restart] (Start Afterstep)   {afterstep}
-    [restart] (Start Enlightenment) {enlightenment}
-    [restart] (Start TWM)         {twm}
-    [restart] (Start KWM)         {kwm}
-  [end]
-
-  [exit] (Exit)
 [end]
-
-# End of example menu.
 

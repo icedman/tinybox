@@ -27,12 +27,31 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
+void menu_execute(struct tbx_server* server, struct tbx_menu *item)
+{
+    if (!item->execute) {
+        return;
+    }
+
+    console_log("pressed %s", item->execute);
+    
+    menu_show(server->menu, 0, 0, false);
+    struct tbx_command* ctx = server->command;
+    command_execute(ctx, item->argc, item->argv);
+}
+
 void menu_show(struct tbx_menu* menu, int x, int y, bool shown)
 {
     if (!menu) {
         return;
     }
 
+    if (menu->menu_type != TBX_MENU) {
+        return;
+    }
+
+    menu->command.server->menu_hovered = NULL;
+    menu->hovered = NULL;
     menu->shown = shown;
     menu->menu_x = x;
     menu->menu_y = y;
@@ -95,6 +114,7 @@ static struct tbx_menu* menu_at_recursive(struct tbx_menu* menu, int x, int y)
             struct tbx_menu* item = (struct tbx_menu*)cmd;
             if ((x >= px + item->x && x <= px + item->x + item->width) && (y >= py + item->y && y <= py + item->y + item->height)) {
                 menu->hovered = item;
+                cmd->server->menu_hovered = item;
                 break;
             }
         }
@@ -131,25 +151,79 @@ struct tbx_menu* menut_at(struct tbx_server* server, int x, int y)
     return res;
 }
 
-cairo_surface_t* generate_menu_texture(struct tbx_output* tbx_output, struct tbx_menu* menu)
-{
-    if (menu->menu_image) {
-        return menu->menu_image;
-    }
+cairo_surface_t* generate_item_texture(struct tbx_output* tbx_output, struct tbx_menu* menu, bool hilite) {
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, menu->width, menu->height);
+    cairo_t* cx = cairo_create(surface);
 
     // style
     struct tbx_style* style = &tbx_output->server->style;
 
-    char* font = "monospace 10";
+    float color[4] = { 0.0, 0.0, 0, 0.0 };
+    float colorTo[4] = { 0.0, 0.0, 0, 0.0 };
+
+    uint32_t flags = 0;
+    if (hilite) {
+        flags = style->menu_hilite;
+        color_to_rgba(color, style->menu_hilite_color);
+        color_to_rgba(colorTo, style->menu_hilite_colorTo);
+        draw_gradient_rect(cx, flags, menu->width, menu->height, color, colorTo);
+    }
+
+    cairo_translate(cx, 4, 2);
+    cairo_rectangle(cx, 0, 0, menu->text_image_width, menu->text_image_height);
+
+    // text
+    if (hilite) {
+        cairo_set_source_surface(cx, menu->text_hilite_image, 0, 0);
+    } else {
+        cairo_set_source_surface(cx, menu->text_image, 0, 0);
+    }
+
+    // cairo_fill(cx);
+    cairo_paint(cx);
+
+    cairo_destroy(cx);
+    return surface;
+}
+
+struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct tbx_menu* menu)
+{
+    // style
+    struct tbx_style* style = &tbx_output->server->style;
+
+    if (menu->menu_texture) {
+        if (menu->lastStyleHash == style->hash) {
+            return menu->menu_texture;
+        }
+        wlr_texture_destroy(menu->menu_texture);
+    }
+
+    struct wlr_renderer* renderer = tbx_output->server->renderer;
+    menu->lastStyleHash = style->hash;
+
+    char* font = style->font;
     float color[4] = { 1.0, 1.0, 0, 1.0 };
     float colorTo[4] = { 1.0, 1.0, 0, 1.0 };
 
     int menu_height = 0;
     int menu_width = 0;
+    int title_height = 0;
+
+    int tw = 400;
+    int th = 32;
+    color_to_rgba(color, style->menu_title_textColor);
+    char *title = menu->title;
+    if (!title) {
+        title = menu->label;
+    }
+    cairo_surface_t *title_text = cairo_image_from_text(title, &tw, &th, font, color, 
+        tbx_output->wlr_output->subpixel);
+
+    menu_width = tw + 8;
 
     color_to_rgba(color, style->menu_frame_textColor);
 
-    // generate item textures
+    // generate item text textures
     struct tbx_command* cmd;
     wl_list_for_each_reverse(cmd, &menu->items, link)
     {
@@ -157,10 +231,16 @@ cairo_surface_t* generate_menu_texture(struct tbx_output* tbx_output, struct tbx
         int w = 300;
         int h = 32;
 
-        if (!item->item_image) {
-            item->item_image = cairo_image_from_text(item->label, &w, &h, font, color, tbx_output->wlr_output->subpixel);
-            item->width = w;
-            item->height = h;
+        item->text_image = cairo_image_from_text(item->label, &w, &h, font, color, tbx_output->wlr_output->subpixel);
+        w = 300; h = 32;
+        item->text_hilite_image = cairo_image_from_text(item->label, &w, &h, font, color, tbx_output->wlr_output->subpixel);
+        item->width = w + 8;
+        item->height = h + 4;
+        item->text_image_width = w;
+        item->text_image_height = h;
+
+        if (title_height == 0) {
+            title_height = item->height;
         }
 
         item->y = menu_height;
@@ -170,38 +250,86 @@ cairo_surface_t* generate_menu_texture(struct tbx_output* tbx_output, struct tbx
         }
     }
 
+    menu_height += title_height;
+
     menu->menu_width = menu_width;
     menu->menu_height = menu_height;
 
     // create the menu texture
-    menu->menu_image = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, menu_width, menu_height);
-    cairo_t* cx = cairo_create(menu->menu_image);
+    cairo_surface_t *menu_image = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, menu_width, menu_height);
+    cairo_t* cx = cairo_create(menu_image);
 
     // borders
+    // render the title
+    uint32_t flags = style->menu_title;
+    color_to_rgba(color, style->menu_title_color);
+    color_to_rgba(colorTo, style->menu_title_colorTo);
+    draw_gradient_rect_xy(cx, flags, 0, 0, 
+            menu_width, title_height, color, colorTo);
 
-    // title
-    color_to_rgba(color, style->menu_frame_color);
-    color_to_rgba(colorTo, style->menu_frame_colorTo);
-    uint32_t flags = style->menu_frame;
+    // draw title text
+    if (title_text) {
+        cairo_save(cx);
+        cairo_translate(cx, 4, 2);
+        cairo_set_source_surface(cx, title_text, 0, 0);
+        cairo_rectangle(cx, 0, 0, tw, th);
+        cairo_fill(cx);
+        cairo_restore(cx);
+        cairo_surface_destroy(title_text);
+    }
 
     // background
-    draw_gradient_rect(cx, flags, menu_width, menu_height, color, colorTo);
+    flags = style->menu_frame;
+    color_to_rgba(color, style->menu_frame_color);
+    color_to_rgba(colorTo, style->menu_frame_colorTo);
+    draw_gradient_rect_xy(cx, flags, 0, title_height, 
+            menu_width, menu_height - title_height, color, colorTo);
 
-    // render each item
+    int item_offset_y = title_height;
+
     cairo_save(cx);
+
+    cairo_translate(cx, 0, item_offset_y);
     wl_list_for_each_reverse(cmd, &menu->items, link)
     {
         struct tbx_menu* item = (struct tbx_menu*)cmd;
         // make all item widths equal
+        
+        // create item with background
         item->width = menu_width;
-        cairo_set_source_surface(cx, item->item_image, 0, 0);
+        item->y += item_offset_y;
+
+        cairo_surface_t *item_image = generate_item_texture(tbx_output, item, false);
+        cairo_set_source_surface(cx, item_image, 0, 0);
         cairo_translate(cx, 0, item->height);
         cairo_paint(cx);
+        cairo_surface_destroy(item_image);
+
+        item_image = generate_item_texture(tbx_output, item, true);
+
+        // save wlr_texture
+        if (item->item_texture) {
+            wlr_texture_destroy(item->item_texture);
+        }
+
+        unsigned char* data = cairo_image_surface_get_data(item_image);
+        item->item_texture = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+            cairo_image_surface_get_stride(item_image), item->width, item->height, data);
+
+        cairo_surface_destroy(item_image);
+        cairo_surface_destroy(item->text_image);
+        cairo_surface_destroy(item->text_hilite_image);
+        
     }
     cairo_restore(cx);
-
     cairo_destroy(cx);
-    return menu->menu_image;
+
+    unsigned char* data = cairo_image_surface_get_data(menu_image);
+    menu->menu_texture = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+        cairo_image_surface_get_stride(menu_image), menu->menu_width, menu->menu_height, data);
+
+    cairo_surface_destroy(menu_image);
+    return menu->menu_texture;
 }
 
 static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
@@ -209,10 +337,15 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     if (!menu->menu_type == TBX_MENU || !wl_list_length(&menu->items)) {
         return;
     }
+
+    double ox = 0, oy = 0;
+    wlr_output_layout_output_coords(tbx_output->server->output_layout, tbx_output->wlr_output, &ox,
+        &oy);
+
     // console_log("m %d %d", menu->x, menu->y);
 
     struct wlr_output* output = tbx_output->wlr_output;
-    struct wlr_renderer* renderer = tbx_output->server->renderer;
+    // struct wlr_renderer* renderer = tbx_output->server->renderer;
 
     // style
     struct tbx_style* style = &tbx_output->server->style;
@@ -223,8 +356,8 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
     generate_menu_texture(tbx_output, menu);
 
-    box.x = menu->menu_x;
-    box.y = menu->menu_y;
+    box.x = menu->menu_x + ox;
+    box.y = menu->menu_y + oy;
     box.width = menu->menu_width;
     box.height = menu->menu_height;
 
@@ -241,13 +374,7 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     box.width -= (borderWidth * 2);
     box.height -= (borderWidth * 2);
 
-    unsigned char* data = cairo_image_surface_get_data(menu->menu_image);
-    struct wlr_texture* menu_texture = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
-        cairo_image_surface_get_stride(menu->menu_image), menu->menu_width, menu->menu_height, data);
-
-    render_texture(output, &box, menu_texture, output->scale);
-
-    wlr_texture_destroy(menu_texture);
+    render_texture(output, &box, menu->menu_texture, output->scale);
 
     // hovered or submenu
     struct tbx_command* submenu;
@@ -258,12 +385,14 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
             continue;
         }
 
-        box.x = menu->menu_x + item->x;
-        box.y = menu->menu_y + item->y;
+        box.x = menu->menu_x + item->x + 3 + ox;
+        box.y = menu->menu_y + item->y + 3 + oy;
         box.width = item->width;
         box.height = item->height;
         color_to_rgba(color, style->borderColor);
-        render_rect(output, &box, color, output->scale);
+        // render_rect(output, &box, color, output->scale);
+
+        render_texture(output, &box, item->item_texture, output->scale);
     }
 }
 
@@ -284,6 +413,94 @@ static void render_menu_recursive(struct tbx_output* output, struct tbx_menu* me
             item->menu_y = menu->menu_y + item->y;
             render_menu_recursive(output, item);
         }
+    }
+}
+
+static void menu_focus_item(struct tbx_server *server, struct tbx_menu *item) {
+    if (!item) {
+        return;
+    }
+    server->menu_hovered = item;
+    if (item->parent) {
+        item->parent->hovered = item;
+    }
+}
+static void menu_walk(struct tbx_server *server, struct tbx_menu *item, int dir_x, int dir_y) {
+    if (!server->menu_navigation_grab) {
+        return;
+    }
+
+    // first item
+    if (!item) {
+        item = server->menu_navigation_grab->hovered;
+        if (!item) {
+            struct tbx_command *cmd;
+            wl_list_for_each_reverse(cmd, &server->menu_navigation_grab->items, link) {
+                item = (struct tbx_menu*)cmd;
+                menu_focus_item(server, item);
+                return;
+            }
+        }
+    }
+
+
+    if (dir_y != 0) {
+        struct tbx_menu *prev = NULL;
+        struct tbx_command *cmd;
+        wl_list_for_each_reverse(cmd, &server->menu_navigation_grab->items, link) {
+            struct tbx_menu *n = (struct tbx_menu*)cmd;
+            if (dir_y == 1 && prev == item) {
+                menu_focus_item(server, n);
+                return;
+            }
+            if (dir_y == -1 && n == item) {
+                menu_focus_item(server, prev);
+                return;
+            }
+            prev = n;
+        }
+    }
+
+    if (dir_x != 0) {
+        if (dir_x == 1 && wl_list_length(&item->items) > 0) {
+            menu_show_submenu(item->parent, item);
+            return;
+        }
+        if (dir_x == -1) {
+            menu_show(item->parent, 0, 0, false);
+        }
+    }
+
+}
+
+void menu_navigation(struct tbx_server *server, uint32_t keycode)
+{
+    struct tbx_menu *item = server->menu_hovered;
+
+    switch(keycode) {
+        case XKB_KEY_Escape:
+        menu_show(server->menu, 0, 0, false);
+        break;
+
+        case XKB_KEY_space:
+        case XKB_KEY_Return:
+        menu_execute(server, item);
+        break;
+
+        case XKB_KEY_Up:
+        menu_walk(server, item, 0, -1);
+        break;
+
+        case XKB_KEY_Down:
+        menu_walk(server, item, 0, 1);
+        break;
+
+        case XKB_KEY_Left:
+        menu_walk(server, item, -1, 0);
+        break;
+        case XKB_KEY_Right:
+        menu_walk(server, item, 1, 0);
+        break;
     }
 }
 
