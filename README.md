@@ -1,3 +1,5 @@
+![Latest Screenshot](https://raw.githubusercontent.com/icedman/tinybox/master/screenshots/Screenshot%20from%202020-05-20%2023-29-45.png)
+
 # tinybox
 
 window manager based started from tinywl;
@@ -8,6 +10,7 @@ window manager based started from tinywl;
 
 * styles
 * workspaces
+* menu
 * keybinding
 * three/four fingers drag/swipe
 
@@ -15,8 +18,6 @@ window manager based started from tinywl;
 
 * pixmap based themes (fluxbox/openbox)
 * bar
-* menu
-
 ## missing
 
 * hdpi
