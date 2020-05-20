@@ -13,6 +13,17 @@
 struct tbx_menu* create_menu(struct tbx_command* cmd, int argc, char** argv);
 struct tbx_menu* create_item(struct tbx_command* cmd, int argc, char** argv);
 
+static void distill(char* str) {
+    int l=strlen(str);
+    for(int i=0; i<l; i++) {
+        if (str[i] == '[' || str[i] == ']' ||
+            str[i] == '(' || str[i] == ')' ||
+            str[i] == '{' || str[i] == '}') {
+            str[i] = '"';
+        }
+    }
+}
+
 static void exec_menu_custom(struct tbx_command* cmd, int _argc, char** _argv)
 {
     if (!command_check_args(cmd, _argc, 1)) {
@@ -20,16 +31,7 @@ static void exec_menu_custom(struct tbx_command* cmd, int _argc, char** _argv)
     }
 
     char *command_line = (char*)command_merge_args(cmd->server, _argc, _argv);
-
-    // distill
-    int l=strlen(command_line);
-    for(int i=0; i<l; i++) {
-        if (command_line[i] == '[' || command_line[i] == ']' ||
-            command_line[i] == '(' || command_line[i] == ')' ||
-            command_line[i] == '{' || command_line[i] == '}') {
-            command_line[i] = '"';
-        }
-    }
+    distill(command_line);
 
     int argc;
     char** argv = split_args(command_line, &argc);
@@ -142,10 +144,12 @@ struct tbx_menu* create_menu(struct tbx_command* cmd, int argc, char** argv)
     struct tbx_menu* menu = calloc(1, sizeof(struct tbx_menu));
     struct tbx_command* m = &menu->command;
 
+    distill(argv[0]);
     strip_quotes(argv[0]);
 
     char* identifier = argv[0];
     if (argc > 1) {
+        distill(argv[1]);
         strip_quotes(argv[1]);
         identifier = argv[1];
     }

@@ -21,7 +21,7 @@ def process_theme(path, name):
         if not m is None:
             # print(m.group(0))
             nn = m.group(0);
-            nn = nn.lower()
+            # nn = nn.lower()
             if nn not in config_types:
                  config_types[nn] = {}
             config_types[nn][current_type] = current_type
@@ -56,7 +56,8 @@ def process_dir(path, prev):
                 process_dir(file_path, name)
 
 
-types = [ "bbwm", "fb", "ob" ]
+# types = [ "bbwm", "fb", "ob" ]
+types = [ "bbwm", "fb" ]
 
 def read_styles():
     global current_type
