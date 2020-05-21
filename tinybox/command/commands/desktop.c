@@ -95,8 +95,8 @@ void exec_shade_window(struct tbx_command* cmd, int argc, char** argv)
         return;
     }
 
-    struct tbx_view* current_view = wl_container_of(cmd->server->views.next, current_view, link);
-
+    // struct tbx_view* current_view = wl_container_of(cmd->server->views.next, current_view, link);
+    struct tbx_view* current_view = workspace_get_top_view(cmd->server, cmd->server->workspace);
     if (!current_view) {
         return;
     }

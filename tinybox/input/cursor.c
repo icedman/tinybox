@@ -333,7 +333,8 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
             "left_ptr", server->cursor->cursor);
 
         if (!view) {
-            menu_show(server->menu, cursor->cursor->x, cursor->cursor->y, !server->menu->shown);
+            bool show = !(event->button != 273);
+            menu_show(server->menu, cursor->cursor->x, cursor->cursor->y, show);
         }
 
     } else {

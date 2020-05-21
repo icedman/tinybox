@@ -43,6 +43,8 @@ struct tbx_menu {
     int text_image_width;
     int text_image_height;
 
+    struct wlr_box title_box;
+    struct wlr_box frame_box;
     struct wlr_texture* item_texture;
     struct wlr_texture* menu_texture;
     int lastStyleHash;

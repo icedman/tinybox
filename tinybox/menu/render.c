@@ -82,6 +82,7 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     float color[4] = { 1.0, 1.0, 0, 1.0 };
     float colorTo[4] = { 1.0, 1.0, 0, 1.0 };
 
+    int borderWidth = 3;
     int menu_height = 0;
     int menu_width = 0;
     int title_height = 0;
@@ -98,8 +99,6 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
 
     menu_width = tw + 8;
 
-    color_to_rgba(color, style->menu_frame_textColor);
-
     // generate item text textures
     struct tbx_command* cmd;
     wl_list_for_each_reverse(cmd, &menu->items, link)
@@ -108,9 +107,12 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
         int w = 300;
         int h = 32;
 
+        color_to_rgba(color, style->menu_frame_textColor);
         item->text_image = cairo_image_from_text(item->label, &w, &h, font, color, tbx_output->wlr_output->subpixel);
         w = 300;
         h = 32;
+
+        color_to_rgba(color, style->menu_hilite_textColor);
         item->text_hilite_image = cairo_image_from_text(item->label, &w, &h, font, color, tbx_output->wlr_output->subpixel);
         item->width = w + 8;
         item->height = h + 4;
@@ -129,6 +131,7 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     }
 
     menu_height += title_height;
+    menu_height += borderWidth;
 
     menu->menu_width = menu_width;
     menu->menu_height = menu_height;
@@ -142,8 +145,14 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     uint32_t flags = style->menu_title;
     color_to_rgba(color, style->menu_title_color);
     color_to_rgba(colorTo, style->menu_title_colorTo);
-    draw_gradient_rect_xy(cx, flags, 0, 0,
-        menu_width, title_height, color, colorTo);
+
+    struct wlr_box title_box = {
+        0, 0,
+        menu_width,
+        title_height
+    };
+    memcpy(&menu->title_box, &title_box, sizeof(struct wlr_box));
+    draw_gradient_rect_xy(cx, flags, title_box.x, title_box.y, title_box.width, title_box.height, color, colorTo);
 
     // draw title text
     if (title_text) {
@@ -160,10 +169,16 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     flags = style->menu_frame;
     color_to_rgba(color, style->menu_frame_color);
     color_to_rgba(colorTo, style->menu_frame_colorTo);
-    draw_gradient_rect_xy(cx, flags, 0, title_height,
-        menu_width, menu_height - title_height, color, colorTo);
+    
+    struct wlr_box frame = {
+        0, title_height + borderWidth,
+        menu_width,
+        menu_height - title_height - borderWidth
+    };
+    memcpy(&menu->frame_box, &frame, sizeof(struct wlr_box));
+    draw_gradient_rect_xy(cx, flags, frame.x, frame.y, frame.width, frame.height, color, colorTo);
 
-    int item_offset_y = title_height;
+    int item_offset_y = title_height + borderWidth;
 
     cairo_save(cx);
 
@@ -258,6 +273,30 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
     render_texture(output, &box, menu->menu_texture, output->scale);
 
+    // add the bevels
+    int tflags = style->menu_frame;
+    float bevelColor[4] = { 1,0,1,1 };
+    memcpy(&box, &menu->frame_box, sizeof(struct wlr_box));
+    box.x += menu->menu_x + borderWidth;
+    box.y += menu->menu_y + borderWidth;
+    if (tflags & sf_raised) {
+        render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+    } else if (tflags & sf_sunken){
+        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+    }
+
+    tflags = style->menu_title;
+    memcpy(&box, &menu->title_box, sizeof(struct wlr_box));
+    box.x += menu->menu_x + borderWidth;
+    box.y += menu->menu_y + borderWidth;
+    if (tflags & sf_raised) {
+        render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+    } else if (tflags & sf_sunken){
+        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+    }
+
+    tflags = style->menu_hilite;
+
     // hovered or submenu
     struct tbx_command* submenu;
     wl_list_for_each(submenu, &menu->items, link)
@@ -275,15 +314,12 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
         // render_rect(output, &box, color, output->scale);
 
         render_texture(output, &box, item->item_texture, output->scale);
-    }
 
-    // add the bevels
-    int tflags = style->menu_frame;
-    float bevelColor[4] = { 1,0,1,1 };
-    if (tflags & sf_raised) {
-        render_rect_outline(output, &box_frame, bevelColor, 1, 1, output->scale);
-    } else if (tflags & sf_sunken){
-        render_rect_outline(output, &box_frame, bevelColor, 1, -1, output->scale);    
+        if (tflags & sf_raised) {
+            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+        } else if (tflags & sf_sunken){
+            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+        }
     }
 }
 
