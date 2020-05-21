@@ -32,6 +32,9 @@ enum {
     tx_workspace_7,
     tx_workspace_8,
 
+    tx_bevel_light,
+    tx_bevel_dark,
+
     tx_last
 };
 
@@ -49,6 +52,10 @@ struct render_data {
 
 void render_rect(struct wlr_output* output, struct wlr_box* box, float color[4],
     float scale);
+
+void render_rect_outline(struct wlr_output* output, struct wlr_box* box, float color[4],
+    float width, int bevel, float scale);
+
 void render_texture(struct wlr_output* output, struct wlr_box* box,
     struct wlr_texture* texture, float scale);
 void generate_textures(struct tbx_output* output, bool forced);

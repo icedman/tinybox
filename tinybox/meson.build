@@ -34,6 +34,7 @@ tinybox_src = files(
   'output/console.c',
   
   'menu/menu.c',
+  'menu/render.c',
 
   'server/server.c',
   'shell/decoration.c',

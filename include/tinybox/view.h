@@ -119,6 +119,7 @@ struct tbx_view {
 
     // damage tracking
     struct wlr_box damage;
+    int damage_age;
 };
 
 struct tbx_xdg_shell_view {

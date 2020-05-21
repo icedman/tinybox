@@ -326,7 +326,9 @@ void view_close(struct tbx_view* view)
 
 void view_damage(struct tbx_view* view)
 {
+    // wlr_surface_get_effective_damage
     view->interface->get_geometry(view, &view->damage);
     view->damage.x = view->x;
     view->damage.y = view->y;
+    view->damage_age = 0;
 }

@@ -86,9 +86,9 @@ void draw_gradient_rect_xy(cairo_t* cx, int flags, int x, int y, int w, int h,
     }
 
     if (pat) {
-        cairo_pattern_add_color_stop_rgb(pat, 0, color[0], color[1], color[2]);
-        cairo_pattern_add_color_stop_rgb(pat, 1.0, colorTo[0], colorTo[1],
-            colorTo[2]);
+        cairo_pattern_add_color_stop_rgba(pat, 0, color[0], color[1], color[2], color[3]);
+        cairo_pattern_add_color_stop_rgba(pat, 1.0, colorTo[0], colorTo[1],
+            colorTo[2], colorTo[3]);
 
         cairo_rectangle(cx, x, y, w, h);
         cairo_set_source(cx, pat);
@@ -98,7 +98,7 @@ void draw_gradient_rect_xy(cairo_t* cx, int flags, int x, int y, int w, int h,
     } else {
 
         cairo_rectangle(cx, 0.0, 0.0, w, h);
-        cairo_set_source_rgb(cx, color[0], color[1], color[2]);
+        cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
         cairo_fill(cx);
     }
 };

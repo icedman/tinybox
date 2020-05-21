@@ -133,6 +133,12 @@ void generate_textures(struct tbx_output* output, bool forced)
     float colorTo[4];
     int flags;
 
+    // bevels
+    float bevelLight[4] = { 1.0, 1.0, 1.0, 0.4 };
+    float bevelDark[4] = { 0.0, 0.0, 0.0, 0.4 };
+    generate_texture(renderer, tx_bevel_light, sf_solid, 32, 32, bevelLight, bevelLight);
+    generate_texture(renderer, tx_bevel_dark, sf_solid, 8, 8, bevelDark, bevelDark);
+
     // titlebar
     color_to_rgba(color, style->window_title_focus_color);
     color_to_rgba(colorTo, style->window_title_focus_colorTo);
@@ -316,6 +322,57 @@ void render_rect(struct wlr_output* output, struct wlr_box* box, float color[4],
     wlr_render_rect(renderer, &box_scaled, color, output->transform_matrix);
 }
 
+void render_rect_outline(struct wlr_output* output, struct wlr_box* box, float color[4],
+    float width, int bevel, float scale)
+{
+    struct wlr_texture *bevelTop;
+    struct wlr_texture *bevelBottom;
+
+    if (bevel == 1) {
+        bevelTop = get_texture_cache(tx_bevel_light);
+        bevelBottom = get_texture_cache(tx_bevel_dark);
+    } else {
+        bevelBottom = get_texture_cache(tx_bevel_light);
+        bevelTop = get_texture_cache(tx_bevel_dark);
+    }
+
+    // top
+    struct wlr_box edge;
+    memcpy(&edge, box, sizeof(struct wlr_box));
+    edge.height = width;
+
+    if (bevel) {
+        render_texture(output, &edge, bevelTop, scale);
+    } else {
+        render_rect(output, &edge, color, scale);
+    }
+
+    // bottom
+    edge.y = edge.y + box->height - width;
+    if (bevel) {
+        render_texture(output, &edge, bevelBottom, scale);
+    } else {
+        render_rect(output, &edge, color, scale);
+    }
+
+    // left
+    memcpy(&edge, box, sizeof(struct wlr_box));
+    edge.width = width;
+    if (bevel) {
+        render_texture(output, &edge, bevelTop, scale);
+    } else {
+        render_rect(output, &edge, color, scale);
+    }
+
+    // right
+    edge.x = edge.x + box->width - width;
+    if (bevel) {
+        render_texture(output, &edge, bevelBottom, scale);
+    } else {
+        render_rect(output, &edge, color, scale);
+    }
+}
+
 void render_texture(struct wlr_output* output, struct wlr_box* box,
     struct wlr_texture* texture, float scale)
 {
@@ -342,6 +399,8 @@ void render_texture(struct wlr_output* output, struct wlr_box* box,
         output->transform_matrix);
 
     wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0);
+
+    glBindTexture(attribs.target, 0);
 }
 
 void scissor_output(struct wlr_output* wlr_output, struct wlr_box box)

@@ -208,9 +208,9 @@ void load_style(struct tbx_server* server, const char* path)
     strcpy(config_style->font, "monospace 10");
 
     // dump defaults bin
-    FILE* fp = fopen("./style.bin", "wb");
-    fwrite(style, 1, sizeof(struct tbx_style), fp);
-    fclose(fp);
+    // FILE* fp = fopen("./style.bin", "wb");
+    // fwrite(style, 1, sizeof(struct tbx_style), fp);
+    // fclose(fp);
 }
 
 void free_style(struct tbx_style* style)

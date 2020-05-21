@@ -27,6 +27,9 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
+#define DO_DAMAGE_TRACK 0
+#define DAMAGE_LIFE 2
+
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
 {
     // smoothen
@@ -51,6 +54,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
     bool shaded = view->shaded;
 
     float color[4] = { 1, 0, 1, 1 };
+    float bevelColor[4] = { 1.0, 0.0, 1.0, 0.1 };
 
     int unfocus_offset = 0;
     if (view_from_surface(view->server, seat->keyboard_state.focused_surface) != view) {
@@ -102,27 +106,9 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             color_to_rgba(color, style->window_frame_unfocusColor);
         }
 
-        // left
         memcpy(&box, &view_geometry, sizeof(struct wlr_box));
-        box.x -= frameWidth;
-        box.width = frameWidth;
-        render_rect(output, &box, color, output->scale);
-
-        // right
-        box.x += view_geometry.width + frameWidth;
-        render_rect(output, &box, color, output->scale);
-
-        // top
-        memcpy(&box, &view_geometry, sizeof(struct wlr_box));
-        box.x -= frameWidth;
-        box.y -= frameWidth;
-        box.width += (frameWidth * 2);
-        box.height = frameWidth;
-        render_rect(output, &box, color, output->scale);
-
-        // bottom
-        box.y += view_geometry.height + frameWidth;
-        render_rect(output, &box, color, output->scale);
+        grow_box_hv(&box, frameWidth, frameWidth);
+        render_rect_outline(output, &box, color, frameWidth, false, output->scale);
     }
 
     // ----------------------
@@ -156,12 +142,26 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             output->scale);
         // render_rect(output, &box, colorDebug2, output->scale);
 
+        int tflags = unfocus_offset ? style->window_title_focus : style->window_title_unfocus;
+        if (tflags & sf_raised) {
+            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+        } else if (tflags & sf_sunken){
+            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+        }
+
         // label
         grow_box_hv(&box, -margin, -margin);
         render_texture(output, &box,
             get_texture_cache(tx_window_label_focus + unfocus_offset),
             output->scale);
-        // render_rect(output, &box, colorDebug3, output->scale);
+        // render_rect(output, &box, bevelColor, output->scale);
+
+        tflags = unfocus_offset ? style->window_label_focus : style->window_label_unfocus;
+        if (tflags & sf_raised) {
+            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+        } else if (tflags & sf_sunken){
+            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+        }
 
         // title
         box.x += margin;
@@ -173,6 +173,8 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             .width = box.width - (margin * 4),
             .height = box.height,
         };
+
+        if (sc_box.x) {}
 
         box.width = view->title_box.width;
         box.height = view->title_box.height;
@@ -211,6 +213,14 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         render_texture(output, &box,
             get_texture_cache(tx_window_handle_focus + unfocus_offset),
             output->scale);
+
+        int tflags = unfocus_offset ? style->window_handle_focus : style->window_handle_unfocus;
+        if (tflags & sf_raised) {
+            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+        } else if (tflags & sf_sunken){
+            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+        }
+
         // render_rect(output, &box, colorDebug2, output->scale);
 
         // grips
@@ -224,6 +234,13 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
                 output->scale);
             // render_rect(output, &box, colorDebug4, output->scale);
 
+            tflags = unfocus_offset ? style->window_grip_focus : style->window_grip_unfocus;
+            if (tflags & sf_raised) {
+                render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+            } else if (tflags & sf_sunken){
+                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+            }
+
             memcpy(&view->hotspots[HS_EDGE_BOTTOM_LEFT], &box, sizeof(struct wlr_box));
             grow_box_hv(&view->hotspots[HS_EDGE_BOTTOM_LEFT], borderWidth, borderWidth);
 
@@ -235,6 +252,12 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
 
             memcpy(&view->hotspots[HS_EDGE_BOTTOM_RIGHT], &box, sizeof(struct wlr_box));
             grow_box_hv(&view->hotspots[HS_EDGE_BOTTOM_RIGHT], borderWidth, borderWidth);
+
+            if (tflags & sf_raised) {
+                render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+            } else if (tflags & sf_sunken){
+                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+            }
         }
     }
 
@@ -444,6 +467,73 @@ static void output_frame(struct wl_listener* listener, void* data)
     /* Begin the renderer (calls glViewport and some other GL sanity checks) */
     wlr_renderer_begin(renderer, width, height);
 
+#if DO_DAMAGE_TRACK
+    //-----------------
+    // primitive damage code
+    //-----------------
+    // implement double buffer first? or understand wl_ buffering
+    // primitive damage tracking
+    // too primitive ~ can't know residual damage when window is closed
+    
+    int damages = 0;
+    struct tbx_view* damage_view;
+    struct wlr_box damage_box;
+    float damage_color[4] = { 1.0, 0, 1.0, 1.0 };
+
+    if (!wl_list_length(&server->views)) {
+        damages = 1;
+    }
+
+    wl_list_for_each(damage_view, &server->views, link)
+    {
+        if (server->ws_animate ||
+            cursor->mode != TBX_CURSOR_PASSTHROUGH ||
+            server->menu->shown) {
+            damages = 1;
+            break;
+        }
+
+        if (damage_view->damage.width == 0) {
+            continue;
+        }
+
+        if (damages) {
+            break;
+        }
+
+        memcpy(&damage_box, &damage_view->damage, sizeof(struct wlr_box));
+        grow_box_hv(&damage_box, 8, 8);
+        render_rect(output->wlr_output, &damage_box, damage_color, output->wlr_output->scale);
+
+        // console_log("d: %d %d %d %d", damage_view->damage.x, damage_view->damage.y,
+        //         damage_view->damage.width, damage_view->damage.height);
+
+        if (damage_view->damage_age++ > DAMAGE_LIFE) {
+            damage_view->damage.width = 0;
+        }
+        
+        damages++;
+    }
+
+    if (!damages) {
+        struct tbx_view* view;
+        wl_list_for_each(view, &server->views, link)
+        {
+            if (view->mapped && view->surface) {
+                wlr_surface_send_frame_done(view->surface, &now);
+            }
+        }
+
+        struct wlr_box indicator = {
+            0,0,8,8
+        };
+        float indicator_color[4] = { 1,1,0,1 };
+        render_rect(output->wlr_output, &indicator, indicator_color, output->wlr_output->scale);
+
+        goto end_render;
+    }
+#endif
+    
     // render box
     float color[4] = { 0, 0, 0, 1.0 };
     wlr_renderer_clear(renderer, color);
@@ -562,6 +652,10 @@ static void output_frame(struct wl_listener* listener, void* data)
     //-----------------
     render_menus(output);
 
+#if DO_DAMAGE_TRACK
+end_render:
+#endif
+
     /* Hardware cursors are rendered by the GPU on a separate plane, and can be
    * moved around without re-rendering what's beneath them - which is more
    * efficient. However, not all hardware supports hardware cursors. For this
@@ -670,39 +764,3 @@ bool output_setup(struct tbx_server* server)
     wl_signal_add(&server->backend->events.new_output, &server->new_output);
     return true;
 }
-
-/* damage code 
-// implement double buffer first? or understand wl_ buffering
-// primitive damage tracking
-int damages = 0;
-struct tbx_view* damage_view;
-struct wlr_box damage_box;
-float damage_color[4] = { 1.0, 0, 1.0, 1.0 };
-wl_list_for_each(damage_view, &server->views, link)
-{
-if (damage_view->damage.width == 0) {
-    continue;
-}
-
-memcpy(&damage_box, &damage_view->damage, sizeof(struct wlr_box));
-grow_box_hv(&damage_box, 8, 8);
-render_rect(output->wlr_output, &damage_box, damage_color, output->wlr_output->scale);
-
-// console_log("d: %d %d %d %d", damage_view->damage.x, damage_view->damage.y,
-//         damage_view->damage.width, damage_view->damage.height);
-
-damage_view->damage.width = 0;
-damages++;
-}
-
-if (!damages) {
-struct tbx_view* view;
-wl_list_for_each(view, &server->views, link) {
-    if (view->mapped && view->surface) {
-        wlr_surface_send_frame_done(view->surface, &now);
-    }
-}
-
-goto end_render;
-}
-*/
