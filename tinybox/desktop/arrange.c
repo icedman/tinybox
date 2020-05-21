@@ -14,25 +14,27 @@ static struct wlr_box box_screen;
 static struct tbx_vec center_screen;
 static struct wl_list boxes;
 static int box_id = 0;
+static int overlaps = 0;
 
 static bool ab_overlap(struct tbx_arrange_box *a, struct tbx_arrange_box *b) 
 { 
+    int gap = 4;
     struct tbx_vec l1 = {
-        .x = a->x - a->width/2,
-        .y = a->y - a->height/2
+        .x = a->x - a->width/2 - gap,
+        .y = a->y - a->height/2 - gap - 20
     };
     struct tbx_vec r1 = {
-        .x = a->x + a->width/2,
-        .y = a->y + a->height/2
+        .x = a->x + a->width/2 + gap,
+        .y = a->y + a->height/2 + gap
     };
 
     struct tbx_vec l2 = {
-        .x = b->x - b->width/2,
-        .y = b->y - b->height/2
+        .x = b->x - b->width/2 - gap,
+        .y = b->y - b->height/2 - gap - 20
     };
     struct tbx_vec r2 = {
-        .x = b->x + b->width/2,
-        .y = b->y + b->height/2
+        .x = b->x + b->width/2 + gap,
+        .y = b->y + b->height/2 + gap
     };
 
     if (l1.x >= r2.x || l2.x >= r1.x) 
@@ -41,6 +43,7 @@ static bool ab_overlap(struct tbx_arrange_box *a, struct tbx_arrange_box *b)
     if (l1.y >= r2.y || l2.y >= r1.y) 
         return false; 
   
+    overlaps++;
     return true; 
 } 
 
@@ -121,9 +124,8 @@ static void arrange_workspace(struct tbx_server* server, int workspace)
 
 static void arrange_update(struct tbx_arrange_box* ab)
 {
-    float mag = 0;
-    ab->x += ab->force.x * mag;
-    ab->y += ab->force.y * mag;
+    ab->x += ab->force.x * ab->mag;
+    ab->y += ab->force.y * ab->mag;
 
     float margin = 8;
 
@@ -182,9 +184,15 @@ static void arrange_repel(struct tbx_arrange_box* ab)
             struct tbx_vec rr;
             if (dx < radx) {
                 rr.x = b.x - a.x;
+                if (rr.x == 0) {
+                    rr.x = ab->id;
+                }
             }
             if (dy < rady) {
                 rr.y = b.y - a.y;
+                if (rr.y == 0) {
+                    rr.y = ab->id;
+                }
             }
             force.x -= rr.x;
             force.y -= rr.y;
@@ -193,6 +201,12 @@ static void arrange_repel(struct tbx_arrange_box* ab)
             ab->x += force.x * radx * 0.9;
             ab->y += force.y * rady * 0.9;
         }
+    }
+
+    if (!force.x && !force.x) {
+        ab->mag *= 0.5;
+    } else {
+        ab->mag = 2.0;
     }
 
     ab->force.x += force.x;
@@ -224,17 +238,33 @@ bool arrange_run(struct tbx_server* server)
         return true;
     }
 
-    for (int i = 0; i < 2000; i++) {
-        // console_log("i:%d", i);
-        struct tbx_arrange_box* ab;
-        wl_list_for_each(ab, &boxes, link)
-        {
-            arrange_repel(ab);
+    struct tbx_arrange_box* ab;
+    for (int j = 0; j < 10; j++) {
+        for (int i = 0; i < 100; i++) {
+            // console_log("i:%d", i);
+            overlaps = 0;
+            wl_list_for_each(ab, &boxes, link)
+            {
+                arrange_repel(ab);
+            }
+            if (!overlaps) {
+                break;
+            }
+            wl_list_for_each(ab, &boxes, link)
+            {
+                arrange_update(ab);
+            }
         }
-        wl_list_for_each(ab, &boxes, link)
-        {
-            arrange_update(ab);
+        if (overlaps == 0) {
+            break;
         }
+
+        wl_list_for_each(ab, &boxes, link)
+            {
+                ab->force.x = 0;
+                ab->force.y = 0;
+                ab->mag = 0;
+            }
     }
     return true;
 }

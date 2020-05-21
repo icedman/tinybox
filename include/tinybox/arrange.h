@@ -24,6 +24,7 @@ struct tbx_arrange_box {
     float height;
 
     struct tbx_vec force;
+    float mag;
 };
 
 void arrange_begin(struct tbx_server* server, int workspace, int gap, int margin);
