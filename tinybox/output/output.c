@@ -27,7 +27,7 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-#define DO_DAMAGE_TRACK 1
+#define DO_DAMAGE_TRACK 0
 #define DAMAGE_LIFE 4
 
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
@@ -493,9 +493,9 @@ static void output_frame(struct wl_listener* listener, void* data)
         }
 
         struct wlr_box indicator = {
-            0,0,8,8
+            4,4,4,4
         };
-        float indicator_color[4] = { 1,1,0,1 };
+        float indicator_color[4] = { 1,1,1,1 };
         render_rect(output->wlr_output, &indicator, indicator_color, output->wlr_output->scale);
 
         goto end_render;
