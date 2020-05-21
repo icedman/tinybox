@@ -8,7 +8,7 @@
 #include <wayland-server-core.h>
 
 struct tbx_menu;
-struct tbx_view ;
+struct tbx_view;
 
 struct tbx_output {
     struct wl_list link;

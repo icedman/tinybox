@@ -145,8 +145,8 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         int tflags = unfocus_offset ? style->window_title_focus : style->window_title_unfocus;
         if (tflags & sf_raised) {
             render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-        } else if (tflags & sf_sunken){
-            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+        } else if (tflags & sf_sunken) {
+            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
         }
 
         // label
@@ -159,8 +159,8 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         tflags = unfocus_offset ? style->window_label_focus : style->window_label_unfocus;
         if (tflags & sf_raised) {
             render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-        } else if (tflags & sf_sunken){
-            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+        } else if (tflags & sf_sunken) {
+            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
         }
 
         // title
@@ -174,7 +174,8 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             .height = box.height,
         };
 
-        if (sc_box.x) {}
+        if (sc_box.x) {
+        }
 
         box.width = view->title_box.width;
         box.height = view->title_box.height;
@@ -217,8 +218,8 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         int tflags = unfocus_offset ? style->window_handle_focus : style->window_handle_unfocus;
         if (tflags & sf_raised) {
             render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-        } else if (tflags & sf_sunken){
-            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+        } else if (tflags & sf_sunken) {
+            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
         }
 
         // render_rect(output, &box, colorDebug2, output->scale);
@@ -237,8 +238,8 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             tflags = unfocus_offset ? style->window_grip_focus : style->window_grip_unfocus;
             if (tflags & sf_raised) {
                 render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-            } else if (tflags & sf_sunken){
-                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+            } else if (tflags & sf_sunken) {
+                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
             }
 
             memcpy(&view->hotspots[HS_EDGE_BOTTOM_LEFT], &box, sizeof(struct wlr_box));
@@ -255,8 +256,8 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
 
             if (tflags & sf_raised) {
                 render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-            } else if (tflags & sf_sunken){
-                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+            } else if (tflags & sf_sunken) {
+                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
             }
         }
     }
@@ -473,13 +474,11 @@ static void output_frame(struct wl_listener* listener, void* data)
     //-----------------
     // all or nothing damage
     int damages = 0;
-    if (server->ws_animate ||
-            cursor->mode != TBX_CURSOR_PASSTHROUGH ||
-            server->menu->shown) {
+    if (server->ws_animate || cursor->mode != TBX_CURSOR_PASSTHROUGH || server->menu->shown) {
         server->main_output->damage_age = DAMAGE_LIFE * 4; // because of animations
     }
 
-    if (server->main_output->damage_age-->0) {
+    if (server->main_output->damage_age-- > 0) {
         damages = 1;
     }
 
@@ -493,15 +492,15 @@ static void output_frame(struct wl_listener* listener, void* data)
         }
 
         struct wlr_box indicator = {
-            4,4,4,4
+            4, 4, 4, 4
         };
-        float indicator_color[4] = { 1,1,1,1 };
+        float indicator_color[4] = { 1, 1, 1, 1 };
         render_rect(output->wlr_output, &indicator, indicator_color, output->wlr_output->scale);
 
         goto end_render;
     }
 #endif
-    
+
     // render box
     float color[4] = { 0, 0, 0, 1.0 };
     wlr_renderer_clear(renderer, color);

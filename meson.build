@@ -20,7 +20,7 @@ add_project_arguments(
     '-Wno-unused-result',
     '-Wno-missing-braces',
     '-Wundef',
-    '-Wvla',
+    '-Wvla'
   ],
   language: 'c',
 )
@@ -28,6 +28,8 @@ add_project_arguments(
 tinybox_inc = include_directories('include')
 
 cc = meson.get_compiler('c')
+
+math = cc.find_library('m', required : true)
 
 wayland_server = dependency('wayland-server')
 wayland_cursor = dependency('wayland-cursor')

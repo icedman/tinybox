@@ -24,6 +24,7 @@ tinybox_src = files(
   'input/seat.c',
   'input/libinput.c',
   
+  'desktop/arrange.c',
   'desktop/view.c',
   'desktop/workspace.c',
   'desktop/tree.c',
@@ -51,6 +52,7 @@ tinybox_dep = [
   glesv2,
   wlroots,
   xkbcommon,
+  math
   ]
 
 executable(

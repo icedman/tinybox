@@ -325,8 +325,8 @@ void render_rect(struct wlr_output* output, struct wlr_box* box, float color[4],
 void render_rect_outline(struct wlr_output* output, struct wlr_box* box, float color[4],
     float width, int bevel, float scale)
 {
-    struct wlr_texture *bevelTop;
-    struct wlr_texture *bevelBottom;
+    struct wlr_texture* bevelTop;
+    struct wlr_texture* bevelBottom;
 
     if (bevel == 1) {
         bevelTop = get_texture_cache(tx_bevel_light);

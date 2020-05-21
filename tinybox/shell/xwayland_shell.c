@@ -296,10 +296,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                     struct tbx_view* ancestor;
                     wl_list_for_each(ancestor, &view->server->views, link)
                     {
-                        if (ancestor == view ||
-                            !ancestor->mapped ||
-                            !ancestor->x ||
-                            ancestor->width < view->width) {
+                        if (ancestor == view || !ancestor->mapped || !ancestor->x || ancestor->width < view->width) {
                             continue;
                         }
                         if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {

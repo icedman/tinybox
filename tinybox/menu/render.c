@@ -1,10 +1,10 @@
 
-#include "tinybox/menu.h"
+#include "tinybox/render.h"
 #include "common/cairo.h"
 #include "common/pango.h"
 #include "common/util.h"
+#include "tinybox/menu.h"
 #include "tinybox/output.h"
-#include "tinybox/render.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
 #include "tinybox/view.h"
@@ -169,7 +169,7 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
     flags = style->menu_frame;
     color_to_rgba(color, style->menu_frame_color);
     color_to_rgba(colorTo, style->menu_frame_colorTo);
-    
+
     struct wlr_box frame = {
         0, title_height + borderWidth,
         menu_width,
@@ -275,14 +275,14 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
     // add the bevels
     int tflags = style->menu_frame;
-    float bevelColor[4] = { 1,0,1,1 };
+    float bevelColor[4] = { 1, 0, 1, 1 };
     memcpy(&box, &menu->frame_box, sizeof(struct wlr_box));
     box.x += menu->menu_x + borderWidth;
     box.y += menu->menu_y + borderWidth;
     if (tflags & sf_raised) {
         render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-    } else if (tflags & sf_sunken){
-        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+    } else if (tflags & sf_sunken) {
+        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
     }
 
     tflags = style->menu_title;
@@ -291,8 +291,8 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     box.y += menu->menu_y + borderWidth;
     if (tflags & sf_raised) {
         render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-    } else if (tflags & sf_sunken){
-        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+    } else if (tflags & sf_sunken) {
+        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
     }
 
     tflags = style->menu_hilite;
@@ -317,8 +317,8 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
         if (tflags & sf_raised) {
             render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-        } else if (tflags & sf_sunken){
-            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);    
+        } else if (tflags & sf_sunken) {
+            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
         }
     }
 }

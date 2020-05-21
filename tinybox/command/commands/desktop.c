@@ -1,5 +1,6 @@
 #include "common/stringop.h"
 #include "common/util.h"
+#include "tinybox/arrange.h"
 #include "tinybox/command.h"
 #include "tinybox/config.h"
 #include "tinybox/seat.h"
@@ -117,6 +118,14 @@ void exec_cycle(struct tbx_command* cmd, int argc, char** argv)
     workspace_cycle_views(cmd->server, cmd->server->workspace);
 }
 
+void exec_arrange(struct tbx_command* cmd, int argc, char** argv)
+{
+    console_log("arrange");
+    arrange_begin(cmd->server, cmd->server->workspace, 4, 8);
+    arrange_run(cmd->server);
+    arrange_end(cmd->server);
+}
+
 void register_desktop_commands(struct tbx_server* server)
 {
     struct tbx_command* wks = register_command(server->command, "workspace", exec_workspace);
@@ -124,4 +133,5 @@ void register_desktop_commands(struct tbx_server* server)
     register_command(server->command, "move", exec_move_window_to_workspace);
     register_command(server->command, "shade", exec_shade_window);
     register_command(server->command, "cycle", exec_cycle);
+    register_command(server->command, "arrange", exec_arrange);
 }
