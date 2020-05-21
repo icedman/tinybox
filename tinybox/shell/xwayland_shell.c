@@ -287,14 +287,19 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                 //-------------------------
                 // hacky: adopt a parent?
                 //-------------------------
+                // properly implement popups
                 struct tbx_view* focused = view_from_surface(view->server,
                     view->server->seat->seat->keyboard_state.focused_surface);
 
                 if (!focused || focused->view_type != VIEW_TYPE_XWAYLAND) {
+                    focused = NULL;
                     struct tbx_view* ancestor;
                     wl_list_for_each(ancestor, &view->server->views, link)
                     {
-                        if (ancestor == view || !ancestor->x || ancestor->width < view->width) {
+                        if (ancestor == view ||
+                            !ancestor->mapped ||
+                            !ancestor->x ||
+                            ancestor->width < view->width) {
                             continue;
                         }
                         if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
@@ -304,9 +309,9 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                     }
                 }
 
-                if (focused && focused->view_type == VIEW_TYPE_XWAYLAND) {
-                    // console_log("adopted %d %d %d %d", xsurface->x, xsurface->width, focused->x, focused->y);
-                    // view->parent = focused;
+                if (focused) {
+                    console_log("adopted %d %d %d", focused->width, focused->x, focused->y);
+                    view->parent = focused;
                     view->x = xsurface->x + focused->x;
                     view->y = xsurface->y + focused->y;
                     return;
@@ -322,9 +327,9 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
     view_set_focus(view, view->surface);
 
     // always set to zero
-    view_move_to_center(view, NULL);
     wlr_xwayland_surface_configure(view->xwayland_surface, 0,
         0, view->width, view->height);
+    view_move_to_center(view, NULL);
     view_damage(view);
 }
 

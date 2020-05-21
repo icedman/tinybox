@@ -27,8 +27,8 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-#define DO_DAMAGE_TRACK 0
-#define DAMAGE_LIFE 2
+#define DO_DAMAGE_TRACK 1
+#define DAMAGE_LIFE 4
 
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
 {
@@ -471,48 +471,16 @@ static void output_frame(struct wl_listener* listener, void* data)
     //-----------------
     // primitive damage code
     //-----------------
-    // implement double buffer first? or understand wl_ buffering
-    // primitive damage tracking
-    // too primitive ~ can't know residual damage when window is closed
-    
+    // all or nothing damage
     int damages = 0;
-    struct tbx_view* damage_view;
-    struct wlr_box damage_box;
-    float damage_color[4] = { 1.0, 0, 1.0, 1.0 };
-
-    if (!wl_list_length(&server->views)) {
-        damages = 1;
-    }
-
-    wl_list_for_each(damage_view, &server->views, link)
-    {
-        if (server->ws_animate ||
+    if (server->ws_animate ||
             cursor->mode != TBX_CURSOR_PASSTHROUGH ||
             server->menu->shown) {
-            damages = 1;
-            break;
-        }
+        server->main_output->damage_age = DAMAGE_LIFE * 4; // because of animations
+    }
 
-        if (damage_view->damage.width == 0) {
-            continue;
-        }
-
-        if (damages) {
-            break;
-        }
-
-        memcpy(&damage_box, &damage_view->damage, sizeof(struct wlr_box));
-        grow_box_hv(&damage_box, 8, 8);
-        render_rect(output->wlr_output, &damage_box, damage_color, output->wlr_output->scale);
-
-        // console_log("d: %d %d %d %d", damage_view->damage.x, damage_view->damage.y,
-        //         damage_view->damage.width, damage_view->damage.height);
-
-        if (damage_view->damage_age++ > DAMAGE_LIFE) {
-            damage_view->damage.width = 0;
-        }
-        
-        damages++;
+    if (server->main_output->damage_age-->0) {
+        damages = 1;
     }
 
     if (!damages) {
@@ -732,6 +700,7 @@ static void server_new_output(struct wl_listener* listener, void* data)
 
     /* Sets up a listener for the frame notify event. */
     output->frame.notify = output_frame;
+    output->damage_age = DAMAGE_LIFE;
     wl_signal_add(&wlr_output->events.frame, &output->frame);
     output->destroy.notify = output_handle_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);
@@ -759,8 +728,17 @@ bool output_setup(struct tbx_server* server)
 {
     server->output_layout = wlr_output_layout_create();
     wl_list_init(&server->outputs);
-
     server->new_output.notify = server_new_output;
     wl_signal_add(&server->backend->events.new_output, &server->new_output);
     return true;
+}
+
+void output_damage_view(struct tbx_output* output, struct tbx_view* view)
+{
+    output->server->main_output->damage_age = DAMAGE_LIFE;
+}
+
+void output_damage_menu(struct tbx_output* output, struct tbx_menu* menu)
+{
+    output->server->main_output->damage_age = DAMAGE_LIFE;
 }

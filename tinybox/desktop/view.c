@@ -321,6 +321,7 @@ void view_destroy(struct tbx_view* view)
 
 void view_close(struct tbx_view* view)
 {
+    view_damage(view);
     view->interface->close(view);
 }
 
@@ -331,4 +332,6 @@ void view_damage(struct tbx_view* view)
     view->damage.x = view->x;
     view->damage.y = view->y;
     view->damage_age = 0;
+
+    output_damage_view(view->server->main_output, view);
 }
