@@ -243,8 +243,8 @@ void view_send_to_workspace(struct tbx_view* view, int id,
     if (id < 0) {
         id = 0;
     }
-    if (id >= config->workspaces) {
-        id = config->workspaces;
+    if (id >= config->workspaces - 1) {
+        id = config->workspaces - 1;
     }
 
     int prev = view->workspace;

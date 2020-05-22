@@ -32,6 +32,10 @@
 
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
 {
+    // if (view->csd) {
+    //     return;
+    // }
+    
     // smoothen
     if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT || view->server->cursor->resize_edges & WLR_EDGE_TOP) && (view->request_box.width > 20 && view->request_box.height > 20) && (view->request_box.width != box->width || view->request_box.height != box->height)) {
         box->width = view->request_box.width;

@@ -12,7 +12,7 @@ struct tbx_vec {
     float y;
 };
 
-struct tbx_arrange_box {
+struct tbx_packer_node {
     struct wl_list link;
     struct tbx_view* view;
 

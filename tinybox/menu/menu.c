@@ -72,7 +72,7 @@ void menu_show(struct tbx_menu* menu, int x, int y, bool shown)
 
 void menu_show_submenu(struct tbx_menu* menu, struct tbx_menu* submenu)
 {
-    if (menu->submenu == submenu) {
+    if (menu->submenu == submenu && submenu->shown) {
         // already showing
         return;
     }

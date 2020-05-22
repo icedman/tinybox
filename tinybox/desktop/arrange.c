@@ -16,7 +16,7 @@ static struct wl_list boxes;
 static int box_id = 0;
 static int overlaps = 0;
 
-static bool ab_overlap(struct tbx_arrange_box *a, struct tbx_arrange_box *b) 
+static bool ab_overlap(struct tbx_packer_node *a, struct tbx_packer_node *b) 
 { 
     int gap = 4;
     struct tbx_vec l1 = {
@@ -74,7 +74,7 @@ static void vec_dir_to_xy(struct tbx_vec* from, struct tbx_vec* to, struct tbx_v
 
 static void arrange_add_view(struct tbx_server* server, struct tbx_view* view)
 {
-    struct tbx_arrange_box* ab = calloc(1, sizeof(struct tbx_arrange_box));
+    struct tbx_packer_node* ab = calloc(1, sizeof(struct tbx_packer_node));
     ab->id = box_id++;
 
     struct wlr_box geometry;
@@ -122,7 +122,7 @@ static void arrange_workspace(struct tbx_server* server, int workspace)
     }
 }
 
-static void arrange_update(struct tbx_arrange_box* ab)
+static void arrange_update(struct tbx_packer_node* ab)
 {
     ab->x += ab->force.x * ab->mag;
     ab->y += ab->force.y * ab->mag;
@@ -132,15 +132,27 @@ static void arrange_update(struct tbx_arrange_box* ab)
     // borders
     if (ab->x - (ab->width) / 2 < 0 + margin) {
         ab->x = ab->width/2 + margin;
+        if (ab->force.x < 0) {
+            ab->force.x *= -1;
+        }
     }
     if (ab->y - (ab->height) / 2 < 30 + margin) {
         ab->y = ab->height/2 + 30 + margin;
+        if (ab->force.y < 0) {
+            ab->force.y *= -1;
+        }
     }
     if (ab->x + (ab->width) / 2 > box_screen.width - margin) {
         ab->x = box_screen.width - (ab->width/2) - margin;
+        if (ab->force.x > 0) {
+            ab->force.x *= -1;
+        }
     }
     if (ab->y + (ab->height) / 2 > box_screen.height - margin - 8) {
         ab->y = box_screen.height - (ab->height/2) - margin - 8;
+        if (ab->force.y > 0) {
+            ab->force.y *= -1;
+        }
     }
 
     ab->view->x = ab->x - ab->width / 2;
@@ -149,10 +161,10 @@ static void arrange_update(struct tbx_arrange_box* ab)
     // console_log(">%d %f %f %f %f", ab->id, ab->x, ab->y);
 }
 
-static void arrange_repel(struct tbx_arrange_box* ab)
+static void arrange_repel(struct tbx_packer_node* ab)
 {
     struct tbx_vec force;
-    struct tbx_arrange_box* other;
+    struct tbx_packer_node* other;
     wl_list_for_each(other, &boxes, link)
     {
         if (other == ab) {
@@ -224,8 +236,8 @@ void arrange_begin(struct tbx_server* server, int workspace, int gap, int margin
 
 void arrange_end(struct tbx_server* server)
 {
-    struct tbx_arrange_box* ab;
-    struct tbx_arrange_box* tmp;
+    struct tbx_packer_node* ab;
+    struct tbx_packer_node* tmp;
     wl_list_for_each_safe(ab, tmp, &boxes, link)
     {
         free(ab);
@@ -238,7 +250,7 @@ bool arrange_run(struct tbx_server* server)
         return true;
     }
 
-    struct tbx_arrange_box* ab;
+    struct tbx_packer_node* ab;
     for (int j = 0; j < 10; j++) {
         for (int i = 0; i < 100; i++) {
             // console_log("i:%d", i);
