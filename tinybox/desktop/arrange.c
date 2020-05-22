@@ -40,7 +40,6 @@ static Node* splitNode(Node* n, int w, int h)
     n->used = true;
     n->down = createNode(n->x, n->y + h, n->w, n->h - h);
     n->right = createNode(n->x + w, n->y, n->w - w, h);
-    console_log("split!");
     return n;
 }
 
@@ -60,16 +59,59 @@ static Node* findNode(Node* r, int w, int h)
     return NULL;
 }
 
-static void fitNodes()
+static void fitNodes(Node *_root)
 {
     struct tbx_packer_node* block;
     wl_list_for_each(block, &boxes, link)
     {
-        Node* node = findNode(&root, block->w, block->h);
+        Node* node = findNode(_root, block->w, block->h);
         if (node != NULL) {
             block->fit = splitNode(node, block->w, block->h);
             block->view->x = block->fit->x + 4;
             block->view->y = block->fit->y + 4;
+        }
+    }
+}
+
+static void opitmizeSizes()
+{
+    int widths[] = {
+        (box_screen.width/2),
+        (box_screen.width/3),
+        (box_screen.width/3*2),
+        0
+    };
+
+    struct tbx_packer_node* i;
+    wl_list_for_each(i, &boxes, link)
+    {
+        int closestD = 0;
+        int closestIdx = -1;
+        for(int j=0;;j++) {
+            int w = widths[j];
+            if (w == 0) {
+                break;
+            }
+
+            int d = i->w - w;
+            d = d * d;
+            if (d < closestD || closestD == 0) {
+                closestD = d;
+                closestIdx = j;
+            }
+        }
+
+        if (widths[closestIdx] < i->w) {
+            i->w = widths[closestIdx];
+            i->view->interface->configure(i->view, i->x, i->y,
+                i->w - 16,
+                i->h - i->view->hotspots[HS_TITLEBAR].height
+                     - i->view->hotspots[HS_HANDLE].height
+                     - (3 * 4)
+                     - 1
+                     // - (i->view->server->style.borderWidth * 4)
+                     - (i->view->server->style.frameWidth * 2)
+                );
         }
     }
 }
@@ -208,8 +250,9 @@ bool arrange_run(struct tbx_server* server)
         return true;
     }
 
+    opitmizeSizes();
     sortNodes();
-    fitNodes();
+    fitNodes(&root);
 
     struct tbx_packer_node* block;
     wl_list_for_each(block, &boxes, link)
