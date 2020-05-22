@@ -14,78 +14,112 @@ static struct wlr_box box_screen;
 static struct tbx_vec center_screen;
 static struct wl_list boxes;
 static int box_id = 0;
-static int overlaps = 0;
 
-static bool ab_overlap(struct tbx_packer_node *a, struct tbx_packer_node *b) 
-{ 
-    int gap = 4;
-    struct tbx_vec l1 = {
-        .x = a->x - a->width/2 - gap,
-        .y = a->y - a->height/2 - gap - 20
-    };
-    struct tbx_vec r1 = {
-        .x = a->x + a->width/2 + gap,
-        .y = a->y + a->height/2 + gap
-    };
+typedef struct tbx_packer_node Node;
 
-    struct tbx_vec l2 = {
-        .x = b->x - b->width/2 - gap,
-        .y = b->y - b->height/2 - gap - 20
-    };
-    struct tbx_vec r2 = {
-        .x = b->x + b->width/2 + gap,
-        .y = b->y + b->height/2 + gap
-    };
+Node root;
 
-    if (l1.x >= r2.x || l2.x >= r1.x) 
-        return false; 
-
-    if (l1.y >= r2.y || l2.y >= r1.y) 
-        return false; 
-  
-    overlaps++;
-    return true; 
-} 
-
-static void vec_normalize(struct tbx_vec* vec)
+static Node* createNode(int x, int y, int w, int h)
 {
-    float d = sqrt((vec->x * vec->x) + (vec->y * vec->y));
-    if (d == 0) {
-        d = 0.01;
+    Node* n = calloc(1, sizeof(Node));
+    n->id = box_id++;
+    n->x = x;
+    n->y = y;
+    n->w = w;
+    n->h = h;
+    n->view = NULL;
+    n->fit = NULL;
+    n->right = NULL;
+    n->down = NULL;
+    n->used = false;
+    return n;
+}
+
+static Node* splitNode(Node* n, int w, int h)
+{
+    n->used = true;
+    n->down = createNode(n->x, n->y + h, n->w, n->h - h);
+    n->right = createNode(n->x + w, n->y, n->w - w, h);
+    console_log("split!");
+    return n;
+}
+
+static Node* findNode(Node* r, int w, int h)
+{
+    if (r->used) {
+        Node* rr = findNode(r->right, w, h);
+        if (rr != NULL) {
+            return rr;
+        } else {
+            return findNode(r->down, w, h);
+        }
+    } else if ((w <= r->w) && (h <= r->h)) {
+        return r;
     }
-    vec->x = vec->x / d;
-    vec->y = vec->y / d;
-    // console_log("%f", d);
+
+    return NULL;
 }
 
-static float vec_distance(struct tbx_vec* from, struct tbx_vec* to)
+static void fitNodes()
 {
-    float dx = (from->x - to->x);
-    float dy = (from->y - to->y);
-    return sqrt((dx * dx) + (dy * dy));
+    struct tbx_packer_node* block;
+    wl_list_for_each(block, &boxes, link)
+    {
+        Node* node = findNode(&root, block->w, block->h);
+        if (node != NULL) {
+            block->fit = splitNode(node, block->w, block->h);
+            block->view->x = block->fit->x + 4;
+            block->view->y = block->fit->y + 4;
+        }
+    }
 }
 
-static void vec_dir_to_xy(struct tbx_vec* from, struct tbx_vec* to, struct tbx_vec* res)
+static void sortNodes()
 {
-    res->x = to->x - from->x;
-    res->y = to->y - from->y;
-    vec_normalize(res);
+    struct tbx_packer_node* i;
+    struct tbx_packer_node* j;
+
+    wl_list_for_each(i, &boxes, link)
+    {
+        wl_list_for_each(j, &boxes, link)
+        {
+            float ia = i->w * i->h;
+            float ja = j->w * j->h;
+            if (ia > ja) {
+                // swap
+                struct tbx_view* tmp_view = i->view;
+                struct wlr_box box;
+                box.x = i->x;
+                box.y = i->y;
+                box.width = i->w;
+                box.height = i->h;
+
+                i->view = j->view;
+                i->x = j->x;
+                i->y = j->y;
+                i->w = j->w;
+                i->h = j->h;
+
+                j->view = tmp_view;
+                j->x = box.x;
+                j->y = box.y;
+                j->w = box.width;
+                j->h = box.height;
+            }
+        }
+    }
 }
 
 static void arrange_add_view(struct tbx_server* server, struct tbx_view* view)
 {
-    struct tbx_packer_node* ab = calloc(1, sizeof(struct tbx_packer_node));
-    ab->id = box_id++;
-
     struct wlr_box geometry;
     view->interface->get_geometry(view, &geometry);
 
+    Node* ab = createNode(view->x, view->y, geometry.width + 16, geometry.height + 46 + 8);
     ab->view = view;
-    ab->x = view->x + geometry.width / 2;
-    ab->y = view->y + geometry.height / 2;
-    ab->width = geometry.width;
-    ab->height = geometry.height;
 
+    wl_list_insert(&boxes, &ab->link);
+    
     struct tbx_output* output = view_get_preferred_output(view);
 
     struct wlr_box* main_box = wlr_output_layout_get_box(
@@ -93,22 +127,13 @@ static void arrange_add_view(struct tbx_server* server, struct tbx_view* view)
 
     memcpy(&box_screen, main_box, sizeof(struct wlr_box));
 
+    root.x = 8;
+    root.y = 38;
+    root.w = box_screen.width - 16;
+    root.h = box_screen.height - 46;
+
     center_screen.x = (box_screen.width / 2);
     center_screen.y = (box_screen.height / 2);
-
-    struct tbx_vec to_center;
-    struct tbx_vec loc = {
-        .x = ab->x,
-        .y = ab->y
-    };
-    vec_dir_to_xy(&center_screen, &loc, &to_center);
-
-    if (ab->x == center_screen.x || ab->y == center_screen.y) {
-        ab->x += ab->id;
-        ab->y += ab->id;
-    }
-
-    wl_list_insert(&boxes, &ab->link);
 }
 
 static void arrange_workspace(struct tbx_server* server, int workspace)
@@ -116,128 +141,61 @@ static void arrange_workspace(struct tbx_server* server, int workspace)
     struct tbx_view* view;
     wl_list_for_each(view, &server->views, link)
     {
-        if (view->workspace == workspace) {
+        if (view->workspace == workspace && view->mapped) {
             arrange_add_view(server, view);
         }
     }
 }
 
-static void arrange_update(struct tbx_packer_node* ab)
+static void arrange_update(Node* ab)
 {
-    ab->x += ab->force.x * ab->mag;
-    ab->y += ab->force.y * ab->mag;
+    if (!ab) {
+        return;
+    }
 
+    console_log("update %d", ab->id);
+    
     float margin = 8;
 
     // borders
-    if (ab->x - (ab->width) / 2 < 0 + margin) {
-        ab->x = ab->width/2 + margin;
-        if (ab->force.x < 0) {
-            ab->force.x *= -1;
-        }
+    if (ab->x < margin) {
+        ab->x = margin;
     }
-    if (ab->y - (ab->height) / 2 < 30 + margin) {
-        ab->y = ab->height/2 + 30 + margin;
-        if (ab->force.y < 0) {
-            ab->force.y *= -1;
-        }
+    if (ab->y < 30 + margin) {
+        ab->y = 30 + margin;
     }
-    if (ab->x + (ab->width) / 2 > box_screen.width - margin) {
-        ab->x = box_screen.width - (ab->width/2) - margin;
-        if (ab->force.x > 0) {
-            ab->force.x *= -1;
-        }
+    if (ab->x > box_screen.width - margin) {
+        ab->x = box_screen.width - margin;
     }
-    if (ab->y + (ab->height) / 2 > box_screen.height - margin - 8) {
-        ab->y = box_screen.height - (ab->height/2) - margin - 8;
-        if (ab->force.y > 0) {
-            ab->force.y *= -1;
+    if (ab->y > box_screen.height - margin - 8) {
+        ab->y = box_screen.height - margin - 8;
+    }
+    
+    if (ab->fit) {
+        struct tbx_view *view = ab->fit->view;
+        if (view) {
+            view->x = ab->x;
+            view->y = ab->y;
+            console_log(">%d %f %f %f %f", ab->id, ab->x, ab->y);
         }
     }
 
-    ab->view->x = ab->x - ab->width / 2;
-    ab->view->y = ab->y - ab->height / 2;
-
-    // console_log(">%d %f %f %f %f", ab->id, ab->x, ab->y);
-}
-
-static void arrange_repel(struct tbx_packer_node* ab)
-{
-    struct tbx_vec force;
-    struct tbx_packer_node* other;
-    wl_list_for_each(other, &boxes, link)
-    {
-        if (other == ab) {
-            continue;
-        }
-
-        struct tbx_vec a = {
-            .x = ab->x,
-            .y = ab->y,
-        };
-
-        struct tbx_vec b = {
-            .x = other->x,
-            .y = other->y,
-        };
-
-        float d = vec_distance(&a, &b);
-        if (d == 0) {
-            a.x = ab->id;
-        }
-
-        if (ab_overlap(ab, other)) {
-            float radx = (ab->width + other->width)/2; 
-            float rady = (ab->height + other->height)/2; 
-
-            float dx = sqrt((a.x - b.x)*(a.x - b.x));
-            float dy = sqrt((a.y - b.y)*(a.y - b.y));
-            
-            struct tbx_vec rr;
-            if (dx < radx) {
-                rr.x = b.x - a.x;
-                if (rr.x == 0) {
-                    rr.x = ab->id;
-                }
-            }
-            if (dy < rady) {
-                rr.y = b.y - a.y;
-                if (rr.y == 0) {
-                    rr.y = ab->id;
-                }
-            }
-            force.x -= rr.x;
-            force.y -= rr.y;
-            vec_normalize(&force);
-
-            ab->x += force.x * radx * 0.9;
-            ab->y += force.y * rady * 0.9;
-        }
-    }
-
-    if (!force.x && !force.x) {
-        ab->mag *= 0.5;
-    } else {
-        ab->mag = 2.0;
-    }
-
-    ab->force.x += force.x;
-    ab->force.y += force.y;
-    vec_normalize(&ab->force);
-    // memcpy(&ab->force, &force, sizeof(struct tbx_vec));
+    arrange_update(ab->right);
+    arrange_update(ab->down);
 }
 
 void arrange_begin(struct tbx_server* server, int workspace, int gap, int margin)
 {
     box_id = 0;
+    memset(&root, 0, sizeof(struct tbx_packer_node));
     wl_list_init(&boxes);
     arrange_workspace(server, workspace);
 }
 
 void arrange_end(struct tbx_server* server)
 {
-    struct tbx_packer_node* ab;
-    struct tbx_packer_node* tmp;
+    Node* ab;
+    Node* tmp;
     wl_list_for_each_safe(ab, tmp, &boxes, link)
     {
         free(ab);
@@ -250,33 +208,17 @@ bool arrange_run(struct tbx_server* server)
         return true;
     }
 
-    struct tbx_packer_node* ab;
-    for (int j = 0; j < 10; j++) {
-        for (int i = 0; i < 100; i++) {
-            // console_log("i:%d", i);
-            overlaps = 0;
-            wl_list_for_each(ab, &boxes, link)
-            {
-                arrange_repel(ab);
-            }
-            if (!overlaps) {
-                break;
-            }
-            wl_list_for_each(ab, &boxes, link)
-            {
-                arrange_update(ab);
-            }
-        }
-        if (overlaps == 0) {
-            break;
-        }
+    sortNodes();
+    fitNodes();
 
-        wl_list_for_each(ab, &boxes, link)
-            {
-                ab->force.x = 0;
-                ab->force.y = 0;
-                ab->mag = 0;
-            }
+    struct tbx_packer_node* block;
+    wl_list_for_each(block, &boxes, link)
+    {
+        if (block->fit) {
+            block->x = block->fit->x;
+            block->y = block->fit->y;
+        }
+        arrange_update(block);
     }
     return true;
 }

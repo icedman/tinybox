@@ -20,11 +20,14 @@ struct tbx_packer_node {
 
     float x;
     float y;
-    float width;
-    float height;
+    float w;
+    float h;
 
-    struct tbx_vec force;
-    float mag;
+    struct tbx_packer_node* fit;
+    struct tbx_packer_node* down;
+    struct tbx_packer_node* right;
+
+    bool used;
 };
 
 void arrange_begin(struct tbx_server* server, int workspace, int gap, int margin);

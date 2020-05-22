@@ -309,8 +309,8 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                 if (focused) {
                     console_log("adopted %d %d %d", focused->width, focused->x, focused->y);
                     view->parent = focused;
-                    view->x = xsurface->x + focused->x;
-                    view->y = xsurface->y + focused->y;
+                    //view->x = xsurface->x + focused->x;
+                    //view->y = xsurface->y + focused->y;
                     return;
                 }
             }
