@@ -115,6 +115,11 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         render_rect_outline(output, &box, color, frameWidth, false, output->scale);
     }
 
+    bool mini = view->server->config.mini_titlebar;
+    if (mini) {
+        titlebarHeight = handleWidth;
+    }
+
     // ----------------------
     // render titlebar
     // ----------------------
@@ -153,45 +158,47 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
         }
 
-        // label
-        grow_box_hv(&box, -margin, -margin);
-        render_texture(output, &box,
-            get_texture_cache(tx_window_label_focus + unfocus_offset),
-            output->scale);
-        // render_rect(output, &box, bevelColor, output->scale);
+        if (!mini) {
+            // label
+            grow_box_hv(&box, -margin, -margin);
+            render_texture(output, &box,
+                get_texture_cache(tx_window_label_focus + unfocus_offset),
+                output->scale);
+            // render_rect(output, &box, bevelColor, output->scale);
 
-        tflags = unfocus_offset ? style->window_label_focus : style->window_label_unfocus;
-        if (tflags & sf_raised) {
-            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-        } else if (tflags & sf_sunken) {
-            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
-        }
-
-        // title
-        box.x += margin;
-        box.y += margin;
-
-        struct wlr_box sc_box = {
-            .x = box.x,
-            .y = box.y,
-            .width = box.width - (margin * 4),
-            .height = box.height,
-        };
-
-        if (sc_box.x) {
-        }
-
-        box.width = view->title_box.width;
-        box.height = view->title_box.height;
-
-        if (view->title) {
-            scissor_output(output, sc_box);
-            if (!unfocus_offset) {
-                render_texture(output, &box, view->title, output->scale);
-            } else {
-                render_texture(output, &box, view->title_unfocused, output->scale);
+            tflags = unfocus_offset ? style->window_label_focus : style->window_label_unfocus;
+            if (tflags & sf_raised) {
+                render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+            } else if (tflags & sf_sunken) {
+                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
             }
-            wlr_renderer_scissor(rdata->renderer, NULL);
+
+            // title
+            box.x += margin;
+            box.y += margin;
+
+            struct wlr_box sc_box = {
+                .x = box.x,
+                .y = box.y,
+                .width = box.width - (margin * 4),
+                .height = box.height,
+            };
+
+            if (sc_box.x) {
+            }
+
+            box.width = view->title_box.width;
+            box.height = view->title_box.height;
+
+            if (view->title) {
+                scissor_output(output, sc_box);
+                if (!unfocus_offset) {
+                    render_texture(output, &box, view->title, output->scale);
+                } else {
+                    render_texture(output, &box, view->title_unfocused, output->scale);
+                }
+                wlr_renderer_scissor(rdata->renderer, NULL);
+            }
         }
     }
 

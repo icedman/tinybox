@@ -123,11 +123,22 @@ static void exec_console(struct tbx_command* cmd, int argc, char** argv)
     }
 }
 
+static void exec_mini_titlebar(struct tbx_command* cmd, int argc, char** argv)
+{
+    struct tbx_config* config = &cmd->server->config;
+    if (argc) {
+        config->mini_titlebar = parse_boolean(argv[0], false);
+    } else {
+        config->mini_titlebar = !config->mini_titlebar;
+    }
+}
+
 void register_config_commands(struct tbx_server* server)
 {
     register_command(server->command, "set", exec_set);
     register_command(server->command, "workspaces", exec_workspaces);
     register_command(server->command, "animate", exec_animate);
     register_command(server->command, "swipe_threshold", exec_swipe_threshold);
+    register_command(server->command, "mini_titlebar", exec_mini_titlebar);
     register_command(server->command, "console", exec_console);
 }

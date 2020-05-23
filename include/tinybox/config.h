@@ -69,6 +69,7 @@ struct tbx_config {
     int swipe_threshold;
     bool animate;
     bool console;
+    bool mini_titlebar;
 
     uint32_t super_key;
 

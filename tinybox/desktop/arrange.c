@@ -10,14 +10,22 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 
-static struct wlr_box box_screen;
-static struct tbx_vec center_screen;
-static struct wl_list boxes;
-static int box_id = 0;
-
 typedef struct tbx_packer_node Node;
 
-Node root;
+static struct wlr_box box_screen;
+static struct wl_list boxes;
+static int box_id = 0;
+static bool split_screen;
+static Node root;
+static int max_width;
+
+static void resetRoot() {
+    memset(&root, 0, sizeof(struct tbx_packer_node));
+    root.x = 8;
+    root.y = 38;
+    root.w = box_screen.width - 16;
+    root.h = box_screen.height - 46;
+}
 
 static Node* createNode(int x, int y, int w, int h)
 {
@@ -64,6 +72,9 @@ static void fitNodes(Node *_root)
     struct tbx_packer_node* block;
     wl_list_for_each(block, &boxes, link)
     {
+        if (block->fit) {
+            continue;
+        }
         Node* node = findNode(_root, block->w, block->h);
         if (node != NULL) {
             block->fit = splitNode(node, block->w, block->h);
@@ -83,6 +94,7 @@ static void opitmizeSizes()
     };
 
     struct tbx_packer_node* i;
+    max_width = 0;
     wl_list_for_each(i, &boxes, link)
     {
         int closestD = 0;
@@ -112,6 +124,10 @@ static void opitmizeSizes()
                      // - (i->view->server->style.borderWidth * 4)
                      - (i->view->server->style.frameWidth * 2)
                 );
+        }
+
+        if (max_width < i->w) {
+            max_width = i->w;
         }
     }
 }
@@ -159,7 +175,6 @@ static void arrange_add_view(struct tbx_server* server, struct tbx_view* view)
 
     Node* ab = createNode(view->x, view->y, geometry.width + 16, geometry.height + 46 + 8);
     ab->view = view;
-
     wl_list_insert(&boxes, &ab->link);
     
     struct tbx_output* output = view_get_preferred_output(view);
@@ -168,14 +183,11 @@ static void arrange_add_view(struct tbx_server* server, struct tbx_view* view)
         server->output_layout, output->wlr_output);
 
     memcpy(&box_screen, main_box, sizeof(struct wlr_box));
+    resetRoot();
 
-    root.x = 8;
-    root.y = 38;
-    root.w = box_screen.width - 16;
-    root.h = box_screen.height - 46;
-
-    center_screen.x = (box_screen.width / 2);
-    center_screen.y = (box_screen.height / 2);
+    if (view->width > box_screen.width / 2) {
+        split_screen = false;
+    }
 }
 
 static void arrange_workspace(struct tbx_server* server, int workspace)
@@ -229,7 +241,8 @@ static void arrange_update(Node* ab)
 void arrange_begin(struct tbx_server* server, int workspace, int gap, int margin)
 {
     box_id = 0;
-    memset(&root, 0, sizeof(struct tbx_packer_node));
+    split_screen = true;
+    max_width = 0;
     wl_list_init(&boxes);
     arrange_workspace(server, workspace);
 }
@@ -252,7 +265,19 @@ bool arrange_run(struct tbx_server* server)
 
     opitmizeSizes();
     sortNodes();
+
+    if (split_screen) {
+        root.w = max_width + 8;
+    }
     fitNodes(&root);
+
+    if (split_screen) {
+        // second pass
+        resetRoot();
+        root.x += max_width + 4;
+        root.w -= max_width + 16;
+        fitNodes(&root);
+    }
 
     struct tbx_packer_node* block;
     wl_list_for_each(block, &boxes, link)

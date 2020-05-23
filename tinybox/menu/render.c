@@ -331,13 +331,14 @@ static void render_menu_recursive(struct tbx_output* output, struct tbx_menu* me
 
     render_menu(output, menu);
 
+    int borderWidth = 3;
     struct tbx_command* submenu;
     wl_list_for_each(submenu, &menu->items, link)
     {
         struct tbx_menu* item = (struct tbx_menu*)submenu;
         if (item->menu_type == TBX_MENU && item->shown) {
-            item->menu_x = menu->menu_x + menu->menu_width + item->x;
-            item->menu_y = menu->menu_y + item->y;
+            item->menu_x = menu->menu_x + menu->menu_width + item->x + borderWidth;
+            item->menu_y = menu->menu_y + item->y - item->height - borderWidth;
             render_menu_recursive(output, item);
         }
     }
