@@ -289,6 +289,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
 
     struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
     struct tbx_view* view = &xwayland_view->view;
+    struct tbx_server* server = view->server;
 
     view->mapped = true;
     view->title_dirty = true;
@@ -319,8 +320,20 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                 // hacky: adopt a parent?
                 //-------------------------
                 // properly implement popups
-                struct tbx_view* focused = view_from_surface(view->server,
-                    view->server->seat->seat->keyboard_state.focused_surface);
+
+                // current focus
+                struct tbx_view* focused = view_from_surface(server,
+                    server->seat->seat->keyboard_state.focused_surface);
+
+                // under cursor
+                double sx, sy;
+                struct wlr_surface *surface;
+                struct tbx_view* under = desktop_view_at(server,
+                    server->cursor->cursor->x, server->cursor->cursor->y, &surface, &sx, &sy);
+
+                if (under) {
+                    focused = under;
+                }
 
                 if (!focused || focused->view_type != VIEW_TYPE_XWAYLAND) {
                     focused = NULL;
@@ -344,8 +357,10 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
                 if (focused) {
                     console_log("adopted %d %d %d", focused->width, focused->x, focused->y);
                     view->parent = focused;
-                    view->x = xsurface->x + focused->x;
-                    view->y = xsurface->y + focused->y;
+
+                    // (focused->xwayland_surface->x) .. when surface coords not yet configured.. it wouldn't be zero
+                    view->x = xsurface->x + focused->x - (focused->xwayland_surface->x);
+                    view->y = xsurface->y + focused->y - (focused->xwayland_surface->y);
                     return;
                 }
             }
