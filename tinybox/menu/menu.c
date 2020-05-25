@@ -104,6 +104,19 @@ static struct tbx_menu* menu_at_recursive(struct tbx_menu* menu, int x, int y)
 
     if (menu->shown && (x >= menu->menu_x && x <= menu->menu_x + menu->menu_width) && (y >= menu->menu_y && y <= menu->menu_y + menu->menu_height)) {
 
+        // check titlebar
+        struct tbx_view *view = (struct tbx_view*)&menu->view;
+        struct wlr_box *titlebar = &view->hotspots[HS_TITLEBAR];
+        
+        if (titlebar) {
+            if (x >= titlebar->x && x <= titlebar->x + titlebar->width && 
+                y >= titlebar->y && y <= titlebar->y + titlebar->height) {
+                view->hotspot = HS_TITLEBAR;
+            menu->hovered = NULL;
+            return menu;
+            }
+        }
+    
         // were in menu,
         // check item hovered
         struct tbx_command* cmd;
@@ -138,7 +151,7 @@ static struct tbx_menu* menu_at_recursive(struct tbx_menu* menu, int x, int y)
     return NULL;
 }
 
-struct tbx_menu* menut_at(struct tbx_server* server, int x, int y)
+struct tbx_menu* menu_at(struct tbx_server* server, int x, int y)
 {
     server->menu->hovered = NULL;
     struct tbx_menu* res = menu_at_recursive(server->menu, x, y);
@@ -239,4 +252,36 @@ void menu_navigation(struct tbx_server* server, uint32_t keycode)
         menu_walk(server, item, 1, 0);
         break;
     }
+}
+
+static void menu_get_geometry(struct tbx_view* view, struct wlr_box* box)
+{
+    struct tbx_menu_view *menu_view = (struct tbx_menu_view*)view;
+    box->x = box->y = 0;
+    box->width = menu_view->menu->menu_width;
+    box->height = menu_view->menu->menu_height;
+}
+
+static uint32_t menu_view_configure(struct tbx_view* view, double lx, double ly,
+    int width, int height)
+{
+    struct tbx_menu_view *menu_view = (struct tbx_menu_view*)view;
+    menu_view->menu->menu_x = lx;
+    menu_view->menu->menu_y = ly;
+    return 0;
+}
+
+struct tbx_view_interface menu_view_interface = {
+    .get_geometry = menu_get_geometry,
+    .configure = menu_view_configure,
+};
+
+void menu_setup(struct tbx_server* server, struct tbx_menu *menu)
+{
+    menu->view.menu = menu;
+    
+    struct tbx_view *view = (struct tbx_view*)&menu->view;
+    view->server = server;
+    view->interface = &menu_view_interface;
+    view->surface = NULL;
 }

@@ -152,6 +152,7 @@ struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct 
         title_height
     };
     memcpy(&menu->title_box, &title_box, sizeof(struct wlr_box));
+    
     draw_gradient_rect_xy(cx, flags, title_box.x, title_box.y, title_box.width, title_box.height, color, colorTo);
 
     // draw title text
@@ -230,6 +231,11 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
         return;
     }
 
+    // sync xy
+    struct tbx_view *view = (struct tbx_view*)&menu->view;
+    view->x = menu->menu_x;
+    view->y = menu->menu_y;
+
     double ox = 0, oy = 0;
     wlr_output_layout_output_coords(tbx_output->server->output_layout, tbx_output->wlr_output, &ox,
         &oy);
@@ -294,6 +300,8 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     } else if (tflags & sf_sunken) {
         render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
     }
+
+    memcpy(&view->hotspots[HS_TITLEBAR], &box, sizeof(struct wlr_box));
 
     tflags = style->menu_hilite;
 

@@ -207,7 +207,7 @@ static void arrange_update(Node* ab)
         return;
     }
 
-    console_log("update %d", ab->id);
+    // console_log("update %d", ab->id);
     
     float margin = 8;
 

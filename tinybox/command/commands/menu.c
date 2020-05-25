@@ -143,6 +143,8 @@ struct tbx_menu* create_menu(struct tbx_command* cmd, int argc, char** argv)
     struct tbx_menu* menu = calloc(1, sizeof(struct tbx_menu));
     struct tbx_command* m = &menu->command;
 
+    menu_setup(cmd->server, menu);
+
     distill(argv[0]);
     strip_quotes(argv[0]);
 
@@ -177,6 +179,8 @@ struct tbx_menu* create_item(struct tbx_command* cmd, int argc, char** argv)
 {
     struct tbx_menu* menu = create_menu(cmd, argc, argv);
     struct tbx_command* m = &menu->command;
+
+    menu_setup(cmd->server, menu);
 
     // strip_quotes(argv[0]);
     if (argc > 2) {

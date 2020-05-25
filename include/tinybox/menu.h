@@ -2,6 +2,7 @@
 #define TINYBOX_MENU_H
 
 #include "tinybox/command.h"
+#include "tinybox/view.h"
 #include <cairo/cairo.h>
 
 struct tbx_command;
@@ -10,6 +11,12 @@ struct tbx_output;
 enum menu_type {
     TBX_MENU,
     TBX_MENU_ITEM
+};
+
+struct tbx_menu;
+struct tbx_menu_view {
+    struct tbx_view view;
+    struct tbx_menu *menu;
 };
 
 struct tbx_menu {
@@ -55,13 +62,17 @@ struct tbx_menu {
     char* execute;
     int argc;
     char** argv;
+
+    struct tbx_menu_view view;
 };
 
-struct tbx_menu* menut_at(struct tbx_server* server, int x, int y);
+struct tbx_menu* menu_at(struct tbx_server* server, int x, int y);
 void menu_show(struct tbx_menu* menu, int x, int y, bool show);
 void menu_show_submenu(struct tbx_menu* menu, struct tbx_menu* sub_menu);
 void render_menus(struct tbx_output* output);
 void menu_execute(struct tbx_server* server, struct tbx_menu* item);
 void menu_navigation(struct tbx_server* server, uint32_t keycode);
+
+void menu_setup(struct tbx_server* server, struct tbx_menu *menu);
 
 #endif // TINYBOX_MENU_H

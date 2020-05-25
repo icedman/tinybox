@@ -30,10 +30,11 @@ const char* cursor_images[] = {
 static void smooth_move_view(struct tbx_view* view, double tx, double ty,
     double s)
 {
+    view->interface->configure(view, tx, ty, view->width, view->height);
     view->x += (tx - view->x) * s;
     view->y += (ty - view->y) * s;
-    view->request_box.x = tx;
-    view->request_box.y = ty;
+    // view->request_box.x = tx;
+    // view->request_box.y = ty;
     view->request_wait = 4; // wait output frames to commit render
 }
 
@@ -213,7 +214,7 @@ static void process_cursor_motion(struct tbx_server* server, uint32_t time)
 
     // process menu
     if (server->menu->shown) {
-        struct tbx_menu* menu = menut_at(server, cursor->cursor->x, cursor->cursor->y);
+        struct tbx_menu* menu = menu_at(server, cursor->cursor->x, cursor->cursor->y);
         if (menu) {
             if (menu->hovered && menu->hovered->menu_type == TBX_MENU) {
                 menu_show_submenu(menu, menu->hovered);
@@ -307,13 +308,25 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
     double sx, sy;
     struct wlr_surface* surface;
 
-    struct tbx_menu* menu = menut_at(server, cursor->cursor->x, cursor->cursor->y);
+    struct tbx_menu* menu = menu_at(server, cursor->cursor->x, cursor->cursor->y);
     if (menu) {
+
+        struct tbx_view *view = (struct tbx_view*)&menu->view;
+
         if (server->menu_hovered && event->state == WLR_BUTTON_RELEASED) {
             struct tbx_menu* item = server->menu_hovered;
             if (item->execute) {
                 menu_execute(server, item);
             }
+        } else if (event->state == WLR_BUTTON_PRESSED) {
+            // begin grabbing
+            if (view->hotspot == HS_TITLEBAR) {
+                menu->lock = true;
+                begin_interactive_sd(server, view);
+            }
+        } else {
+            cursor->mode = TBX_CURSOR_PASSTHROUGH;
+            view->hotspot = HS_NONE;
         }
         return;
     }

@@ -54,6 +54,11 @@ void view_set_focus(struct tbx_view* view, struct wlr_surface* surface)
         }
     }
 
+    // not handled
+    if (!view->link.next) {
+        return;
+    }
+
     /* Move the view to the front */
     wl_list_remove(&view->link);
     wl_list_insert(&server->views, &view->link);
