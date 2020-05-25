@@ -309,24 +309,24 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
     struct wlr_surface* surface;
 
     struct tbx_menu* menu = menu_at(server, cursor->cursor->x, cursor->cursor->y);
-    if (menu) {
-
+    if (menu && cursor->mode == TBX_CURSOR_PASSTHROUGH) {
         struct tbx_view *view = (struct tbx_view*)&menu->view;
-
         if (server->menu_hovered && event->state == WLR_BUTTON_RELEASED) {
             struct tbx_menu* item = server->menu_hovered;
-            if (item->execute) {
+            if (menu->hovered == item && item->execute) {
                 menu_execute(server, item);
             }
         } else if (event->state == WLR_BUTTON_PRESSED) {
             // begin grabbing
             if (view->hotspot == HS_TITLEBAR) {
-                menu->lock = true;
+                if (menu->pinned && (event->button == 273)) {
+                    menu->pinned = false;
+                    menu_show(menu, 0, 0, false);
+                    return;
+                }
+                menu->pinned = true;
                 begin_interactive_sd(server, view);
             }
-        } else {
-            cursor->mode = TBX_CURSOR_PASSTHROUGH;
-            view->hotspot = HS_NONE;
         }
         return;
     }
@@ -346,7 +346,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
             "left_ptr", server->cursor->cursor);
 
         if (!view) {
-            bool show = !(event->button != 273);
+            bool show = !(event->button != 273); // TODO
             menu_show(server->menu, cursor->cursor->x, cursor->cursor->y, show);
         }
 

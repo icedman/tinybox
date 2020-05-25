@@ -50,11 +50,16 @@ void menu_show(struct tbx_menu* menu, int x, int y, bool shown)
         return;
     }
 
+    shown = shown | menu->pinned;
+
     menu->command.server->menu_hovered = NULL;
     menu->hovered = NULL;
     menu->shown = shown;
-    menu->menu_x = x;
-    menu->menu_y = y;
+
+    if (!menu->pinned) {
+        menu->menu_x = x;
+        menu->menu_y = y;
+    }
 
     if (menu->shown) {
         menu->command.server->menu_navigation_grab = menu;
@@ -88,9 +93,15 @@ void menu_show_submenu(struct tbx_menu* menu, struct tbx_menu* submenu)
         struct tbx_menu* item = (struct tbx_menu*)cmd;
         if (item == submenu) {
             menu->submenu = submenu;
-            menu_show(submenu,
-                menu->menu_x + menu->menu_width + item->x,
-                menu->menu_y + item->y, true);
+
+            if (!submenu->pinned) {
+                menu_show(submenu,
+                    menu->menu_x + menu->menu_width + item->x,
+                    menu->menu_y + item->y, true);
+
+                submenu->menu_x += 3;
+                submenu->menu_y -= (item->height + 3);
+            }
             return;
         }
     }

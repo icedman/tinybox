@@ -34,6 +34,7 @@ struct tbx_menu {
     int y;
     int width;
     int height;
+    bool pinned; // moved and pinned
 
     // world coords
     int menu_x;

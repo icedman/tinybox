@@ -333,20 +333,22 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
 static void render_menu_recursive(struct tbx_output* output, struct tbx_menu* menu)
 {
-    if (!menu->menu_type == TBX_MENU || !menu->shown) {
+    if (!menu->menu_type == TBX_MENU) {
         return;
     }
 
-    render_menu(output, menu);
+    if (menu->shown) {
+        render_menu(output, menu);
+    }
 
-    int borderWidth = 3;
+    // int borderWidth = 3;
     struct tbx_command* submenu;
     wl_list_for_each(submenu, &menu->items, link)
     {
         struct tbx_menu* item = (struct tbx_menu*)submenu;
-        if (item->menu_type == TBX_MENU && item->shown) {
-            item->menu_x = menu->menu_x + menu->menu_width + item->x + borderWidth;
-            item->menu_y = menu->menu_y + item->y - item->height - borderWidth;
+        if (item->menu_type == TBX_MENU) {
+            // item->menu_x = menu->menu_x + menu->menu_width + item->x + borderWidth;
+            // item->menu_y = menu->menu_y + item->y - item->height - borderWidth;
             render_menu_recursive(output, item);
         }
     }
