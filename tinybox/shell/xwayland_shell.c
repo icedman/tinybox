@@ -16,6 +16,21 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/xwayland.h>
 
+// copy now ~ understand later
+static const char *atom_map[ATOM_LAST] = {
+    "_NET_WM_WINDOW_TYPE_NORMAL",
+    "_NET_WM_WINDOW_TYPE_DIALOG",
+    "_NET_WM_WINDOW_TYPE_UTILITY",
+    "_NET_WM_WINDOW_TYPE_TOOLBAR",
+    "_NET_WM_WINDOW_TYPE_SPLASH",
+    "_NET_WM_WINDOW_TYPE_MENU",
+    "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU",
+    "_NET_WM_WINDOW_TYPE_POPUP_MENU",
+    "_NET_WM_WINDOW_TYPE_TOOLTIP",
+    "_NET_WM_WINDOW_TYPE_NOTIFICATION",
+    "_NET_WM_STATE_MODAL",
+};
+
 static void xwayland_get_constraints(struct tbx_view* view, double* min_width,
     double* max_width, double* min_height, double* max_height)
 {
@@ -222,6 +237,33 @@ struct tbx_view_interface xwayland_view_interface = {
     .destroy = xwayland_destroy
 };
 
+static struct tbx_view* get_root(struct tbx_view *view) {
+    if (view->parent) {
+        return get_root(view->parent);
+    }
+    return view;
+}
+
+static void xwayland_view_set_parent(struct tbx_view *view) {
+    struct tbx_view* ancestor;
+    struct wlr_xwayland_surface* xsurface = view->xwayland_surface;
+    wl_list_for_each(ancestor, &view->server->views, link)
+    {
+        if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
+            if (view->interface->is_transient_for(view, ancestor)) {
+                view->parent = ancestor;
+
+                struct tbx_view *root = get_root(ancestor);
+
+                view->x = xsurface->x + root->x;
+                view->y = xsurface->y + root->y;
+                console_log("set parent %d", root->x);
+                break;
+            }
+        }
+    }
+}
+
 static void xwayland_surface_commit(struct wl_listener* listener, void* data)
 {
     // console_log("commit xwayland");
@@ -267,18 +309,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
 
         if (view->xwayland_surface->parent) {
 
-            struct tbx_view* ancestor;
-            wl_list_for_each(ancestor, &view->server->views, link)
-            {
-                if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
-                    if (view->interface->is_transient_for(view, ancestor)) {
-                        view->parent = ancestor;
-                        view->x = xsurface->x + ancestor->x;
-                        view->y = xsurface->y + ancestor->y;
-                        break;
-                    }
-                }
-            }
+            xwayland_view_set_parent(view);
 
         } else {
 
@@ -389,7 +420,6 @@ static void xwayland_set_title(struct wl_listener* listener, void* data)
     view->title_dirty = true;
 }
 
-/*
 static void xwayland_set_class(struct wl_listener* listener, void* data)
 {
     struct tbx_xwayland_view* xview = wl_container_of(listener, xview, set_class);
@@ -408,12 +438,16 @@ static void xwayland_set_role(struct wl_listener* listener, void* data)
 
 static void xwayland_set_window_type(struct wl_listener* listener, void* data)
 {
-    console_log("set_window_type");
     struct tbx_xwayland_view* xview = wl_container_of(listener, xview, set_window_type);
     struct tbx_view* view = &xview->view;
-    console_log("set_window_type %d", xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE));
+
+    int wt = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
+    console_log("set_window_type %d", wt);
+
+    // for(size_t i=0; i<view->xwayland_surface->window_type_len; i++) {
+    //     console_log("window_type %d", view->xwayland_surface->window_type[i]);    
+    // }
 }
-*/
 
 static void new_xwayland_surface(struct wl_listener* listener, void* data)
 {
@@ -455,7 +489,6 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
     wl_signal_add(&xsurface->events.set_title,
         &xwayland_view->set_title);
 
-    /*
     xwayland_view->set_class.notify = xwayland_set_class;
     wl_signal_add(&xsurface->events.set_class,
         &xwayland_view->set_class);
@@ -467,7 +500,6 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
     xwayland_view->set_window_type.notify = xwayland_set_window_type;
     wl_signal_add(&xsurface->events.set_window_type,
         &xwayland_view->set_window_type);
-    */
 
     // move to workspace
     view->workspace = server->workspace;
@@ -484,6 +516,43 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
     view_setup(view);
 }
 
+
+void handle_xwayland_ready(struct wl_listener *listener, void *data) {
+    struct tbx_xwayland_shell *xwayland = wl_container_of(listener, xwayland, xwayland_ready);
+    // struct tbx_server *server = xwayland->server;
+
+    xcb_connection_t *xcb_conn = xcb_connect(NULL, NULL);
+    int err = xcb_connection_has_error(xcb_conn);
+    if (err) {
+        console_log("XCB connect failed: %d", err);
+        return;
+    }
+
+    xcb_intern_atom_cookie_t cookies[ATOM_LAST];
+    for (size_t i = 0; i < ATOM_LAST; i++) {
+        cookies[i] =
+            xcb_intern_atom(xcb_conn, 0, strlen(atom_map[i]), atom_map[i]);
+    }
+    for (size_t i = 0; i < ATOM_LAST; i++) {
+        xcb_generic_error_t *error = NULL;
+        xcb_intern_atom_reply_t *reply =
+            xcb_intern_atom_reply(xcb_conn, cookies[i], &error);
+        if (reply != NULL && error == NULL) {
+            xwayland->atoms[i] = reply->atom;
+        }
+        free(reply);
+
+        if (error != NULL) {
+            // sway_log(SWAY_ERROR, "could not resolve atom %s, X11 error code %d",
+            //     atom_map[i], error->error_code);
+            free(error);
+            break;
+        }
+    }
+
+    xcb_disconnect(xcb_conn);
+}
+
 bool xwayland_shell_setup(struct tbx_server* server)
 {
     server->xwayland_shell = calloc(1, sizeof(struct tbx_xwayland_shell));
@@ -495,6 +564,10 @@ bool xwayland_shell_setup(struct tbx_server* server)
     server->xwayland_shell->new_xwayland_surface.notify = new_xwayland_surface;
     wl_signal_add(&server->xwayland_shell->wlr_xwayland->events.new_surface,
         &server->xwayland_shell->new_xwayland_surface);
+
+    server->xwayland_shell->xwayland_ready.notify = handle_xwayland_ready;
+    wl_signal_add(&server->xwayland_shell->wlr_xwayland->events.new_surface,
+        &server->xwayland_shell->xwayland_ready);
 
     setenv("DISPLAY", server->xwayland_shell->wlr_xwayland->display_name, true);
     return true;

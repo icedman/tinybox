@@ -26,6 +26,7 @@ struct tbx_server;
 struct tbx_xwayland_shell {
     struct wlr_xwayland* wlr_xwayland;
     struct wl_listener new_xwayland_surface;
+    struct wl_listener xwayland_ready;
     struct tbx_server* server;
 
     xcb_atom_t atoms[ATOM_LAST];

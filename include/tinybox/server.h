@@ -32,7 +32,7 @@ struct tbx_server {
     // shell
     struct tbx_xdg_shell* xdg_shell;
     struct tbx_xwayland_shell* xwayland_shell;
-
+    
     // decorations
     struct tbx_decoration_manager* decoration_manager;
 

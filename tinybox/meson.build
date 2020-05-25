@@ -52,7 +52,8 @@ tinybox_dep = [
   glesv2,
   wlroots,
   xkbcommon,
-  math
+  math,
+  xcb
   ]
 
 executable(

@@ -43,6 +43,7 @@ libinput       = dependency('libinput')
 pangocairo     = dependency('pangocairo')
 glesv2         = dependency('glesv2')
 egl            = dependency('egl')
+xcb            = dependency('xcb')
 wlroots = dependency('wlroots', version: '>=0.10.0')
 
 subdir('protocols')
