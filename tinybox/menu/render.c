@@ -63,7 +63,7 @@ cairo_surface_t* generate_item_texture(struct tbx_output* tbx_output, struct tbx
     return surface;
 }
 
-struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct tbx_menu* menu)
+static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct tbx_menu* menu)
 {
     // style
     struct tbx_style* style = &tbx_output->server->style;
@@ -358,4 +358,13 @@ void render_menus(struct tbx_output* output)
 {
     struct tbx_server* server = output->server;
     render_menu_recursive(output, server->menu);
+}
+
+void prerender_menu(struct tbx_server* server, struct tbx_menu *menu)
+{
+    generate_menu_texture(server->main_output, menu);
+
+    struct tbx_view *view = (struct tbx_view*)&menu->view;
+    view->width = menu->menu_width;
+    view->height = menu->menu_height;
 }

@@ -347,6 +347,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
 
         if (!view) {
             bool show = !(event->button != 273); // TODO
+            prerender_menu(server, server->menu);
             menu_show(server->menu, cursor->cursor->x, cursor->cursor->y, show);
         }
 

@@ -56,6 +56,39 @@ void menu_show(struct tbx_menu* menu, int x, int y, bool shown)
     menu->hovered = NULL;
     menu->shown = shown;
 
+    if (!shown) {
+        menu->reversed = false;
+    }
+
+    if (menu->shown && menu->submenu && menu->submenu->shown) {
+        menu_show(menu->submenu, 0, 0, false);
+    }
+
+    // constraint to output
+    struct tbx_view* view = (struct tbx_view*)&menu->view;
+    struct tbx_server* server = view->server;
+    struct tbx_output* output = view_get_preferred_output(view);
+
+    struct wlr_box* main_box = wlr_output_layout_get_box(
+        server->output_layout, output->wlr_output);
+
+    if (x < main_box->x) {
+        x = main_box->x;
+    }
+    if (y < main_box->y) {
+        y = main_box->y;
+    }
+    if (x + menu->menu_width > main_box->x + main_box->width) {
+        x = main_box->x + main_box->width - menu->menu_width;
+        menu->reversed = true;
+    }
+    if (y < main_box->y) {
+        y = main_box->y;
+    }
+    if (y + menu->menu_height > main_box->y + main_box->height) {
+        y = main_box->y + main_box->height - menu->menu_height;
+    }
+
     if (!menu->pinned) {
         menu->menu_x = x;
         menu->menu_y = y;
@@ -94,13 +127,29 @@ void menu_show_submenu(struct tbx_menu* menu, struct tbx_menu* submenu)
         if (item == submenu) {
             menu->submenu = submenu;
 
-            if (!submenu->pinned) {
-                menu_show(submenu,
-                    menu->menu_x + menu->menu_width + item->x,
-                    menu->menu_y + item->y, true);
+            prerender_menu(cmd->server, submenu);
 
-                submenu->menu_x += 3;
+            if (!submenu->pinned) {
+                
+                int new_x = menu->menu_x;
+                submenu->reversed = menu->reversed;
+
+                if (!menu->reversed) {
+                    new_x += menu->menu_width + item->x + 3;
+                } else {
+                    new_x -= submenu->menu_width + 3;
+                }
+
+                menu_show(submenu,
+                    new_x,
+                    menu->menu_y + item->y, true);
                 submenu->menu_y -= (item->height + 3);
+
+                if (submenu->reversed != menu->reversed) {
+                    menu->reversed = submenu->reversed;
+                    menu_show(submenu, 0, 0, false); // hide.. so that it get reversed when displayed
+
+                }
             }
             return;
         }

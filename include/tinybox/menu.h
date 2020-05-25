@@ -28,6 +28,7 @@ struct tbx_menu {
 
     bool shown;
     bool fixed;
+    bool reversed; // reverse direction right-to-left
 
     // local coors ~ relative to parent
     int x;
@@ -75,5 +76,6 @@ void menu_execute(struct tbx_server* server, struct tbx_menu* item);
 void menu_navigation(struct tbx_server* server, uint32_t keycode);
 
 void menu_setup(struct tbx_server* server, struct tbx_menu *menu);
+void prerender_menu(struct tbx_server* server, struct tbx_menu *menu);
 
 #endif // TINYBOX_MENU_H
