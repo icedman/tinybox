@@ -24,10 +24,12 @@ struct tbx_menu {
     struct tbx_command command;
     enum menu_type menu_type;
 
+    struct wl_list named_link;
+
     char* title; // menu
     char* label; // item
 
-    bool to_close;
+    int to_close;
     bool shown;
     bool pinned;
     bool reversed; // reverse direction right-to-left

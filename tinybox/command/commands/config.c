@@ -123,6 +123,28 @@ static void exec_console(struct tbx_command* cmd, int argc, char** argv)
     }
 }
 
+static void exec_font(struct tbx_command* cmd, int argc, char** argv)
+{
+    if (!command_check_args(cmd, argc, 1)) {
+        return;
+    }
+
+    strip_quotes(argv[0]);
+    // struct tbx_config* config = &cmd->server->config;
+    strcpy(cmd->server->style.font, argv[0]);
+    console_log(">font %s", argv[0]);
+}
+
+static void exec_show_tooltip(struct tbx_command* cmd, int argc, char** argv)
+{
+    struct tbx_config* config = &cmd->server->config;
+    if (argc) {
+        config->show_tooltip = parse_boolean(argv[0], false);
+    } else {
+        config->show_tooltip = !config->show_tooltip;
+    }
+}
+
 static void exec_mini_titlebar(struct tbx_command* cmd, int argc, char** argv)
 {
     struct tbx_config* config = &cmd->server->config;
@@ -141,4 +163,6 @@ void register_config_commands(struct tbx_server* server)
     register_command(server->command, "swipe_threshold", exec_swipe_threshold);
     register_command(server->command, "mini_titlebar", exec_mini_titlebar);
     register_command(server->command, "console", exec_console);
+    register_command(server->command, "show_tooltip", exec_show_tooltip);
+    register_command(server->command, "font", exec_font);
 }

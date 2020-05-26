@@ -70,6 +70,7 @@ struct tbx_config {
     bool animate;
     bool console;
     bool mini_titlebar;
+    bool show_tooltip;
 
     uint32_t super_key;
 

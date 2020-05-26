@@ -94,11 +94,17 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
     if (!title) {
         title = menu->label;
     }
-    cairo_surface_t* title_text = cairo_image_from_text(title, &tw, &th, font, color,
-        tbx_output->wlr_output->subpixel);
 
-    title_height = th + 4;
-    menu_width = tw + 8;
+    cairo_surface_t* title_text = 0;
+    if (title && strlen(title) > 0) { 
+        title_text = cairo_image_from_text(title, &tw, &th, font, color,
+            tbx_output->wlr_output->subpixel);
+        title_height = th + 4;
+        menu_width = tw + 8;
+    } else {
+        title_height = 0;
+    }
+
 
     // generate item text textures
     struct tbx_command* cmd;
@@ -120,9 +126,9 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
         item->text_image_width = w;
         item->text_image_height = h;
 
-        if (title_height < item->height) {
-            title_height = item->height;
-        }
+        // if (title_height < item->height) {
+        //     title_height = item->height;
+        // }
 
         item->y = menu_height;
         menu_height += item->height;
@@ -133,7 +139,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
 
     menu_height += title_height;
 
-    if (wl_list_length(&menu->items) > 0) {
+    if (title_height > 0 && wl_list_length(&menu->items) > 0) {
         menu_height += borderWidth;     
     }
     
@@ -283,17 +289,21 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
     render_texture(output, &box, menu->menu_texture, output->scale);
 
+    //-------------------
     // add the bevels
+    //-------------------
     float bevelColor[4] = { 1, 0, 1, 1 };
 
     int tflags = style->menu_title;
     memcpy(&box, &menu->title_box, sizeof(struct wlr_box));
-    box.x += menu->menu_x + borderWidth;
-    box.y += menu->menu_y + borderWidth;
-    if (tflags & sf_raised) {
-        render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-    } else if (tflags & sf_sunken) {
-        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+    if (box.height > 0) {
+        box.x += menu->menu_x + borderWidth;
+        box.y += menu->menu_y + borderWidth;
+        if (tflags & sf_raised) {
+            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+        } else if (tflags & sf_sunken) {
+            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+        }
     }
 
     if (wl_list_length(&menu->items) == 0) {
@@ -314,7 +324,9 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
     tflags = style->menu_hilite;
 
+    //-------------------
     // hovered or submenu
+    //-------------------
     if (menu->submenu && menu->submenu->pinned) {
         menu->submenu = NULL;
     }
@@ -353,9 +365,11 @@ void render_menus(struct tbx_output* output)
     wl_list_for_each_safe(view, tmp, &server->menus, link) {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
         struct tbx_menu* menu = menu_view->menu;
-        if (menu->to_close) {
-            menu->to_close = false;
-            menu_close(menu);
+        if (menu->to_close > 0) {
+            menu->to_close--;
+            if (menu->to_close == 0) {
+                menu_close(menu);
+            }
         }
         if (!menu->shown) {
             wl_list_remove(&view->link);

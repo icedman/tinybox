@@ -40,7 +40,7 @@ void menu_execute(struct tbx_server* server, struct tbx_menu* item)
 
 void menu_schedule_close(struct tbx_menu* menu)
 {
-    menu->to_close = true;
+    menu->to_close = 4;
 }
 
 void menu_close(struct tbx_menu* menu)
@@ -235,6 +235,10 @@ static struct tbx_menu* menu_at_items(struct tbx_menu* menu, int x, int y)
             if ((x >= px + item->x && x <= px + item->x + item->width) && (y >= py + item->y && y <= py + item->y + item->height)) {
                 menu->hovered = item;
                 cmd->server->menu_hovered = item;
+
+                if (menu->submenu && menu->hovered != menu->submenu) {
+                    menu_schedule_close(menu->submenu);
+                }
                 return menu;
             }
         }
@@ -303,6 +307,11 @@ static void menu_walk(struct tbx_server* server, struct tbx_menu* item, int dir_
             {
                 item = (struct tbx_menu*)cmd;
                 menu_focus_item(server, item);
+
+                if (dir_x == -1) {
+                    menu_close(item->parent);
+                }
+                
                 return;
             }
         }
@@ -395,6 +404,10 @@ struct tbx_view_interface menu_view_interface = {
 
 void menu_show_tooltip(struct tbx_server* server, const char *text)
 {
+    if (!server->config.show_tooltip) {
+        return;
+    }
+
     static char tooltip[64];
     struct tbx_menu* menu;
     if (!server->tooltip) {
@@ -405,8 +418,9 @@ void menu_show_tooltip(struct tbx_server* server, const char *text)
     }
 
     menu = server->tooltip;
+    menu->to_close = 30; // close within half a second
 
-    if (!text) {
+    if (!strlen(text)) {
         menu_close(server->tooltip);
     }
 

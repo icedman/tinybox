@@ -229,6 +229,11 @@ static void process_cursor_motion(struct tbx_server* server, uint32_t time)
             if (menu->hovered && menu->hovered->menu_type == TBX_MENU) {
                 menu_show_submenu(server, menu, menu->hovered);
             }
+
+            wlr_xcursor_manager_set_cursor_image(cursor->xcursor_manager, "left_ptr",
+            cursor->cursor);
+
+            wlr_seat_pointer_clear_focus(server->seat->seat);
             return;
         }
     }
@@ -366,6 +371,8 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
             if (show) {
                 prerender_menu(server, server->menu, false);
                 menu_show(server, server->menu, cursor->cursor->x, cursor->cursor->y);
+            } else {
+                menu_close_all(server);
             }
         }
 

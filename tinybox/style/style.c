@@ -13,6 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// #define DEFAULT_FONT "lucida sans 12 bold"
+#define DEFAULT_FONT "monospace 10"
+
 void to_lower_string(char* str, char* out)
 {
     for (int i = 0; i < 32 && str[i]; i++) {
@@ -147,7 +150,7 @@ void load_style(struct tbx_server* server, const char* path)
     if (!f) {
         printf("load defaults\n");
         memcpy(config_style, style_bin, sizeof(struct tbx_style));
-        strcpy(config_style->font, "monospace 10");
+        strcpy(config_style->font, DEFAULT_FONT);
         free(expanded);
         return;
     }
@@ -186,17 +189,7 @@ void load_style(struct tbx_server* server, const char* path)
             }
 
             void* target = pointerMap[idx].data;
-
-            // if (pointerMap[idx].cmd == parseString) {
-            //   int l = strlen(argv[1]);
-            //   if (l) {
-            //     *(char**)pointerMap[idx].data = calloc(1, (l+1)*sizeof(char));
-            //     strcpy(*(char**)pointerMap[idx].data, argv[1]);
-            //   }
-            //   // _parseString(argc, argv, target, argv[0]);
-            // } else {
             pointerMap[idx].cmd(argc, argv, target, argv[0]);
-            // }
         }
 
         free_argv(argc, argv);
@@ -204,8 +197,11 @@ void load_style(struct tbx_server* server, const char* path)
 
     fclose(f);
 
+    if (!config_style->font) {
+        strcpy(style->font, DEFAULT_FONT);
+    }
+    strcpy(style->font, config_style->font);
     memcpy(config_style, style, sizeof(struct tbx_style));
-    strcpy(config_style->font, "monospace 10");
 
     // dump defaults bin
     // FILE* fp = fopen("./style.bin", "wb");
@@ -232,5 +228,5 @@ void free_style(struct tbx_style* style)
     }
 
     memcpy(style, style_bin, sizeof(struct tbx_style));
-    strcpy(style->font, "monospace 10");
+    strcpy(style->font, DEFAULT_FONT);
 }
