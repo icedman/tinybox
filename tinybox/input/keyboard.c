@@ -242,6 +242,10 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
         handle_keybinding(server, &k);
     }
 
+    if (server->menu_navigation_grab && server->menu_navigation_grab->pinned) {
+        server->menu_navigation_grab = NULL;
+    }
+
     if (!handled && server->menu_navigation_grab && event->state == WLR_KEY_PRESSED) {
         console_log("menu grabbed %s", server->menu_navigation_grab->label);
         for (int i = 0; i < nsyms; i++) {

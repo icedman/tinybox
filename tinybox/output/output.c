@@ -425,13 +425,26 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
    * Naturally you can do this any way you like, for example to make a 3D
    * compositor.
    */
+
+    float alpha = 1.0;
+    if (view->server->cursor->mode == TBX_CURSOR_RESIZE ||
+        view->server->cursor->mode == TBX_CURSOR_MOVE) {
+        alpha = view->server->config.move_resize_alpha;
+        if (alpha < 0.4) {
+            alpha = 0.4;
+        }
+        if (alpha > 1) {
+            alpha = 1;
+        }
+    }
+
     float matrix[9];
     enum wl_output_transform transform = wlr_output_transform_invert(surface->current.transform);
     wlr_matrix_project_box(matrix, &box, transform, 0, output->transform_matrix);
 
     /* This takes our matrix, the texture, and an alpha, and performs the actual
    * rendering on the GPU. */
-    wlr_render_texture_with_matrix(rdata->renderer, texture, matrix, 1);
+    wlr_render_texture_with_matrix(rdata->renderer, texture, matrix, alpha);
 
     /* This lets the client know that we've displayed that frame and it can
    * prepare another one now if it likes. */

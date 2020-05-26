@@ -30,6 +30,7 @@ struct tbx_menu {
     char* label; // item
 
     int to_close;
+    bool no_title;
     bool shown;
     bool pinned;
     bool reversed; // reverse direction right-to-left
@@ -86,5 +87,7 @@ void render_menus(struct tbx_output* output);
 void menu_focus(struct tbx_server* server, struct tbx_menu *menu);
 
 void menu_show_tooltip(struct tbx_server* server, const char *text);
+
+struct tbx_menu *find_named_menu(struct tbx_server *server, const char *identifier);
 
 #endif // TINYBOX_MENU_H

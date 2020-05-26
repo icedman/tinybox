@@ -71,6 +71,7 @@ struct tbx_config {
     bool console;
     bool mini_titlebar;
     bool show_tooltip;
+    float move_resize_alpha;
 
     uint32_t super_key;
 

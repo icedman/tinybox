@@ -37,7 +37,6 @@ static void exec_set(struct tbx_command* cmd, int argc, char** argv)
     entry->type = TBX_CONFIG_DICTIONARY;
 
     // console_log("set %s :\"%s\"", argv[0], argv[1]);
-
 #if 0
     char command_line[512];
     char* ptr = command_line;
@@ -109,6 +108,17 @@ static void exec_swipe_threshold(struct tbx_command* cmd, int argc,
     }
 }
 
+static void exec_move_resize_alpha(struct tbx_command* cmd, int argc,
+    char** argv)
+{
+    if (!command_check_args(cmd, argc, 1)) {
+        return;
+    }
+
+    struct tbx_config* config = &cmd->server->config;
+    config->move_resize_alpha = parse_float(argv[0]);
+}
+
 static void exec_console(struct tbx_command* cmd, int argc, char** argv)
 {
     struct tbx_config* config = &cmd->server->config;
@@ -165,4 +175,5 @@ void register_config_commands(struct tbx_server* server)
     register_command(server->command, "console", exec_console);
     register_command(server->command, "show_tooltip", exec_show_tooltip);
     register_command(server->command, "font", exec_font);
+    register_command(server->command, "move_resize_alpha", exec_move_resize_alpha);
 }

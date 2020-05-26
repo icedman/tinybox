@@ -240,6 +240,8 @@ static void xdg_surface_map(struct wl_listener* listener, void* data)
     view->mapped = true;
     view->title_dirty = true;
     view->surface = (struct wlr_surface*)view->xdg_surface;
+    view->hotspot = HS_NONE;
+
     view_set_focus(view, view->xdg_surface->surface);
     view_move_to_center(view, NULL);
     view_damage(view);

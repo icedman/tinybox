@@ -232,12 +232,13 @@ static struct tbx_menu* menu_at_items(struct tbx_menu* menu, int x, int y)
         wl_list_for_each(cmd, &menu->items, link)
         {
             struct tbx_menu* item = (struct tbx_menu*)cmd;
-            if ((x >= px + item->x && x <= px + item->x + item->width) && (y >= py + item->y && y <= py + item->y + item->height)) {
+            if ((x >= px + item->x && x <= px + item->x + item->width) &&
+                (y >= py + item->y && y <= py + item->y + item->height)) {
                 menu->hovered = item;
                 cmd->server->menu_hovered = item;
 
                 if (menu->submenu && menu->hovered != menu->submenu) {
-                    menu_schedule_close(menu->submenu);
+                    menu_close(menu->submenu);
                 }
                 return menu;
             }
@@ -460,4 +461,17 @@ void menu_focus(struct tbx_server* server, struct tbx_menu *menu) {
     struct tbx_view *view = (struct tbx_view*)&menu->view;
     wl_list_remove(&view->link);
     wl_list_insert(&server->menus, &view->link);
+}
+
+struct tbx_menu *find_named_menu(struct tbx_server *server, const char *identifier)
+{
+    struct tbx_menu *menu;
+    wl_list_for_each(menu, &server->named_menus, named_link) {
+        console_log(">>%s", menu->title);
+        if (strcmp(menu->label, identifier) == 0) {
+            return menu;
+        }
+    }
+
+    return NULL;
 }

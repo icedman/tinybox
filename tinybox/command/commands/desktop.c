@@ -86,6 +86,29 @@ void exec_move_window_to_workspace(struct tbx_command* cmd, int argc,
     view_send_to_workspace(current_view, w, true);
 }
 
+void exec_window_close(struct tbx_command* cmd, int argc,
+    char** argv)
+{
+    console_log("window close!");
+    
+    if (!command_check_args(cmd, argc, 0)) {
+        return;
+    }
+
+    if (!cmd->server->started) {
+        return;
+    }
+
+    // activate top most
+    struct tbx_view* current_view = workspace_get_top_view(cmd->server, cmd->server->workspace);
+    if (!current_view) {
+        return;
+    }
+
+    current_view->interface->close(current_view);
+}
+
+
 void exec_shade_window(struct tbx_command* cmd, int argc, char** argv)
 {
     // if (!command_check_args(cmd, argc, 0)) {
@@ -134,4 +157,5 @@ void register_desktop_commands(struct tbx_server* server)
     register_command(server->command, "shade", exec_shade_window);
     register_command(server->command, "cycle", exec_cycle);
     register_command(server->command, "arrange", exec_arrange);
+    register_command(server->command, "window_close", exec_window_close);
 }

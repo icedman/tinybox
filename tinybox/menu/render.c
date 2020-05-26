@@ -91,7 +91,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
     int th = 32;
     color_to_rgba(color, style->menu_title_textColor);
     char* title = menu->title;
-    if (!title) {
+    if (!title && !menu->no_title) {
         title = menu->label;
     }
 
@@ -102,7 +102,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
         title_height = th + 4;
         menu_width = tw + 8;
     } else {
-        title_height = 0;
+        title_height = 5;
     }
 
 

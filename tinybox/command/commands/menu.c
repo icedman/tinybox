@@ -25,21 +25,8 @@ static void distill(char* str)
 
 static void exec_create_root_menu(struct tbx_command* cmd, int argc, char** argv)
 {
-    console_log("menu!! %d", argc);
-
     if (!command_check_args(cmd, argc, 0)) {
         return;
-    }
-
-    if (argc > 2) {
-        if (strcmp(argv[1], "window") == 0) {
-            // // named menu
-            distill(argv[2]);
-            struct tbx_menu *named_menu = cmd->server->menu = create_menu(cmd, argc, argv);
-            cmd->server->menu_context = named_menu;
-            wl_list_insert(&cmd->server->named_menus, &named_menu->named_link);
-            return;
-        }
     }
 
     if (!cmd->server->menu) {
@@ -48,6 +35,21 @@ static void exec_create_root_menu(struct tbx_command* cmd, int argc, char** argv
         console_log("root %s", cmd->server->menu_context->label);
         return;
     }
+}
+
+static void exec_create_window_menu(struct tbx_command* cmd, int argc, char** argv)
+{
+    console_log("startmenu %d", argc);
+
+    if (!command_check_args(cmd, argc, 0)) {
+        return;
+    }
+
+    struct tbx_menu *menu = create_menu(cmd, argc, argv);
+    cmd->server->menu_context = menu;
+    menu->no_title = true;
+    wl_list_insert(&cmd->server->named_menus, &menu->named_link);
+    console_log("window %s", cmd->server->menu_context->label);
 }
 
 static void exec_menu_custom(struct tbx_command* cmd, int _argc, char** _argv)
@@ -68,7 +70,12 @@ static void exec_menu_custom(struct tbx_command* cmd, int _argc, char** _argv)
     strip_quotes(argv[0]);
 
     if (strcmp("begin", argv[0]) == 0) {
-        exec_create_root_menu(cmd, argc, argv);
+        free_argv(argc, argv);
+        return;
+    }
+
+    if (strcmp("window", argv[0]) == 0) {
+        exec_create_window_menu(cmd, argc, argv);
         free_argv(argc, argv);
         return;
     }
@@ -202,10 +209,14 @@ struct tbx_menu* create_item(struct tbx_command* cmd, int argc, char** argv)
 
     menu_setup(cmd->server, menu);
 
-    // strip_quotes(argv[0]);
-    if (argc > 2) {
-        menu->execute = calloc(strlen(argv[0]) + strlen(argv[2]) + 2, sizeof(char));
-        sprintf(menu->execute, "%s %s", argv[0], argv[2]);
+    if (argc > 1) {
+        if (argc > 2) {
+            menu->execute = calloc(strlen(argv[0]) + strlen(argv[2]) + 2, sizeof(char));
+            sprintf(menu->execute, "%s %s", argv[0], argv[2]);
+        } else {
+            menu->execute = calloc(strlen(argv[0]) + 1, sizeof(char));
+            sprintf(menu->execute, "%s", argv[0]);
+        }
 
         strip_quotes(menu->execute);
         menu->argv = split_args(menu->execute, &menu->argc);

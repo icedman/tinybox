@@ -284,11 +284,26 @@ void view_move_to_center(struct tbx_view* view, struct tbx_output* output)
 
     struct wlr_box view_geometry;
     view->interface->get_geometry(view, &view_geometry);
+
+    bool reconfigure = false;
+    if (view_geometry.width > main_box->width) {
+        view_geometry.width = main_box->width * 0.98;
+        reconfigure = true;
+    }
+    if (view_geometry.height > main_box->height) {
+        view_geometry.height = main_box->height - 32;
+        reconfigure = true;
+    }
+
     int x = (main_box->width / 2) - (view_geometry.width / 2);
     int y = (main_box->height / 2) - (view_geometry.height / 2);
 
     view->x = x;
     view->y = y;
+
+    if (reconfigure) {
+        view->interface->configure(view, x, y, view_geometry.width, view_geometry.height);
+    }
 }
 
 void view_setup(struct tbx_view* view)

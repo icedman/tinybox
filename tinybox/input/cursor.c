@@ -323,6 +323,9 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
     double sx, sy;
     struct wlr_surface* surface;
 
+    //--------------------
+    // menu interaction
+    //--------------------
     struct tbx_menu* menu = menu_at(server, cursor->cursor->x, cursor->cursor->y);
     if (menu && cursor->mode == TBX_CURSOR_PASSTHROUGH) {
         struct tbx_view *view = (struct tbx_view*)&menu->view;
@@ -367,12 +370,19 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
             "left_ptr", server->cursor->cursor);
 
         if (!view && server->menu) {
-            bool show = !(event->button != 273); // TODO
+            bool show = (event->button == 273); // TODO
             if (show) {
                 prerender_menu(server, server->menu, false);
                 menu_show(server, server->menu, cursor->cursor->x, cursor->cursor->y);
             } else {
                 menu_close_all(server);
+            }
+        }
+
+        if (view && view->hotspot == HS_TITLEBAR && (event->button == 273)) {
+            struct tbx_menu *window = find_named_menu(server, "window");
+            if (window) {
+                menu_show(server, window, cursor->cursor->x, cursor->cursor->y);
             }
         }
 
