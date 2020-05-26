@@ -63,13 +63,13 @@ cairo_surface_t* generate_item_texture(struct tbx_output* tbx_output, struct tbx
     return surface;
 }
 
-static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct tbx_menu* menu)
+static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, struct tbx_menu* menu, bool force)
 {
     // style
     struct tbx_style* style = &tbx_output->server->style;
 
     if (menu->menu_texture) {
-        if (menu->lastStyleHash == style->hash) {
+        if (menu->lastStyleHash == style->hash && !force) {
             return menu->menu_texture;
         }
         wlr_texture_destroy(menu->menu_texture);
@@ -97,6 +97,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
     cairo_surface_t* title_text = cairo_image_from_text(title, &tw, &th, font, color,
         tbx_output->wlr_output->subpixel);
 
+    title_height = th + 4;
     menu_width = tw + 8;
 
     // generate item text textures
@@ -119,7 +120,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
         item->text_image_width = w;
         item->text_image_height = h;
 
-        if (title_height == 0) {
+        if (title_height < item->height) {
             title_height = item->height;
         }
 
@@ -131,8 +132,11 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
     }
 
     menu_height += title_height;
-    menu_height += borderWidth;
 
+    if (wl_list_length(&menu->items) > 0) {
+        menu_height += borderWidth;     
+    }
+    
     menu->menu_width = menu_width;
     menu->menu_height = menu_height;
 
@@ -227,7 +231,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
 
 static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 {
-    if (!menu->menu_type == TBX_MENU || !wl_list_length(&menu->items)) {
+    if (!menu->menu_type == TBX_MENU) {
         return;
     }
 
@@ -252,7 +256,7 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
     float color[4] = { 1, 0, 1, 1 };
 
-    generate_menu_texture(tbx_output, menu);
+    generate_menu_texture(tbx_output, menu, false);
 
     box.x = menu->menu_x + ox;
     box.y = menu->menu_y + oy;
@@ -271,7 +275,7 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
     color_to_rgba(color, style->borderColor);
     render_rect(output, &box, color, output->scale);
-
+    
     box.x += borderWidth;
     box.y += borderWidth;
     box.width -= (borderWidth * 2);
@@ -280,18 +284,9 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     render_texture(output, &box, menu->menu_texture, output->scale);
 
     // add the bevels
-    int tflags = style->menu_frame;
     float bevelColor[4] = { 1, 0, 1, 1 };
-    memcpy(&box, &menu->frame_box, sizeof(struct wlr_box));
-    box.x += menu->menu_x + borderWidth;
-    box.y += menu->menu_y + borderWidth;
-    if (tflags & sf_raised) {
-        render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
-    } else if (tflags & sf_sunken) {
-        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
-    }
 
-    tflags = style->menu_title;
+    int tflags = style->menu_title;
     memcpy(&box, &menu->title_box, sizeof(struct wlr_box));
     box.x += menu->menu_x + borderWidth;
     box.y += menu->menu_y + borderWidth;
@@ -301,7 +296,21 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
         render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
     }
 
+    if (wl_list_length(&menu->items) == 0) {
+        return;
+    }
+
     memcpy(&view->hotspots[HS_TITLEBAR], &box, sizeof(struct wlr_box));
+
+    tflags = style->menu_frame;
+    memcpy(&box, &menu->frame_box, sizeof(struct wlr_box));
+    box.x += menu->menu_x + borderWidth;
+    box.y += menu->menu_y + borderWidth;
+    if (tflags & sf_raised) {
+        render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+    } else if (tflags & sf_sunken) {
+        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+    }
 
     tflags = style->menu_hilite;
 
@@ -344,6 +353,10 @@ void render_menus(struct tbx_output* output)
     wl_list_for_each_safe(view, tmp, &server->menus, link) {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
         struct tbx_menu* menu = menu_view->menu;
+        if (menu->to_close) {
+            menu->to_close = false;
+            menu_close(menu);
+        }
         if (!menu->shown) {
             wl_list_remove(&view->link);
         }
@@ -358,9 +371,9 @@ void render_menus(struct tbx_output* output)
     }
 }
 
-void prerender_menu(struct tbx_server* server, struct tbx_menu *menu)
+void prerender_menu(struct tbx_server* server, struct tbx_menu *menu, bool force)
 {
-    generate_menu_texture(server->main_output, menu);
+    generate_menu_texture(server->main_output, menu, force);
 
     struct tbx_view *view = (struct tbx_view*)&menu->view;
     view->width = menu->menu_width;

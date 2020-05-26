@@ -38,13 +38,16 @@ void menu_execute(struct tbx_server* server, struct tbx_menu* item)
     command_execute(ctx, item->argc, item->argv);
 }
 
+void menu_schedule_close(struct tbx_menu* menu)
+{
+    menu->to_close = true;
+}
+
 void menu_close(struct tbx_menu* menu)
 {   
     if (menu->parent && menu->parent->submenu == menu) {
         menu->parent->submenu = NULL;
     }
-
-    console_log("close: %s", menu->label);
 
     struct tbx_view *view = (struct tbx_view*)&menu->view;
     struct tbx_server *server = view->server;
@@ -54,6 +57,9 @@ void menu_close(struct tbx_menu* menu)
     }
 
     if (!menu->pinned) {
+
+        console_log("close: %s", menu->label);
+
         menu->shown = false;
         menu->reversed = false;
         // wl_list_remove(&view->link);
@@ -86,13 +92,12 @@ void menu_close_all(struct tbx_server* server)
     }
 }
 
-void menu_show(struct tbx_menu* menu, int x, int y)
+void menu_show(struct tbx_server *server, struct tbx_menu* menu, int x, int y)
 {
     if (!menu || menu->menu_type != TBX_MENU) {
         return;
     }
 
-    struct tbx_server *server = menu->command.server;
     server->menu_hovered = NULL;
     menu->hovered = NULL;
 
@@ -151,7 +156,7 @@ void menu_show(struct tbx_menu* menu, int x, int y)
     // console_log("show menu %d %d %d", menu->shown, menu->menu_x, menu->menu_y);
 }
 
-void menu_show_submenu(struct tbx_menu* menu, struct tbx_menu* submenu)
+void menu_show_submenu(struct tbx_server *server, struct tbx_menu* menu, struct tbx_menu* submenu)
 {
     if (submenu->menu_type != TBX_MENU) {
         return;
@@ -173,7 +178,7 @@ void menu_show_submenu(struct tbx_menu* menu, struct tbx_menu* submenu)
         struct tbx_menu* item = (struct tbx_menu*)cmd;
         if (item == submenu) {
             menu->submenu = submenu;
-            prerender_menu(cmd->server, submenu);
+            prerender_menu(server, submenu, false);
 
             if (!submenu->pinned) {
                 
@@ -186,14 +191,14 @@ void menu_show_submenu(struct tbx_menu* menu, struct tbx_menu* submenu)
                     new_x -= submenu->menu_width + 3;
                 }
 
-                menu_show(submenu,
+                menu_show(server, submenu,
                     new_x,
                     menu->menu_y + item->y);
 
                 submenu->menu_y -= (item->height + 3);
                 if (submenu->reversed != menu->reversed) {
                     menu->reversed = submenu->reversed;
-                    menu_show(submenu, 0, 0); // hide.. so that it get reversed when displayed
+                    menu_show(server, submenu, 0, 0); // hide.. so that it get reversed when displayed
 
                 }
             } else {
@@ -323,7 +328,7 @@ static void menu_walk(struct tbx_server* server, struct tbx_menu* item, int dir_
 
     if (dir_x != 0) {
         if (dir_x == 1 && wl_list_length(&item->items) > 0) {
-            menu_show_submenu(item->parent, item);
+            menu_show_submenu(server, item->parent, item);
             return;
         }
         if (dir_x == -1) {
@@ -388,6 +393,41 @@ struct tbx_view_interface menu_view_interface = {
     .configure = menu_view_configure,
 };
 
+void menu_show_tooltip(struct tbx_server* server, const char *text)
+{
+    static char tooltip[64];
+    struct tbx_menu* menu;
+    if (!server->tooltip) {
+        menu = calloc(1, sizeof(struct tbx_menu));
+        // struct tbx_command* m = &menu->command;
+        menu_setup(server, menu);
+        server->tooltip = menu;
+    }
+
+    menu = server->tooltip;
+
+    if (!text) {
+        menu_close(server->tooltip);
+    }
+
+    if (text) {
+        strcpy(tooltip, text);
+        server->tooltip->title = tooltip;
+        prerender_menu(server, server->tooltip, true);
+
+            // constraint to output
+        struct tbx_view* view = (struct tbx_view*)&menu->view;
+        struct tbx_output* output = view_get_preferred_output(view);
+
+        struct wlr_box* main_box = wlr_output_layout_get_box(
+            server->output_layout, output->wlr_output);
+
+        menu_show(server, server->tooltip,
+            main_box->x + main_box->width/2 - view->width/2,
+            main_box->y + main_box->height/2 - view->height/2);
+    }
+}
+
 void menu_setup(struct tbx_server* server, struct tbx_menu *menu)
 {
     menu->view.menu = menu;
@@ -398,4 +438,12 @@ void menu_setup(struct tbx_server* server, struct tbx_menu *menu)
     view->server = server;
     view->interface = &menu_view_interface;
     view->surface = NULL;
+
+    wl_list_init(&menu->items);
+}
+
+void menu_focus(struct tbx_server* server, struct tbx_menu *menu) {
+    struct tbx_view *view = (struct tbx_view*)&menu->view;
+    wl_list_remove(&view->link);
+    wl_list_insert(&server->menus, &view->link);
 }

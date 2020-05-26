@@ -125,6 +125,10 @@ static void process_cursor_move(struct tbx_server* server, uint32_t time)
     double tx = cursor->cursor->x - cursor->grab_x;
     double ty = cursor->cursor->y - cursor->grab_y;
     smooth_move_view(cursor->grab_view, tx, ty, 0.4);
+
+    char tmp[64];
+    sprintf(tmp, "x:%d y:%d", (int)tx, (int)ty);
+    menu_show_tooltip(server, tmp);
 }
 
 static void process_cursor_resize(struct tbx_server* server, uint32_t time)
@@ -199,6 +203,10 @@ static void process_cursor_resize(struct tbx_server* server, uint32_t time)
     }
 
     view->interface->configure(view, new_left, new_top, new_width, new_height);
+
+    char tmp[64];
+    sprintf(tmp, "w:%d h:%d", (int)new_width, (int)new_height);
+    menu_show_tooltip(server, tmp);
 }
 
 static void process_cursor_motion(struct tbx_server* server, uint32_t time)
@@ -219,7 +227,7 @@ static void process_cursor_motion(struct tbx_server* server, uint32_t time)
         struct tbx_menu* menu = menu_at(server, cursor->cursor->x, cursor->cursor->y);
         if (menu) {
             if (menu->hovered && menu->hovered->menu_type == TBX_MENU) {
-                menu_show_submenu(menu, menu->hovered);
+                menu_show_submenu(server, menu, menu->hovered);
             }
             return;
         }
@@ -323,17 +331,16 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
             if (view->hotspot == HS_TITLEBAR) {
                 if (menu->pinned && (event->button == 273)) {
                     menu->pinned = false;
-                    menu_close(menu);
+                    menu_schedule_close(menu);
                     return;
                 }
+
                 menu->pinned = true;
                 if (menu->submenu) {
                     menu_close(menu->submenu);
                 }
 
-                    wl_list_remove(&view->link);
-                    wl_list_insert(&server->menus, &view->link);
-
+                menu_focus(server, menu);
                 begin_interactive_sd(server, view);
             }
         }
@@ -357,8 +364,8 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
         if (!view && server->menu) {
             bool show = !(event->button != 273); // TODO
             if (show) {
-                prerender_menu(server, server->menu);
-                menu_show(server->menu, cursor->cursor->x, cursor->cursor->y);
+                prerender_menu(server, server->menu, false);
+                menu_show(server, server->menu, cursor->cursor->x, cursor->cursor->y);
             }
         }
 

@@ -135,7 +135,7 @@ static void exec_show_menu(struct tbx_command* cmd, int argc, char** argv)
     // toggle a menu
     if (menu) {
         if (!menu->shown) {
-            menu_show(menu, x, y);
+            menu_show(cmd->server, menu, x, y);
         } else {
             menu_close(menu);
         }
@@ -171,8 +171,6 @@ struct tbx_menu* create_menu(struct tbx_command* cmd, int argc, char** argv)
         menu->title = calloc(strlen(argv[2]) + 8, sizeof(char));
         strcpy(menu->title, argv[2]);
     }
-
-    wl_list_init(&menu->items);
 
     m->type = TBX_MENU;
     m->server = cmd->server;

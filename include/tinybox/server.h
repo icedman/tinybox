@@ -57,6 +57,7 @@ struct tbx_server {
     struct tbx_console* console;
 
     // menu system
+    struct tbx_menu* tooltip;
     struct tbx_menu* menu;
     struct tbx_menu* menu_hovered;
     struct tbx_menu* menu_navigation_grab;
