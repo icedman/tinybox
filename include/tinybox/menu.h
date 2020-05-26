@@ -27,7 +27,7 @@ struct tbx_menu {
     char* label; // item
 
     bool shown;
-    bool fixed;
+    bool pinned;
     bool reversed; // reverse direction right-to-left
 
     // local coors ~ relative to parent
@@ -35,7 +35,6 @@ struct tbx_menu {
     int y;
     int width;
     int height;
-    bool pinned; // moved and pinned
 
     // world coords
     int menu_x;
@@ -69,13 +68,15 @@ struct tbx_menu {
 };
 
 struct tbx_menu* menu_at(struct tbx_server* server, int x, int y);
-void menu_show(struct tbx_menu* menu, int x, int y, bool show);
+void menu_close(struct tbx_menu* menu);
+void menu_close_all(struct tbx_server* server);
+void menu_show(struct tbx_menu* menu, int x, int y);
 void menu_show_submenu(struct tbx_menu* menu, struct tbx_menu* sub_menu);
-void render_menus(struct tbx_output* output);
 void menu_execute(struct tbx_server* server, struct tbx_menu* item);
 void menu_navigation(struct tbx_server* server, uint32_t keycode);
 
 void menu_setup(struct tbx_server* server, struct tbx_menu *menu);
 void prerender_menu(struct tbx_server* server, struct tbx_menu *menu);
+void render_menus(struct tbx_output* output);
 
 #endif // TINYBOX_MENU_H

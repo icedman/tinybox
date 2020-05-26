@@ -106,7 +106,9 @@ static bool begin_interactive_sd(struct tbx_server* server,
 
         view->workspace = server->workspace;
 
-        view_set_focus(view, view->surface);
+        if (view->surface) {
+            view_set_focus(view, view->surface);
+        }
         return true;
     }
 
@@ -213,7 +215,7 @@ static void process_cursor_motion(struct tbx_server* server, uint32_t time)
     }
 
     // process menu
-    if (server->menu->shown) {
+    if (server->menu) {
         struct tbx_menu* menu = menu_at(server, cursor->cursor->x, cursor->cursor->y);
         if (menu) {
             if (menu->hovered && menu->hovered->menu_type == TBX_MENU) {
@@ -321,10 +323,17 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
             if (view->hotspot == HS_TITLEBAR) {
                 if (menu->pinned && (event->button == 273)) {
                     menu->pinned = false;
-                    menu_show(menu, 0, 0, false);
+                    menu_close(menu);
                     return;
                 }
                 menu->pinned = true;
+                if (menu->submenu) {
+                    menu_close(menu->submenu);
+                }
+
+                    wl_list_remove(&view->link);
+                    wl_list_insert(&server->menus, &view->link);
+
                 begin_interactive_sd(server, view);
             }
         }
@@ -334,8 +343,8 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
     struct tbx_view* view = desktop_view_at(
         cursor->server, cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
 
-    if (view && cursor->server->menu->shown) {
-        menu_show(cursor->server->menu, 0, 0, false);
+    if (view && cursor->server->menu) {
+        menu_close_all(cursor->server);
     }
 
     if (event->state == WLR_BUTTON_RELEASED) {
@@ -345,10 +354,12 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
         wlr_xcursor_manager_set_cursor_image(server->cursor->xcursor_manager,
             "left_ptr", server->cursor->cursor);
 
-        if (!view) {
+        if (!view && server->menu) {
             bool show = !(event->button != 273); // TODO
-            prerender_menu(server, server->menu);
-            menu_show(server->menu, cursor->cursor->x, cursor->cursor->y, show);
+            if (show) {
+                prerender_menu(server, server->menu);
+                menu_show(server->menu, cursor->cursor->x, cursor->cursor->y);
+            }
         }
 
     } else {

@@ -243,6 +243,7 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
     }
 
     if (!handled && server->menu_navigation_grab && event->state == WLR_KEY_PRESSED) {
+        console_log("menu grabbed %s", server->menu_navigation_grab->label);
         for (int i = 0; i < nsyms; i++) {
             menu_navigation(server, syms[i]);
         }

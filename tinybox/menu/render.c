@@ -306,6 +306,10 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     tflags = style->menu_hilite;
 
     // hovered or submenu
+    if (menu->submenu && menu->submenu->pinned) {
+        menu->submenu = NULL;
+    }
+
     struct tbx_command* submenu;
     wl_list_for_each(submenu, &menu->items, link)
     {
@@ -331,33 +335,27 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     }
 }
 
-static void render_menu_recursive(struct tbx_output* output, struct tbx_menu* menu)
-{
-    if (!menu->menu_type == TBX_MENU) {
-        return;
-    }
-
-    if (menu->shown) {
-        render_menu(output, menu);
-    }
-
-    // int borderWidth = 3;
-    struct tbx_command* submenu;
-    wl_list_for_each(submenu, &menu->items, link)
-    {
-        struct tbx_menu* item = (struct tbx_menu*)submenu;
-        if (item->menu_type == TBX_MENU) {
-            // item->menu_x = menu->menu_x + menu->menu_width + item->x + borderWidth;
-            // item->menu_y = menu->menu_y + item->y - item->height - borderWidth;
-            render_menu_recursive(output, item);
-        }
-    }
-}
-
 void render_menus(struct tbx_output* output)
 {
     struct tbx_server* server = output->server;
-    render_menu_recursive(output, server->menu);
+    struct tbx_view *view, *tmp;
+
+    // remove closed menus
+    wl_list_for_each_safe(view, tmp, &server->menus, link) {
+        struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
+        struct tbx_menu* menu = menu_view->menu;
+        if (!menu->shown) {
+            wl_list_remove(&view->link);
+        }
+    }
+     
+    wl_list_for_each_reverse(view, &server->menus, link) {
+        struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
+        struct tbx_menu* menu = menu_view->menu;
+        if (menu->shown) {
+            render_menu(output, menu);
+        }
+    }
 }
 
 void prerender_menu(struct tbx_server* server, struct tbx_menu *menu)
@@ -367,4 +365,6 @@ void prerender_menu(struct tbx_server* server, struct tbx_menu *menu)
     struct tbx_view *view = (struct tbx_view*)&menu->view;
     view->width = menu->menu_width;
     view->height = menu->menu_height;
+
+    memset(&view->hotspots, 0, HS_COUNT * sizeof(struct wlr_box));
 }

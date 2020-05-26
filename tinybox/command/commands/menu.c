@@ -64,11 +64,13 @@ static void exec_menu_custom(struct tbx_command* cmd, int _argc, char** _argv)
     struct tbx_command* item;
     if (strcmp(argv[0], "submenu") == 0) {
         menu = create_menu(cmd, argc, argv);
+        menu->menu_type = TBX_MENU;
         item = &menu->command;
         // push context
         cmd->server->menu_context = menu;
     } else {
         menu = create_item(cmd, argc, argv);
+        menu->menu_type = TBX_MENU_ITEM;
         item = &menu->command;
     }
 
@@ -83,10 +85,10 @@ static void exec_menu_custom(struct tbx_command* cmd, int _argc, char** _argv)
 
         // debug only
         if (menu->menu_type == TBX_MENU) {
-            // console_log("menu %s", argv[0]);
+            console_log("menu %s", argv[0]);
         }
         if (menu->menu_type == TBX_MENU_ITEM) {
-            // console_log("  item %s", argv[0]);
+            console_log("  item %s", argv[0]);
         }
     }
 
@@ -102,7 +104,6 @@ static void exec_create_root_menu(struct tbx_command* cmd, int argc, char** argv
     if (argc == 1 && !cmd->server->menu) {
         cmd->server->menu = create_menu(cmd, argc, argv);
         cmd->server->menu_context = cmd->server->menu;
-        wl_list_insert(&cmd->server->menus, &cmd->server->menu->command.link);
         console_log("root %s", cmd->server->menu_context->label);
         return;
     }
@@ -131,9 +132,13 @@ static void exec_show_menu(struct tbx_command* cmd, int argc, char** argv)
         y = strtol(argv[1], NULL, 10);
     }
 
-    // show a menu
+    // toggle a menu
     if (menu) {
-        menu_show(menu, x, y, !menu->shown);
+        if (!menu->shown) {
+            menu_show(menu, x, y);
+        } else {
+            menu_close(menu);
+        }
     }
 }
 
