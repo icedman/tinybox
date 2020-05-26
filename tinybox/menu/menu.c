@@ -103,6 +103,8 @@ void menu_show(struct tbx_server *server, struct tbx_menu* menu, int x, int y)
 
     // constraint to output
     struct tbx_view* view = (struct tbx_view*)&menu->view;
+    view->x = x;
+    view->y = y;
     struct tbx_output* output = view_get_preferred_output(view);
 
     struct wlr_box* main_box = wlr_output_layout_get_box(
