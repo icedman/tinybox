@@ -32,9 +32,9 @@
 
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
 {
-    // if (view->csd) {
-    //     return;
-    // }
+    if (view->csd) {
+        return;
+    }
 
     // smoothen
     if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT || view->server->cursor->resize_edges & WLR_EDGE_TOP) && (view->request_box.width > 20 && view->request_box.height > 20) && (view->request_box.width != box->width || view->request_box.height != box->height)) {
@@ -362,7 +362,7 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
 
     // commit from smooth move request
     if (view->request_wait > 0 && view->request_box.x != 0 && view->request_box.y != 0) {
-        if (--view->request_wait == 0) {
+        if (--view->request_wait == 0 || view->csd) {
             view->x = view->request_box.x;
             view->y = view->request_box.y;
             view->request_box.x = 0;

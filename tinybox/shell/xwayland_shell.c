@@ -264,6 +264,84 @@ static void xwayland_view_set_parent(struct tbx_view *view) {
     }
 }
 
+static void xwayland_view_try_set_parent(struct tbx_view *view) {
+    struct tbx_server *server = view->server;
+    struct wlr_xwayland_surface* xsurface = view->xwayland_surface;
+    uint32_t window_type = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
+
+    if (window_type == 0) {
+        return;
+    }
+
+    struct tbx_view* _view;
+    struct tbx_view* candidate = NULL;
+    wl_list_for_each(_view, &server->views, link)
+    {
+        if (_view->view_type != VIEW_TYPE_XWAYLAND || _view == view) {
+            continue;
+        }
+        int wt = xwayland_get_int_prop(_view, VIEW_PROP_WINDOW_TYPE);
+        if (wt != 0) {
+            continue;
+        }
+
+        if (!_view->width || !_view->height) {
+            continue;
+        }
+
+        double sx, sy;
+        struct wlr_surface *surface;
+        if (view_at(_view, server->cursor->cursor->x, server->cursor->cursor->y, &surface, &sx, &sy)) {
+            candidate = _view;
+            break;
+        }
+    }
+
+
+    //-------------------------
+    // hacky: adopt a parent?
+    //-------------------------
+    // properly implement popups
+    if (!candidate) {
+        struct tbx_view* focused = view_from_surface(server,
+            server->seat->seat->keyboard_state.focused_surface);
+
+        if (!focused || focused->view_type != VIEW_TYPE_XWAYLAND) {
+            focused = NULL;
+            struct tbx_view* ancestor;
+            wl_list_for_each(ancestor, &view->server->views, link)
+            {
+                if (ancestor == view || 
+                    ancestor->parent ||
+                    !ancestor->mapped ||
+                    !ancestor->x ||
+                    ancestor->width < view->width) {
+                    continue;
+                }
+                if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
+                    focused = ancestor;
+                    break;
+                }
+            }
+        }
+
+        while (focused && focused->parent) {
+            focused = focused->parent;
+        }
+
+        candidate = focused;
+    }
+
+    if (candidate && xsurface) {
+        console_log("adopted %d %d %d", candidate->width, candidate->x, candidate->y);
+        view->parent = candidate;
+
+        // // (candidate->xwayland_surface->x) .. when surface coords not yet configured.. it wouldn't be zero
+        view->x = xsurface->x + candidate->x - (candidate->xwayland_surface->x);
+        view->y = xsurface->y + candidate->y - (candidate->xwayland_surface->y);
+    }
+}
+
 static void xwayland_surface_commit(struct wl_listener* listener, void* data)
 {
     // console_log("commit xwayland");
@@ -289,7 +367,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
 
     struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, map);
     struct tbx_view* view = &xwayland_view->view;
-    struct tbx_server* server = view->server;
+    // struct tbx_server* server = view->server;
 
     view->mapped = true;
     view->title_dirty = true;
@@ -303,66 +381,15 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
         wl_signal_add(&xsurface->surface->events.commit, &xwayland_view->commit);
     }
 
-    uint32_t window_type = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
-
     // if override redirect .. position as requested
-    if (view->override_redirect) {
+    if (view->override_redirect && !view->parent) {
 
         if (view->xwayland_surface->parent) {
-
             xwayland_view_set_parent(view);
-
         } else {
-
-            // popup? needs a parent
-            if (window_type != 0) {
-                //-------------------------
-                // hacky: adopt a parent?
-                //-------------------------
-                // properly implement popups
-
-                // current focus
-                struct tbx_view* focused = view_from_surface(server,
-                    server->seat->seat->keyboard_state.focused_surface);
-
-                // under cursor
-                double sx, sy;
-                struct wlr_surface *surface;
-                struct tbx_view* under = desktop_view_at(server,
-                    server->cursor->cursor->x, server->cursor->cursor->y, &surface, &sx, &sy);
-
-                if (under) {
-                    focused = under;
-                }
-
-                if (!focused || focused->view_type != VIEW_TYPE_XWAYLAND) {
-                    focused = NULL;
-                    struct tbx_view* ancestor;
-                    wl_list_for_each(ancestor, &view->server->views, link)
-                    {
-                        if (ancestor == view || 
-                            ancestor->parent ||
-                            !ancestor->mapped ||
-                            !ancestor->x ||
-                            ancestor->width < view->width) {
-                            continue;
-                        }
-                        if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
-                            focused = ancestor;
-                            break;
-                        }
-                    }
-                }
-
-                if (focused) {
-                    console_log("adopted %d %d %d", focused->width, focused->x, focused->y);
-                    view->parent = focused;
-
-                    // (focused->xwayland_surface->x) .. when surface coords not yet configured.. it wouldn't be zero
-                    view->x = xsurface->x + focused->x - (focused->xwayland_surface->x);
-                    view->y = xsurface->y + focused->y - (focused->xwayland_surface->y);
-                    return;
-                }
+            xwayland_view_try_set_parent(view);
+            if (view->parent) { 
+                return;
             }
         }
 
