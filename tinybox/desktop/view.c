@@ -132,8 +132,8 @@ struct tbx_view* desktop_view_at(struct tbx_server* server, double lx,
         }
 
         bool shaded = view->shaded;
+        view->hotspot = HS_NONE;
         if (!shaded && view_at(view, lx, ly, surface, sx, sy)) {
-            view->hotspot = HS_NONE;
             return view;
         }
 

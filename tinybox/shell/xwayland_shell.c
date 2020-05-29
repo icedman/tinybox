@@ -275,15 +275,13 @@ static void xwayland_view_try_set_parent(struct tbx_view *view) {
 
     struct tbx_view* _view;
     struct tbx_view* candidate = NULL;
+    struct tbx_view* fallback = NULL;
     wl_list_for_each(_view, &server->views, link)
     {
         if (_view->view_type != VIEW_TYPE_XWAYLAND || _view == view) {
             continue;
         }
         int wt = xwayland_get_int_prop(_view, VIEW_PROP_WINDOW_TYPE);
-        if (wt != 0) {
-            continue;
-        }
 
         if (!_view->width || !_view->height) {
             continue;
@@ -292,8 +290,12 @@ static void xwayland_view_try_set_parent(struct tbx_view *view) {
         double sx, sy;
         struct wlr_surface *surface;
         if (view_at(_view, server->cursor->cursor->x, server->cursor->cursor->y, &surface, &sx, &sy)) {
-            candidate = _view;
-            break;
+            if (wt == 0) {
+                candidate = _view;
+                break;
+            } else {
+                fallback = _view;
+            }
         }
     }
 
@@ -330,6 +332,10 @@ static void xwayland_view_try_set_parent(struct tbx_view *view) {
         }
 
         candidate = focused;
+    }
+
+    if (!candidate) {
+        candidate = fallback;
     }
 
     if (candidate && xsurface) {
@@ -403,7 +409,10 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
     // always set to zero
     wlr_xwayland_surface_configure(view->xwayland_surface, 0,
         0, view->width, view->height);
-    view_move_to_center(view, NULL);
+
+    if (!view->parent)
+        view_move_to_center(view, NULL);
+
     view_damage(view);
 }
 
