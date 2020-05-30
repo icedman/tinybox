@@ -85,40 +85,12 @@ static void fitNodes(Node *_root)
 }
 
 #if 0
-static void optimizeSizes()
+static void findMaxWidth()
 {
-    int widths[] = {
-        (box_screen.width/2),
-        (box_screen.width/3),
-        (box_screen.width/3*2),
-        0
-    };
-
     struct tbx_packer_node* i;
     max_width = 0;
     wl_list_for_each(i, &boxes, link)
     {
-        int closestD = 0;
-        int closestIdx = -1;
-        for(int j=0;;j++) {
-            int w = widths[j];
-            if (w == 0) {
-                break;
-            }
-
-            int d = i->w - w;
-            d = d * d;
-            if (d < closestD || closestD == 0) {
-                closestD = d;
-                closestIdx = j;
-            }
-        }
-
-        if (widths[closestIdx] < i->w) {
-            i->w = widths[closestIdx];
-            i->view->interface->configure(i->view, i->x, i->y, i->w, i->h);
-        }
-
         if (max_width < i->w) {
             max_width = i->w;
         }
@@ -181,10 +153,6 @@ static void arrange_add_view(struct tbx_server* server, struct tbx_view* view)
 
     memcpy(&box_screen, main_box, sizeof(struct wlr_box));
     resetRoot();
-
-    if (view->width > box_screen.width / 2) {
-        split_screen = false;
-    }
 }
 
 static void arrange_workspace(struct tbx_server* server, int workspace)
@@ -223,22 +191,22 @@ bool arrange_run(struct tbx_server* server)
         return true;
     }
 
-    // optimizeSizes();
+    // findMaxWidth();
 
     sortNodes();
 
-    if (split_screen) {
-        root.w = max_width;
-    }
+    // if (split_screen) {
+    //     root.w = max_width + margin * 4;
+    // }
     fitNodes(&root);
 
-    if (split_screen) {
-        // second pass
-        resetRoot();
-        root.x += max_width;
-        root.w -= max_width;
-        fitNodes(&root);
-    }
+    // if (split_screen) {
+    //     // second pass
+    //     resetRoot();
+    //     root.x += max_width;
+    //     root.w -= max_width;
+    //     fitNodes(&root);
+    // }
 
     struct tbx_packer_node* block;
     wl_list_for_each(block, &boxes, link)
