@@ -39,8 +39,7 @@ static void exec_create_root_menu(struct tbx_command* cmd, int argc, char** argv
 
 static void exec_create_window_menu(struct tbx_command* cmd, int argc, char** argv)
 {
-    console_log("startmenu %d", argc);
-
+    // console_log("startmenu %d", argc);
     if (!command_check_args(cmd, argc, 0)) {
         return;
     }
@@ -49,7 +48,7 @@ static void exec_create_window_menu(struct tbx_command* cmd, int argc, char** ar
     cmd->server->menu_context = menu;
     menu->no_title = true;
     wl_list_insert(&cmd->server->named_menus, &menu->named_link);
-    console_log("window %s", cmd->server->menu_context->label);
+    // console_log("window %s", cmd->server->menu_context->label);
 }
 
 static void exec_menu_custom(struct tbx_command* cmd, int _argc, char** _argv)
@@ -105,6 +104,10 @@ static void exec_menu_custom(struct tbx_command* cmd, int _argc, char** _argv)
         menu = create_item(cmd, argc, argv);
         menu->menu_type = TBX_MENU_ITEM;
         item = &menu->command;
+
+        if (strcmp(argv[0], "separator") == 0) {
+            menu->menu_type = TBX_MENU_ITEM_SEPARATOR;
+        }
     }
 
     if (item) {

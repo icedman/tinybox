@@ -50,9 +50,9 @@ cairo_surface_t* generate_item_texture(struct tbx_output* tbx_output, struct tbx
     cairo_rectangle(cx, 0, 0, menu->text_image_width, menu->text_image_height);
 
     // text
-    if (hilite) {
+    if (hilite && menu->text_hilite_image) {
         cairo_set_source_surface(cx, menu->text_hilite_image, 0, 0);
-    } else {
+    } else if (menu->text_image) {
         cairo_set_source_surface(cx, menu->text_image, 0, 0);
     }
 
@@ -130,6 +130,14 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
         //     title_height = item->height;
         // }
 
+        if (item->menu_type == TBX_MENU_ITEM_SEPARATOR) {
+            cairo_surface_destroy(item->text_image);
+            item->text_image = NULL;
+            cairo_surface_destroy(item->text_hilite_image);
+            item->text_hilite_image = NULL;
+            item->height = borderWidth + 2;
+        }
+
         item->y = menu_height;
         menu_height += item->height;
         if (menu_width < item->width) {
@@ -203,6 +211,12 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
         item->width = menu_width;
         item->y += item_offset_y;
 
+        if (item->menu_type == TBX_MENU_ITEM_SEPARATOR) {
+            cairo_translate(cx, 0, item->height);
+            draw_gradient_rect_xy(cx, flags, 0, -item->height+1, item->width, item->height-2, color, colorTo);
+            continue;
+        }
+
         cairo_surface_t* item_image = generate_item_texture(tbx_output, item, false);
         cairo_set_source_surface(cx, item_image, 0, 0);
         cairo_translate(cx, 0, item->height);
@@ -210,8 +224,6 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
         cairo_surface_destroy(item_image);
 
         item_image = generate_item_texture(tbx_output, item, true);
-
-        // save wlr_texture
         if (item->item_texture) {
             wlr_texture_destroy(item->item_texture);
         }
@@ -346,7 +358,11 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
         color_to_rgba(color, style->borderColor);
         // render_rect(output, &box, color, output->scale);
 
-        render_texture(output, &box, item->item_texture, output->scale);
+        if (item->menu_type == TBX_MENU_ITEM_SEPARATOR) {
+            continue;
+        } else {
+            render_texture(output, &box, item->item_texture, output->scale);
+        }
 
         if (tflags & sf_raised) {
             render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);

@@ -11,6 +11,7 @@ struct tbx_output;
 enum menu_type {
     TBX_MENU,
     TBX_MENU_ITEM,
+    TBX_MENU_ITEM_SEPARATOR,
     TBX_MENU_TOOLTIP,
 };
 
