@@ -62,7 +62,7 @@ static bool begin_interactive_sd(struct tbx_server* server,
         modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
     }
 
-    if (view->hotspot_edges != WLR_EDGE_NONE && !(modifiers & WLR_MODIFIER_ALT)) {
+    if (view->hotspot_edges != WLR_EDGE_NONE && cursor->swipe_fingers != 3) {
         cursor->mode = TBX_CURSOR_RESIZE;
         cursor->grab_view = view;
         cursor->resize_edges = view->hotspot_edges;
@@ -94,7 +94,8 @@ static bool begin_interactive_sd(struct tbx_server* server,
     }
 
     if ((view->hotspot == HS_TITLEBAR || view->hotspot == HS_HANDLE) ||
-        (view->hotspot_edges != WLR_EDGE_NONE && (modifiers & WLR_MODIFIER_ALT))) {
+        cursor->swipe_fingers == 3) {
+        
         wlr_xcursor_manager_set_cursor_image(cursor->xcursor_manager, "grabbing",
             cursor->cursor);
 
