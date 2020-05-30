@@ -49,6 +49,13 @@ static bool begin_interactive_sd(struct tbx_server* server,
 
     struct tbx_cursor* cursor = server->cursor;
 
+    // refresh the hotspot
+    // struct wlr_surface* surface = 0;
+    // double sx; double sy;
+    // view->hotspot = HS_NONE;
+    // view->hotspot_edges = WLR_EDGE_NONE;
+    // view_at(view, cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
+
     if (view->hotspot_edges != WLR_EDGE_NONE) {
         cursor->mode = TBX_CURSOR_RESIZE;
         cursor->grab_view = view;
@@ -258,6 +265,9 @@ static void process_cursor_motion(struct tbx_server* server, uint32_t time)
         wlr_xcursor_manager_set_cursor_image(server->cursor->xcursor_manager,
             cursor_images[view->hotspot],
             cursor->cursor);
+    } else if (view) {
+        view->hotspot = HS_NONE;
+        view->hotspot_edges = WLR_EDGE_NONE;
     }
 
     if (surface) {
