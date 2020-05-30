@@ -56,7 +56,13 @@ static bool begin_interactive_sd(struct tbx_server* server,
     // view->hotspot_edges = WLR_EDGE_NONE;
     // view_at(view, cursor->cursor->x, cursor->cursor->y, &surface, &sx, &sy);
 
-    if (view->hotspot_edges != WLR_EDGE_NONE) {
+    struct tbx_keyboard* keyboard = view->server->seat->last_keyboard;
+    uint32_t modifiers = 0;
+    if (keyboard) {
+        modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
+    }
+
+    if (view->hotspot_edges != WLR_EDGE_NONE && !(modifiers & WLR_MODIFIER_ALT)) {
         cursor->mode = TBX_CURSOR_RESIZE;
         cursor->grab_view = view;
         cursor->resize_edges = view->hotspot_edges;
@@ -87,13 +93,12 @@ static bool begin_interactive_sd(struct tbx_server* server,
         return true;
     }
 
-    if (view->hotspot == HS_TITLEBAR || view->hotspot == HS_HANDLE) {
+    if ((view->hotspot == HS_TITLEBAR || view->hotspot == HS_HANDLE) ||
+        (view->hotspot_edges != WLR_EDGE_NONE && (modifiers & WLR_MODIFIER_ALT))) {
         wlr_xcursor_manager_set_cursor_image(cursor->xcursor_manager, "grabbing",
             cursor->cursor);
 
-        struct tbx_keyboard* keyboard = view->server->seat->last_keyboard;
         if (view->hotspot == HS_TITLEBAR && keyboard) {
-            uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
             if (modifiers & WLR_MODIFIER_ALT) {
                 view->shaded = !view->shaded;
             }

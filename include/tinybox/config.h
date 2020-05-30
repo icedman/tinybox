@@ -70,6 +70,7 @@ struct tbx_config {
     bool animate;
     bool console;
     bool mini_titlebar;
+    bool mini_frame;
     bool show_tooltip;
     float move_resize_alpha;
 

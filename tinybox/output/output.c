@@ -115,9 +115,13 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         render_rect_outline(output, &box, color, frameWidth, false, output->scale);
     }
 
-    bool mini = view->server->config.mini_titlebar;
-    if (mini) {
+    bool mini_titlebar = view->server->config.mini_titlebar;
+    bool mini_frame = view->server->config.mini_frame;
+    if (mini_titlebar) {
         titlebarHeight = handleWidth;
+    }
+    if (mini_frame) {
+        titlebarHeight = handleWidth = 0;
     }
 
     // ----------------------
@@ -158,7 +162,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
         }
 
-        if (!mini) {
+        if (!mini_titlebar) {
             // label
             grow_box_hv(&box, -margin, -margin);
             render_texture(output, &box,
