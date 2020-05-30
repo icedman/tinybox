@@ -358,8 +358,8 @@ void view_damage(struct tbx_view* view)
 
 void view_frame(struct tbx_view *view, struct wlr_box *box)
 {
-    box->y = view->hotspots[HS_EDGE_LEFT].x;
+    box->x = view->hotspots[HS_EDGE_LEFT].x;
     box->width = view->hotspots[HS_EDGE_RIGHT].x - box->x;
-    box->y = view->hotspots[HS_EDGE_TOP].y;
+    box->y = view->y - view->hotspots[HS_EDGE_TOP].height - view->hotspots[HS_TITLEBAR].height;
     box->height = view->hotspots[HS_EDGE_BOTTOM].y - box->y;
 }

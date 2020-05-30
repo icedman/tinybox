@@ -62,7 +62,7 @@ static bool begin_interactive_sd(struct tbx_server* server,
         modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
     }
 
-    if (view->hotspot_edges != WLR_EDGE_NONE && cursor->swipe_fingers != 3) {
+    if (view->hotspot_edges != WLR_EDGE_NONE) {
         cursor->mode = TBX_CURSOR_RESIZE;
         cursor->grab_view = view;
         cursor->resize_edges = view->hotspot_edges;

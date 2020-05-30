@@ -19,12 +19,14 @@ static bool split_screen;
 static Node root;
 static int max_width;
 
+static int margin = 8;
+
 static void resetRoot() {
     memset(&root, 0, sizeof(struct tbx_packer_node));
-    root.x = 8;
-    root.y = 38;
-    root.w = box_screen.width - 16;
-    root.h = box_screen.height - 46;
+    root.x = margin;
+    root.y = margin;
+    root.w = box_screen.width - margin*2;
+    root.h = box_screen.height - margin*2;
 }
 
 static Node* createNode(int x, int y, int w, int h)
@@ -78,13 +80,12 @@ static void fitNodes(Node *_root)
         Node* node = findNode(_root, block->w, block->h);
         if (node != NULL) {
             block->fit = splitNode(node, block->w, block->h);
-            block->view->x = block->fit->x + 4;
-            block->view->y = block->fit->y + 4;
         }
     }
 }
 
-static void opitmizeSizes()
+#if 0
+static void optimizeSizes()
 {
     int widths[] = {
         (box_screen.width/2),
@@ -115,15 +116,7 @@ static void opitmizeSizes()
 
         if (widths[closestIdx] < i->w) {
             i->w = widths[closestIdx];
-            i->view->interface->configure(i->view, i->x, i->y,
-                i->w - 16,
-                i->h - i->view->hotspots[HS_TITLEBAR].height
-                     - i->view->hotspots[HS_HANDLE].height
-                     - (3 * 4)
-                     - 1
-                     // - (i->view->server->style.borderWidth * 4)
-                     - (i->view->server->style.frameWidth * 2)
-                );
+            i->view->interface->configure(i->view, i->x, i->y, i->w, i->h);
         }
 
         if (max_width < i->w) {
@@ -131,6 +124,7 @@ static void opitmizeSizes()
         }
     }
 }
+#endif
 
 static void sortNodes()
 {
@@ -171,9 +165,12 @@ static void sortNodes()
 static void arrange_add_view(struct tbx_server* server, struct tbx_view* view)
 {
     struct wlr_box geometry;
-    view->interface->get_geometry(view, &geometry);
 
-    Node* ab = createNode(view->x, view->y, geometry.width + 16, geometry.height + 46 + 8);
+    view_frame(view, &geometry);
+    geometry.width += margin/2;
+    geometry.height += margin/2;
+
+    Node* ab = createNode(view->x, view->y, geometry.width, geometry.height);
     ab->view = view;
     wl_list_insert(&boxes, &ab->link);
     
@@ -201,43 +198,6 @@ static void arrange_workspace(struct tbx_server* server, int workspace)
     }
 }
 
-static void arrange_update(Node* ab)
-{
-    if (!ab) {
-        return;
-    }
-
-    // console_log("update %d", ab->id);
-    
-    float margin = 8;
-
-    // borders
-    if (ab->x < margin) {
-        ab->x = margin;
-    }
-    if (ab->y < 30 + margin) {
-        ab->y = 30 + margin;
-    }
-    if (ab->x > box_screen.width - margin) {
-        ab->x = box_screen.width - margin;
-    }
-    if (ab->y > box_screen.height - margin - 8) {
-        ab->y = box_screen.height - margin - 8;
-    }
-    
-    if (ab->fit) {
-        struct tbx_view *view = ab->fit->view;
-        if (view) {
-            view->x = ab->x;
-            view->y = ab->y;
-            console_log(">%d %f %f %f %f", ab->id, ab->x, ab->y);
-        }
-    }
-
-    arrange_update(ab->right);
-    arrange_update(ab->down);
-}
-
 void arrange_begin(struct tbx_server* server, int workspace, int gap, int margin)
 {
     box_id = 0;
@@ -263,19 +223,20 @@ bool arrange_run(struct tbx_server* server)
         return true;
     }
 
-    opitmizeSizes();
+    // optimizeSizes();
+
     sortNodes();
 
     if (split_screen) {
-        root.w = max_width + 8;
+        root.w = max_width;
     }
     fitNodes(&root);
 
     if (split_screen) {
         // second pass
         resetRoot();
-        root.x += max_width + 4;
-        root.w -= max_width + 16;
+        root.x += max_width;
+        root.w -= max_width;
         fitNodes(&root);
     }
 
@@ -283,10 +244,10 @@ bool arrange_run(struct tbx_server* server)
     wl_list_for_each(block, &boxes, link)
     {
         if (block->fit) {
-            block->x = block->fit->x;
-            block->y = block->fit->y;
+            block->view->x = block->fit->x + block->view->hotspots[HS_EDGE_LEFT].width;
+            block->view->y = block->fit->y + block->view->hotspots[HS_EDGE_TOP].height
+            + block->view->hotspots[HS_TITLEBAR].height;
         }
-        arrange_update(block);
     }
     return true;
 }

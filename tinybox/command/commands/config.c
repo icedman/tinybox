@@ -171,7 +171,7 @@ static void exec_mini_frame(struct tbx_command* cmd, int argc, char** argv)
     if (argc) {
         config->mini_frame = parse_boolean(argv[0], false);
     } else {
-        config->mini_frame = !config->mini_titlebar;
+        config->mini_frame = !config->mini_frame;
     }
 }
 
