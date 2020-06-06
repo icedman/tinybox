@@ -199,7 +199,7 @@ struct tbx_menu* create_menu(struct tbx_command* cmd, int argc, char** argv)
         strcpy(menu->title, argv[2]);
     }
 
-    m->type = TBX_MENU;
+    menu->menu_type = TBX_MENU;
     m->server = cmd->server;
     m->context = cmd;
     return menu;
@@ -208,7 +208,7 @@ struct tbx_menu* create_menu(struct tbx_command* cmd, int argc, char** argv)
 struct tbx_menu* create_item(struct tbx_command* cmd, int argc, char** argv)
 {
     struct tbx_menu* menu = create_menu(cmd, argc, argv);
-    struct tbx_command* m = &menu->command;
+    // struct tbx_command* m = &menu->command;
 
     menu_setup(cmd->server, menu);
 
@@ -227,7 +227,7 @@ struct tbx_menu* create_item(struct tbx_command* cmd, int argc, char** argv)
     }
 
     // convert to menu_item
-    m->type = TBX_MENU_ITEM;
+    menu->menu_type = TBX_MENU_ITEM;
     return menu;
 }
 

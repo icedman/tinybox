@@ -155,7 +155,7 @@ static void console_render_cache(struct tbx_output* output)
 
     // We must use a non-nil cairo_t for cairo_set_font_options to work.
     // Therefore, we cannot use cairo_create(NULL).
-    cairo_surface_t* dummy_surface = cairo_image_surface_create(WL_SHM_FORMAT_ARGB8888, 0, 0);
+    cairo_surface_t* dummy_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 0, 0);
     cairo_t* c = cairo_create(dummy_surface);
     cairo_set_antialias(c, CAIRO_ANTIALIAS_BEST);
     cairo_font_options_t* fo = cairo_font_options_create();
