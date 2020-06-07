@@ -33,6 +33,7 @@ tinybox_src = files(
   'output/render.c',
   'output/layout.c',
   'output/console.c',
+  'output/damage.c',
   
   'menu/menu.c',
   'menu/render.c',

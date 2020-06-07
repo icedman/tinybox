@@ -11,6 +11,7 @@
 #include "tinybox/shell.h"
 #include "tinybox/workspace.h"
 #include "tinybox/xwayland.h"
+#include "tinybox/damage.h"
 
 #include <getopt.h>
 #include <stdlib.h>
@@ -56,6 +57,7 @@ bool tbx_server_setup(struct tbx_server* server)
     xwayland_shell_setup(server);
     decoration_setup(server);
 
+    damage_setup(server);
     cursor_setup(server);
     seat_setup(server);
     console_setup(server);

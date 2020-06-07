@@ -64,6 +64,9 @@ struct tbx_server {
     struct tbx_menu* menu_context; // use only during parsing the menu tree
     struct wl_list menus;
     struct wl_list named_menus;
+
+    // damage
+    struct wl_list damages;
 };
 
 bool tbx_server_setup(struct tbx_server* server);

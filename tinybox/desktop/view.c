@@ -2,6 +2,7 @@
 #include "tinybox/output.h"
 #include "tinybox/workspace.h"
 #include "tinybox/xwayland.h"
+#include "tinybox/damage.h"
 
 #include <stdlib.h>
 
