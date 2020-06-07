@@ -342,25 +342,25 @@ void view_destroy(struct tbx_view* view)
 
 void view_close(struct tbx_view* view)
 {
-    view_damage(view);
+    damage_add_view(view->server, view);
     view->interface->close(view);
 }
 
 void view_damage(struct tbx_view* view)
 {
-    // wlr_surface_get_effective_damage
-    view->interface->get_geometry(view, &view->damage);
-    view->damage.x = view->x;
-    view->damage.y = view->y;
-    view->damage_age = 0;
-
-    output_damage_view(view->server->main_output, view);
+    damage_add_commit(view->server, view);
 }
 
 void view_frame(struct tbx_view *view, struct wlr_box *box)
 {
     box->x = view->hotspots[HS_EDGE_LEFT].x;
-    box->width = view->hotspots[HS_EDGE_RIGHT].x - box->x;
+    box->width = view->hotspots[HS_EDGE_RIGHT].width + view->hotspots[HS_EDGE_RIGHT].x - box->x;
     box->y = view->y - view->hotspots[HS_EDGE_TOP].height - view->hotspots[HS_TITLEBAR].height;
-    box->height = view->hotspots[HS_EDGE_BOTTOM].y - box->y;
+    box->height = view->hotspots[HS_EDGE_BOTTOM].height + view->hotspots[HS_EDGE_BOTTOM].y - box->y;
+
+    if (box->width == 0 || box->height == 0) {
+        view->interface->get_geometry(view, box);
+        box->x = view->x;
+        box->y = view->y;
+    }
 }

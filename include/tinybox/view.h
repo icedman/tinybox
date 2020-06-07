@@ -76,7 +76,7 @@ struct tbx_view {
 
     bool mapped;
     int x, y;
-    int lx, ly; // last x, y for damage?
+    int lx, ly;
 
     // xwayland
     int width, height;
@@ -116,10 +116,6 @@ struct tbx_view {
 
     // workspace
     int workspace;
-
-    // damage tracking
-    struct wlr_box damage;
-    int damage_age;
 };
 
 struct tbx_xdg_shell_view {

@@ -9,6 +9,7 @@
 #include "tinybox/style.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
+#include "tinybox/damage.h"
 
 #include <time.h>
 #include <unistd.h>
@@ -370,6 +371,8 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
             render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
         }
     }
+
+    damage_add_view(view->server, view);
 }
 
 void render_menus(struct tbx_output* output)

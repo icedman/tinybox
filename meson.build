@@ -44,6 +44,7 @@ pangocairo     = dependency('pangocairo')
 glesv2         = dependency('glesv2')
 egl            = dependency('egl')
 xcb            = dependency('xcb')
+pixman         = dependency('pixman-1')
 
 wlroots = dependency('wlroots', version: '>=0.10.0')
 

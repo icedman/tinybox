@@ -2,6 +2,7 @@
 #include "tinybox/server.h"
 #include "tinybox/shell.h"
 #include "tinybox/view.h"
+#include "tinybox/damage.h"
 
 #include <float.h>
 #include <stdlib.h>
@@ -99,6 +100,8 @@ static uint32_t xdg_view_configure(struct tbx_view* view, double lx, double ly,
     view->request_box.y = view->y;
     view->request_box.width = width;
     view->request_box.height = height;
+
+    damage_add_view(view->server, view);
     return 0;
 }
 

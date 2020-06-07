@@ -5,6 +5,7 @@
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
 #include "tinybox/xwayland.h"
+#include "tinybox/damage.h"
 
 #include <float.h>
 #include <getopt.h>
@@ -178,6 +179,8 @@ static uint32_t xwayland_view_configure(struct tbx_view* view, double lx, double
     view->request_box.y = ly;
     view->request_box.width = width;
     view->request_box.height = height;
+
+    damage_add_view(view->server, view);
     return 0;
 }
 

@@ -11,6 +11,7 @@
 #include "tinybox/style.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
+#include "tinybox/damage.h"
 
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
@@ -19,6 +20,7 @@
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_output_damage.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
@@ -27,7 +29,7 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-#define DO_DAMAGE_TRACK 0
+#define DO_DAMAGE_TRACK 1
 #define DAMAGE_LIFE 4
 
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
@@ -496,38 +498,7 @@ static void output_frame(struct wl_listener* listener, void* data)
     /* Begin the renderer (calls glViewport and some other GL sanity checks) */
     wlr_renderer_begin(renderer, width, height);
 
-#if DO_DAMAGE_TRACK
-    //-----------------
-    // primitive damage code
-    //-----------------
-    // all or nothing damage
-    int damages = 0;
-    if (server->ws_animate || cursor->mode != TBX_CURSOR_PASSTHROUGH || server->menu->shown) {
-        server->main_output->damage_age = DAMAGE_LIFE * 4; // because of animations
-    }
-
-    if (server->main_output->damage_age-- > 0) {
-        damages = 1;
-    }
-
-    if (!damages) {
-        struct tbx_view* view;
-        wl_list_for_each(view, &server->views, link)
-        {
-            if (view->mapped && view->surface) {
-                wlr_surface_send_frame_done(view->surface, &now);
-            }
-        }
-
-        struct wlr_box indicator = {
-            4, 4, 4, 4
-        };
-        float indicator_color[4] = { 1, 1, 1, 1 };
-        render_rect(output->wlr_output, &indicator, indicator_color, output->wlr_output->scale);
-
-        goto end_render;
-    }
-#endif
+    damage_update(server);
 
     // render box
     float color[4] = { 0, 0, 0, 1.0 };
@@ -642,14 +613,44 @@ static void output_frame(struct wl_listener* listener, void* data)
         }
     }
 
+
+#if DO_DAMAGE_TRACK
+
+    double ox = 0, oy = 0;
+    wlr_output_layout_output_coords(server->output_layout, output->wlr_output, &ox,
+        &oy);
+
+    struct tbx_damage* damage;
+    float damageColor[4] = { 1.0, 0, 1.0, 1.0 };
+    wl_list_for_each(damage, &server->damages, link) {
+        struct wlr_box damageBox;
+        memcpy(&damageBox, &damage->region, sizeof(struct wlr_box));
+        grow_box_hv(&damageBox, 4, 4);
+        damageBox.x += ox;
+        damageBox.y += oy;
+        // printf("!%d %d %d %d\n", damageBox.x, damageBox.y, damageBox.width, damageBox.height);
+        render_rect_outline(output->wlr_output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
+    }
+
+    damage_update(server);
+
+#endif
+
+    // if (!damages) {
+    //     struct tbx_view* view;
+    //     wl_list_for_each(view, &server->views, link)
+    //     {
+    //         if (view->mapped && view->surface) {
+    //             wlr_surface_send_frame_done(view->surface, &now);
+    //         }
+    //     }
+    // }
+
     //-----------------
     // render menus
     //-----------------
     render_menus(output);
 
-#if DO_DAMAGE_TRACK
-end_render:
-#endif
 
     /* Hardware cursors are rendered by the GPU on a separate plane, and can be
    * moved around without re-rendering what's beneath them - which is more
@@ -724,10 +725,12 @@ static void server_new_output(struct wl_listener* listener, void* data)
     output->wlr_output = wlr_output;
     output->server = server;
     output->enabled = true;
+    output->damage = wlr_output_damage_create(wlr_output);
 
     /* Sets up a listener for the frame notify event. */
     output->frame.notify = output_frame;
-    output->damage_age = DAMAGE_LIFE;
+    damage_whole(server);
+
     wl_signal_add(&wlr_output->events.frame, &output->frame);
     output->destroy.notify = output_handle_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);
@@ -758,14 +761,4 @@ bool output_setup(struct tbx_server* server)
     server->new_output.notify = server_new_output;
     wl_signal_add(&server->backend->events.new_output, &server->new_output);
     return true;
-}
-
-void output_damage_view(struct tbx_output* output, struct tbx_view* view)
-{
-    output->server->main_output->damage_age = DAMAGE_LIFE;
-}
-
-void output_damage_menu(struct tbx_output* output, struct tbx_menu* menu)
-{
-    output->server->main_output->damage_age = DAMAGE_LIFE;
 }

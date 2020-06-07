@@ -9,6 +9,7 @@
 #include "tinybox/style.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
+#include "tinybox/damage.h"
 
 #include <time.h>
 #include <unistd.h>

@@ -54,7 +54,8 @@ tinybox_dep = [
   wlroots,
   xkbcommon,
   math,
-  xcb
+  xcb,
+  pixman
   ]
 
 executable(

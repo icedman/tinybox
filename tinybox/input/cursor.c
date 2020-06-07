@@ -3,6 +3,7 @@
 #include "tinybox/menu.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
+#include "tinybox/damage.h"
 
 #include <stdlib.h>
 
@@ -30,12 +31,16 @@ const char* cursor_images[] = {
 static void smooth_move_view(struct tbx_view* view, double tx, double ty,
     double s)
 {
+    damage_add_view(view->server, view);
+
     view->interface->configure(view, tx, ty, view->width, view->height);
     view->x += (tx - view->x) * s;
     view->y += (ty - view->y) * s;
     // view->request_box.x = tx;
     // view->request_box.y = ty;
     view->request_wait = 4; // wait output frames to commit render
+
+    damage_add_view(view->server, view);
 }
 
 static bool begin_interactive_sd(struct tbx_server* server,
@@ -90,6 +95,8 @@ static bool begin_interactive_sd(struct tbx_server* server,
         view->hotspot_edges = WLR_EDGE_NONE;
 
         view_set_focus(view, view->surface);
+
+        damage_add_view(view->server, view);
         return true;
     }
 
@@ -122,6 +129,8 @@ static bool begin_interactive_sd(struct tbx_server* server,
         if (view->surface) {
             view_set_focus(view, view->surface);
         }
+
+        damage_add_view(view->server, view);
         return true;
     }
 
@@ -215,7 +224,9 @@ static void process_cursor_resize(struct tbx_server* server, uint32_t time)
         new_width = 68;
     }
 
+    damage_add_view(view->server, view);
     view->interface->configure(view, new_left, new_top, new_width, new_height);
+    damage_add_view(view->server, view);
 
     char tmp[64];
     sprintf(tmp, "w:%d h:%d", (int)new_width, (int)new_height);
