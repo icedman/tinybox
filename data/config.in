@@ -1,4 +1,4 @@
-console enable
+#console enable
 
 # Mod1 = Alt
 # Mod4 = Logo
@@ -18,10 +18,15 @@ bindsym $mod+ctrl+return exec $term
 bindsym $mod+ctrl+shift+return exec $browser
 bindsym $mod+ctrl+d exec $menu
 bindsym $mod+ctrl+m menu 40 40
+bindsym $mod+ctrl+a arrange
 
 workspaces 4
 animate true
 swipe_threshold 200
+mini_titlebar true
+mini_frame true
+show_tooltip true
+move_resize_alpha 1.0
 
 bindsym $mod+ctrl+1 workspace 0
 bindsym $mod+ctrl+2 workspace 1
@@ -53,6 +58,8 @@ bindsym XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
 bindsym XF86AudioMicMute exec pactl set-source-mute @DEFAULT_SOURCE@ toggle
 bindsym XF86MonBrightnessDown exec brightnessctl set 15%-
 bindsym XF86MonBrightnessUp exec brightnessctl set +15%
+bindsym XF86PowerDown exec systemctl suspend
+bindsym XF86PowerOff exec systemctl suspend
 
 input 1739:30382:DLL0704:01_06CB:76AE_Touchpad {
     tap enabled
@@ -77,6 +84,9 @@ include ~/.tinybox/menu
 
 #style ~/.tinybox/styles/Nyz
 include ~/.tinybox/style
+
+#font "lucidasans italic 12"
+font "source code pro 10"
 
 # menu 40 40
 

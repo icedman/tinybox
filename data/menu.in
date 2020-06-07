@@ -53,13 +53,21 @@
 #
 # example:
 
-[begin] (Tinybox)
+[begin] (tinybox)
   [exec] (terminal) {termite}
+  [exec] (gnome terminal) {gnome-terminal}
   [exec] (google chrome) {google-chrome-stable}
 
   [submenu] (Styles)  {Choose a style...}
+    [style] (Artwiz)     {~/.tinybox/styles/Artwiz}
     [style] (Nyz)     {~/.tinybox/styles/Nyz}
+    [style] (Operation)     {~/.tinybox/styles/Operation}
     [style] (Twice)   {~/.tinybox/styles/Twice}
+  [end]
+
+  [submenu] (settings)
+    [mini_titlebar] (toggle titlebar)
+    [mini_frame] (toggle frame)
   [end]
 
   [submenu] (Graphics)
@@ -67,5 +75,11 @@
     [exec] (Image Magick) {display}
   [end]
 
+  [separator]
+  
+  [exec] (Suspend) {systemctl suspend}
 [end]
 
+[window]
+    [window_close] (Close)
+[end]
