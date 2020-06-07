@@ -4,6 +4,7 @@
 #include "tinybox/command.h"
 #include "tinybox/seat.h"
 #include "tinybox/server.h"
+#include "tinybox/damage.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -119,6 +120,20 @@ static void exec_move_resize_alpha(struct tbx_command* cmd, int argc,
     config->move_resize_alpha = parse_float(argv[0]);
 }
 
+static void exec_render_damages(struct tbx_command* cmd, int argc,
+    char** argv)
+{
+    struct tbx_config* config = &cmd->server->config;
+    if (argc) {
+        config->render_damages = parse_boolean(argv[0], false);
+    } else {
+        config->render_damages = !config->render_damages;
+    }
+    if (config->render_damages) {
+        console_log("rendering damages");
+    }
+}
+
 static void exec_console(struct tbx_command* cmd, int argc, char** argv)
 {
     struct tbx_config* config = &cmd->server->config;
@@ -163,6 +178,7 @@ static void exec_mini_titlebar(struct tbx_command* cmd, int argc, char** argv)
     } else {
         config->mini_titlebar = !config->mini_titlebar;
     }
+    damage_whole(cmd->server);
 }
 
 static void exec_mini_frame(struct tbx_command* cmd, int argc, char** argv)
@@ -173,6 +189,7 @@ static void exec_mini_frame(struct tbx_command* cmd, int argc, char** argv)
     } else {
         config->mini_frame = !config->mini_frame;
     }
+    damage_whole(cmd->server);
 }
 
 void register_config_commands(struct tbx_server* server)
@@ -187,4 +204,5 @@ void register_config_commands(struct tbx_server* server)
     register_command(server->command, "show_tooltip", exec_show_tooltip);
     register_command(server->command, "font", exec_font);
     register_command(server->command, "move_resize_alpha", exec_move_resize_alpha);
+    register_command(server->command, "render_damages", exec_render_damages);
 }

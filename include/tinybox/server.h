@@ -10,6 +10,8 @@
 #include "tinybox/seat.h"
 #include "tinybox/style.h"
 
+#include "pixman.h"
+
 struct tbx_server_decoration_manager;
 struct tbx_command;
 
@@ -67,6 +69,8 @@ struct tbx_server {
 
     // damage
     struct wl_list damages;
+    pixman_region32_t damage_region;
+    int damage_whole;
 };
 
 bool tbx_server_setup(struct tbx_server* server);

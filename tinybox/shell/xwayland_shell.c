@@ -1,11 +1,11 @@
 #define _POSIX_C_SOURCE 200112L
 
+#include "tinybox/damage.h"
 #include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
 #include "tinybox/xwayland.h"
-#include "tinybox/damage.h"
 
 #include <float.h>
 #include <getopt.h>
@@ -18,7 +18,7 @@
 #include <wlr/xwayland.h>
 
 // copy now ~ understand later
-static const char *atom_map[ATOM_LAST] = {
+static const char* atom_map[ATOM_LAST] = {
     "_NET_WM_WINDOW_TYPE_NORMAL",
     "_NET_WM_WINDOW_TYPE_DIALOG",
     "_NET_WM_WINDOW_TYPE_UTILITY",
@@ -240,14 +240,16 @@ struct tbx_view_interface xwayland_view_interface = {
     .destroy = xwayland_destroy
 };
 
-static struct tbx_view* get_root(struct tbx_view *view) {
+static struct tbx_view* get_root(struct tbx_view* view)
+{
     if (view->parent) {
         return get_root(view->parent);
     }
     return view;
 }
 
-static void xwayland_view_set_parent(struct tbx_view *view) {
+static void xwayland_view_set_parent(struct tbx_view* view)
+{
     struct tbx_view* ancestor;
     struct wlr_xwayland_surface* xsurface = view->xwayland_surface;
     wl_list_for_each(ancestor, &view->server->views, link)
@@ -256,7 +258,7 @@ static void xwayland_view_set_parent(struct tbx_view *view) {
             if (view->interface->is_transient_for(view, ancestor)) {
                 view->parent = ancestor;
 
-                struct tbx_view *root = get_root(ancestor);
+                struct tbx_view* root = get_root(ancestor);
 
                 view->x = xsurface->x + root->x;
                 view->y = xsurface->y + root->y;
@@ -267,8 +269,9 @@ static void xwayland_view_set_parent(struct tbx_view *view) {
     }
 }
 
-static void xwayland_view_try_set_parent(struct tbx_view *view) {
-    struct tbx_server *server = view->server;
+static void xwayland_view_try_set_parent(struct tbx_view* view)
+{
+    struct tbx_server* server = view->server;
     struct wlr_xwayland_surface* xsurface = view->xwayland_surface;
     uint32_t window_type = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
 
@@ -291,7 +294,7 @@ static void xwayland_view_try_set_parent(struct tbx_view *view) {
         }
 
         double sx, sy;
-        struct wlr_surface *surface;
+        struct wlr_surface* surface;
         if (view_at(_view, server->cursor->cursor->x, server->cursor->cursor->y, &surface, &sx, &sy)) {
             if (wt == 0) {
                 candidate = _view;
@@ -301,7 +304,6 @@ static void xwayland_view_try_set_parent(struct tbx_view *view) {
             }
         }
     }
-
 
     //-------------------------
     // hacky: adopt a parent?
@@ -316,11 +318,7 @@ static void xwayland_view_try_set_parent(struct tbx_view *view) {
             struct tbx_view* ancestor;
             wl_list_for_each(ancestor, &view->server->views, link)
             {
-                if (ancestor == view || 
-                    ancestor->parent ||
-                    !ancestor->mapped ||
-                    !ancestor->x ||
-                    ancestor->width < view->width) {
+                if (ancestor == view || ancestor->parent || !ancestor->mapped || !ancestor->x || ancestor->width < view->width) {
                     continue;
                 }
                 if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
@@ -382,6 +380,8 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
     view->title_dirty = true;
     view->surface = view->xwayland_surface->surface;
 
+    damage_whole(view->server);
+
     // view->xwayland_surface = xsurface;
     // view->surface = xsurface->surface;
 
@@ -397,7 +397,7 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
             xwayland_view_set_parent(view);
         } else {
             xwayland_view_try_set_parent(view);
-            if (view->parent) { 
+            if (view->parent) {
                 return;
             }
         }
@@ -426,7 +426,8 @@ static void xwayland_surface_unmap(struct wl_listener* listener, void* data)
     struct tbx_view* view = &xwayland_view->view;
     view->surface = NULL;
     view->mapped = false;
-    view_damage(view);
+    
+    damage_add_view(view->server, view);
 
     if (view->xwayland_surface->surface) {
         wl_list_remove(&xwayland_view->commit.link);
@@ -499,7 +500,7 @@ static void xwayland_set_window_type(struct wl_listener* listener, void* data)
     console_log("set_window_type %d", wt);
 
     // for(size_t i=0; i<view->xwayland_surface->window_type_len; i++) {
-    //     console_log("window_type %d", view->xwayland_surface->window_type[i]);    
+    //     console_log("window_type %d", view->xwayland_surface->window_type[i]);
     // }
 }
 
@@ -570,12 +571,12 @@ static void new_xwayland_surface(struct wl_listener* listener, void* data)
     view_setup(view);
 }
 
-
-void handle_xwayland_ready(struct wl_listener *listener, void *data) {
-    struct tbx_xwayland_shell *xwayland = wl_container_of(listener, xwayland, xwayland_ready);
+void handle_xwayland_ready(struct wl_listener* listener, void* data)
+{
+    struct tbx_xwayland_shell* xwayland = wl_container_of(listener, xwayland, xwayland_ready);
     // struct tbx_server *server = xwayland->server;
 
-    xcb_connection_t *xcb_conn = xcb_connect(NULL, NULL);
+    xcb_connection_t* xcb_conn = xcb_connect(NULL, NULL);
     int err = xcb_connection_has_error(xcb_conn);
     if (err) {
         console_log("XCB connect failed: %d", err);
@@ -584,13 +585,11 @@ void handle_xwayland_ready(struct wl_listener *listener, void *data) {
 
     xcb_intern_atom_cookie_t cookies[ATOM_LAST];
     for (size_t i = 0; i < ATOM_LAST; i++) {
-        cookies[i] =
-            xcb_intern_atom(xcb_conn, 0, strlen(atom_map[i]), atom_map[i]);
+        cookies[i] = xcb_intern_atom(xcb_conn, 0, strlen(atom_map[i]), atom_map[i]);
     }
     for (size_t i = 0; i < ATOM_LAST; i++) {
-        xcb_generic_error_t *error = NULL;
-        xcb_intern_atom_reply_t *reply =
-            xcb_intern_atom_reply(xcb_conn, cookies[i], &error);
+        xcb_generic_error_t* error = NULL;
+        xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(xcb_conn, cookies[i], &error);
         if (reply != NULL && error == NULL) {
             xwayland->atoms[i] = reply->atom;
         }

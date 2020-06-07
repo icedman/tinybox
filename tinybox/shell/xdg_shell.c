@@ -1,8 +1,8 @@
+#include "tinybox/damage.h"
 #include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/shell.h"
 #include "tinybox/view.h"
-#include "tinybox/damage.h"
 
 #include <float.h>
 #include <stdlib.h>
@@ -247,7 +247,8 @@ static void xdg_surface_map(struct wl_listener* listener, void* data)
 
     view_set_focus(view, view->xdg_surface->surface);
     view_move_to_center(view, NULL);
-    view_damage(view);
+
+    damage_whole(view->server);
 
     xdg_shell_view->commit.notify = xdg_surface_commit;
     if (view->xdg_surface->surface) {
@@ -262,7 +263,7 @@ static void xdg_surface_unmap(struct wl_listener* listener, void* data)
     struct tbx_view* view = &xdg_shell_view->view;
     view->surface = NULL;
     view->mapped = false;
-    view_damage(view);
+    damage_add_view(view->server, view);
     if (view->xdg_surface->surface) {
         wl_list_remove(&xdg_shell_view->commit.link);
     }

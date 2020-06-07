@@ -1,8 +1,8 @@
 #include "tinybox/view.h"
+#include "tinybox/damage.h"
 #include "tinybox/output.h"
 #include "tinybox/workspace.h"
 #include "tinybox/xwayland.h"
-#include "tinybox/damage.h"
 
 #include <stdlib.h>
 
@@ -65,6 +65,8 @@ void view_set_focus(struct tbx_view* view, struct wlr_surface* surface)
     wl_list_insert(&server->views, &view->link);
 
     view->interface->set_activated(view, true);
+
+    damage_whole(server);
 }
 
 bool view_at(struct tbx_view* view, double lx, double ly,
@@ -351,7 +353,7 @@ void view_damage(struct tbx_view* view)
     damage_add_commit(view->server, view);
 }
 
-void view_frame(struct tbx_view *view, struct wlr_box *box)
+void view_frame(struct tbx_view* view, struct wlr_box* box)
 {
     box->x = view->hotspots[HS_EDGE_LEFT].x;
     box->width = view->hotspots[HS_EDGE_RIGHT].width + view->hotspots[HS_EDGE_RIGHT].x - box->x;

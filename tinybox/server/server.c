@@ -4,6 +4,7 @@
 #include "tinybox/command.h"
 #include "tinybox/console.h"
 #include "tinybox/cursor.h"
+#include "tinybox/damage.h"
 #include "tinybox/decoration.h"
 #include "tinybox/output.h"
 #include "tinybox/render.h"
@@ -11,7 +12,6 @@
 #include "tinybox/shell.h"
 #include "tinybox/workspace.h"
 #include "tinybox/xwayland.h"
-#include "tinybox/damage.h"
 
 #include <getopt.h>
 #include <stdlib.h>

@@ -73,6 +73,7 @@ struct tbx_config {
     bool mini_frame;
     bool show_tooltip;
     float move_resize_alpha;
+    bool render_damages;
 
     uint32_t super_key;
 

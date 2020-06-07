@@ -44,7 +44,7 @@ static void exec_create_window_menu(struct tbx_command* cmd, int argc, char** ar
         return;
     }
 
-    struct tbx_menu *menu = create_menu(cmd, argc, argv);
+    struct tbx_menu* menu = create_menu(cmd, argc, argv);
     cmd->server->menu_context = menu;
     menu->no_title = true;
     wl_list_insert(&cmd->server->named_menus, &menu->named_link);

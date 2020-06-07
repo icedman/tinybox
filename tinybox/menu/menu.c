@@ -3,13 +3,13 @@
 #include "common/cairo.h"
 #include "common/pango.h"
 #include "common/util.h"
+#include "tinybox/damage.h"
 #include "tinybox/output.h"
 #include "tinybox/render.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
-#include "tinybox/damage.h"
 
 #include <time.h>
 #include <unistd.h>
@@ -45,13 +45,13 @@ void menu_schedule_close(struct tbx_menu* menu)
 }
 
 void menu_close(struct tbx_menu* menu)
-{   
+{
     if (menu->parent && menu->parent->submenu == menu) {
         menu->parent->submenu = NULL;
     }
 
-    struct tbx_view *view = (struct tbx_view*)&menu->view;
-    struct tbx_server *server = view->server;
+    struct tbx_view* view = (struct tbx_view*)&menu->view;
+    struct tbx_server* server = view->server;
 
     if (menu->submenu && menu->submenu->shown) {
         menu_close(menu->submenu);
@@ -64,6 +64,8 @@ void menu_close(struct tbx_menu* menu)
         menu->shown = false;
         menu->reversed = false;
         // wl_list_remove(&view->link);
+
+        damage_add_view(server, view);
 
         if (menu == server->menu_hovered) {
             server->menu_hovered = NULL;
@@ -84,16 +86,17 @@ void menu_close(struct tbx_menu* menu)
 
 void menu_close_all(struct tbx_server* server)
 {
-    struct tbx_view *view;
+    struct tbx_view* view;
     server->menu_hovered = NULL;
 
-    wl_list_for_each(view, &server->menus, link) {
+    wl_list_for_each(view, &server->menus, link)
+    {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
         menu_close(menu_view->menu);
     }
 }
 
-void menu_show(struct tbx_server *server, struct tbx_menu* menu, int x, int y)
+void menu_show(struct tbx_server* server, struct tbx_menu* menu, int x, int y)
 {
     if (!menu || menu->menu_type != TBX_MENU) {
         return;
@@ -143,8 +146,9 @@ void menu_show(struct tbx_server *server, struct tbx_menu* menu, int x, int y)
         return;
     }
 
-    struct tbx_view *_view;
-    wl_list_for_each(_view, &server->menus, link) {
+    struct tbx_view* _view;
+    wl_list_for_each(_view, &server->menus, link)
+    {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)_view;
         struct tbx_menu* _menu = menu_view->menu;
         if (_menu == menu) {
@@ -153,13 +157,12 @@ void menu_show(struct tbx_server *server, struct tbx_menu* menu, int x, int y)
         }
     }
 
-
     menu->shown = true;
     wl_list_insert(&server->menus, &view->link);
     // console_log("show menu %d %d %d", menu->shown, menu->menu_x, menu->menu_y);
 }
 
-void menu_show_submenu(struct tbx_server *server, struct tbx_menu* menu, struct tbx_menu* submenu)
+void menu_show_submenu(struct tbx_server* server, struct tbx_menu* menu, struct tbx_menu* submenu)
 {
     if (submenu->menu_type != TBX_MENU) {
         return;
@@ -184,7 +187,7 @@ void menu_show_submenu(struct tbx_server *server, struct tbx_menu* menu, struct 
             prerender_menu(server, submenu, false);
 
             if (!submenu->pinned) {
-                
+
                 int new_x = menu->menu_x;
                 submenu->reversed = menu->reversed;
 
@@ -202,7 +205,6 @@ void menu_show_submenu(struct tbx_server *server, struct tbx_menu* menu, struct 
                 if (submenu->reversed != menu->reversed) {
                     menu->reversed = submenu->reversed;
                     menu_show(server, submenu, 0, 0); // hide.. so that it get reversed when displayed
-
                 }
             } else {
                 // just transfer grab
@@ -223,8 +225,8 @@ static struct tbx_menu* menu_at_items(struct tbx_menu* menu, int x, int y)
     menu->hovered = NULL;
 
     if ((x >= menu->menu_x && x <= menu->menu_x + menu->menu_width) && (y >= menu->menu_y && y <= menu->menu_y + menu->menu_height)) {
-    
-        struct tbx_view *view = (struct tbx_view*)&menu->view;
+
+        struct tbx_view* view = (struct tbx_view*)&menu->view;
         view->hotspot = HS_NONE;
 
         // were in menu,
@@ -235,8 +237,7 @@ static struct tbx_menu* menu_at_items(struct tbx_menu* menu, int x, int y)
         wl_list_for_each(cmd, &menu->items, link)
         {
             struct tbx_menu* item = (struct tbx_menu*)cmd;
-            if ((x >= px + item->x && x <= px + item->x + item->width) &&
-                (y >= py + item->y && y <= py + item->y + item->height)) {
+            if ((x >= px + item->x && x <= px + item->x + item->width) && (y >= py + item->y && y <= py + item->y + item->height)) {
                 menu->hovered = item;
                 cmd->server->menu_hovered = item;
 
@@ -248,15 +249,14 @@ static struct tbx_menu* menu_at_items(struct tbx_menu* menu, int x, int y)
         }
 
         // check titlebar
-        struct wlr_box *titlebar = &view->hotspots[HS_TITLEBAR];
-        
+        struct wlr_box* titlebar = &view->hotspots[HS_TITLEBAR];
+
         if (titlebar && titlebar->width && titlebar->height) {
-            if (x >= titlebar->x && x <= titlebar->x + titlebar->width && 
-                y >= titlebar->y && y <= titlebar->y + titlebar->height) {
+            if (x >= titlebar->x && x <= titlebar->x + titlebar->width && y >= titlebar->y && y <= titlebar->y + titlebar->height) {
                 view->hotspot = HS_TITLEBAR;
-            // console_log("hs %d %d", titlebar->width, titlebar->height);
+                // console_log("hs %d %d", titlebar->width, titlebar->height);
                 menu->hovered = NULL;
-            return menu;
+                return menu;
             }
         }
     }
@@ -271,8 +271,9 @@ struct tbx_menu* menu_at(struct tbx_server* server, int x, int y)
     }
 
     server->menu_hovered = NULL;
-    struct tbx_view *view;
-    wl_list_for_each(view, &server->menus, link) {
+    struct tbx_view* view;
+    wl_list_for_each(view, &server->menus, link)
+    {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
         struct tbx_menu* menu = menu_view->menu;
         if (menu->shown) {
@@ -315,7 +316,7 @@ static void menu_walk(struct tbx_server* server, struct tbx_menu* item, int dir_
                 if (dir_x == -1) {
                     menu_close(item->parent);
                 }
-                
+
                 return;
             }
         }
@@ -356,7 +357,7 @@ void menu_navigation(struct tbx_server* server, uint32_t keycode)
     if (server->menu_navigation_grab) {
         item = server->menu_navigation_grab->hovered;
     }
-    
+
     switch (keycode) {
     case XKB_KEY_Escape:
         menu_close_all(server);
@@ -386,16 +387,18 @@ void menu_navigation(struct tbx_server* server, uint32_t keycode)
 
 static void menu_get_geometry(struct tbx_view* view, struct wlr_box* box)
 {
-    struct tbx_menu_view *menu_view = (struct tbx_menu_view*)view;
+    int borderWidth = 3;
+
+    struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
     box->x = box->y = 0;
-    box->width = menu_view->menu->menu_width;
-    box->height = menu_view->menu->menu_height;
+    box->width = menu_view->menu->menu_width + (borderWidth << 1);
+    box->height = menu_view->menu->menu_height + (borderWidth << 1);
 }
 
 static uint32_t menu_view_configure(struct tbx_view* view, double lx, double ly,
     int width, int height)
 {
-    struct tbx_menu_view *menu_view = (struct tbx_menu_view*)view;
+    struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
     menu_view->menu->menu_x = lx;
     menu_view->menu->menu_y = ly;
     return 0;
@@ -406,7 +409,7 @@ struct tbx_view_interface menu_view_interface = {
     .configure = menu_view_configure,
 };
 
-void menu_show_tooltip(struct tbx_server* server, const char *text)
+void menu_show_tooltip(struct tbx_server* server, const char* text)
 {
     if (!server->config.show_tooltip) {
         return;
@@ -433,7 +436,7 @@ void menu_show_tooltip(struct tbx_server* server, const char *text)
         server->tooltip->title = tooltip;
         prerender_menu(server, server->tooltip, true);
 
-            // constraint to output
+        // constraint to output
         struct tbx_view* view = (struct tbx_view*)&menu->view;
         struct tbx_output* output = view_get_preferred_output(view);
 
@@ -441,18 +444,18 @@ void menu_show_tooltip(struct tbx_server* server, const char *text)
             server->output_layout, output->wlr_output);
 
         menu_show(server, server->tooltip,
-            main_box->x + main_box->width/2 - view->width/2,
-            main_box->y + main_box->height/2 - view->height/2);
+            main_box->x + main_box->width / 2 - view->width / 2,
+            main_box->y + main_box->height / 2 - view->height / 2);
     }
 }
 
-void menu_setup(struct tbx_server* server, struct tbx_menu *menu)
+void menu_setup(struct tbx_server* server, struct tbx_menu* menu)
 {
     menu->view.menu = menu;
     menu->menu_width = 0;
     menu->menu_height = 0;
-    
-    struct tbx_view *view = (struct tbx_view*)&menu->view;
+
+    struct tbx_view* view = (struct tbx_view*)&menu->view;
     view->server = server;
     view->interface = &menu_view_interface;
     view->surface = NULL;
@@ -460,16 +463,18 @@ void menu_setup(struct tbx_server* server, struct tbx_menu *menu)
     wl_list_init(&menu->items);
 }
 
-void menu_focus(struct tbx_server* server, struct tbx_menu *menu) {
-    struct tbx_view *view = (struct tbx_view*)&menu->view;
+void menu_focus(struct tbx_server* server, struct tbx_menu* menu)
+{
+    struct tbx_view* view = (struct tbx_view*)&menu->view;
     wl_list_remove(&view->link);
     wl_list_insert(&server->menus, &view->link);
 }
 
-struct tbx_menu *find_named_menu(struct tbx_server *server, const char *identifier)
+struct tbx_menu* find_named_menu(struct tbx_server* server, const char* identifier)
 {
-    struct tbx_menu *menu;
-    wl_list_for_each(menu, &server->named_menus, named_link) {
+    struct tbx_menu* menu;
+    wl_list_for_each(menu, &server->named_menus, named_link)
+    {
         console_log(">>%s", menu->title);
         if (strcmp(menu->label, identifier) == 0) {
             return menu;

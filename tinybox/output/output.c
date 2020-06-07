@@ -4,6 +4,7 @@
 #include "common/util.h"
 #include "tinybox/command.h"
 #include "tinybox/cursor.h"
+#include "tinybox/damage.h"
 #include "tinybox/menu.h"
 #include "tinybox/output.h"
 #include "tinybox/render.h"
@@ -11,7 +12,6 @@
 #include "tinybox/style.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
-#include "tinybox/damage.h"
 
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
@@ -19,8 +19,8 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
-#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_damage.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
@@ -28,9 +28,6 @@
 #include <cairo/cairo.h>
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
-
-#define DO_DAMAGE_TRACK 1
-#define DAMAGE_LIFE 4
 
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
 {
@@ -197,13 +194,13 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             box.height = view->title_box.height;
 
             if (view->title) {
-                scissor_output(output, sc_box);
+                // scissor_output(output, sc_box);
                 if (!unfocus_offset) {
                     render_texture(output, &box, view->title, output->scale);
                 } else {
                     render_texture(output, &box, view->title_unfocused, output->scale);
                 }
-                wlr_renderer_scissor(rdata->renderer, NULL);
+                // wlr_renderer_scissor(rdata->renderer, NULL);
             }
         }
     }
@@ -433,8 +430,7 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
    */
 
     float alpha = 1.0;
-    if (view->server->cursor->mode == TBX_CURSOR_RESIZE ||
-        view->server->cursor->mode == TBX_CURSOR_MOVE) {
+    if (view->server->cursor->mode == TBX_CURSOR_RESIZE || view->server->cursor->mode == TBX_CURSOR_MOVE) {
         alpha = view->server->config.move_resize_alpha;
         if (alpha < 0.4) {
             alpha = 0.4;
@@ -483,7 +479,16 @@ static void output_frame(struct wl_listener* listener, void* data)
             server->ws_anim_x = 0;
             server->ws_anim_y = 0;
         }
+        damage_whole(server);
     }
+
+    if (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE ||
+        cursor->mode == TBX_CURSOR_MOVE ||
+        cursor->mode == TBX_CURSOR_RESIZE) {
+        damage_whole(server);
+    }
+
+    bool damage_whole = server->damage_whole > 0;
 
     // uint32_t elapsed = (now.tv_nsec - output->last_frame.tv_nsec)/1000000;
     // output->run_time += elapsed;
@@ -498,159 +503,185 @@ static void output_frame(struct wl_listener* listener, void* data)
     /* Begin the renderer (calls glViewport and some other GL sanity checks) */
     wlr_renderer_begin(renderer, width, height);
 
-    damage_update(server);
+    damage_update(server, output);
 
     // render box
-    float color[4] = { 0, 0, 0, 1.0 };
-    wlr_renderer_clear(renderer, color);
+    // float color[4] = { 0, 0, 0, 1.0 };
+    // wlr_renderer_clear(renderer, color);
 
     //-----------------
     // render workspace backgrounds
     //-----------------
-    if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
-        render_workspace(output, get_workspace(server, server->workspace - 1));
-        render_workspace(output, get_workspace(server, server->workspace + 1));
-    }
-    render_workspace(output, get_workspace(server, server->workspace));
+    // int passes = 0;
 
-    if (in_main_output) {
-        render_console(output);
-    }
-
-    //-----------------
-    // render views
-    //-----------------
-    /* Each subsequent window we render is rendered on top of the last. Because
-   * our view list is ordered front-to-back, we iterate over it backwards. */
-    struct tbx_view* view;
-    wl_list_for_each_reverse(view, &server->views, link)
+    struct tbx_damage *damage_region;
+    wl_list_for_each(damage_region, &server->damages, link)
     {
-        if (!view->mapped || !view->surface) {
-            /* An unmapped view should not be rendered. */
+        if (damage_region->life <= 0)
             continue;
+
+        if (!damage_whole) {
+            scissor_output(output->wlr_output, damage_region->region);
+        } else {
+            wlr_renderer_scissor(renderer, 0);
+        }
+        
+        // passes++;
+        // printf("%d\n", passes);
+
+        if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+            render_workspace(output, get_workspace(server, server->workspace - 1));
+            render_workspace(output, get_workspace(server, server->workspace + 1));
+        }
+        render_workspace(output, get_workspace(server, server->workspace));
+
+        if (in_main_output) {
+            render_console(output);
         }
 
-        double offset_x = 0;
-        double offset_y = 0;
-        struct tbx_workspace* workspace = 0;
-
-        // workspace logic
-        if (in_main_output) {
-            double d = 0;
-
-            // view animation
-            if (animate && view->wsv_animate) {
-                view->wsv_anim_x *= ANIM_SPEED;
-                view->wsv_anim_y *= ANIM_SPEED;
-                if ((view->wsv_anim_x * view->wsv_anim_x) < 10) {
-                    view->wsv_animate = false;
-                    view->wsv_anim_x = 0;
-                    view->wsv_anim_y = 0;
-                }
-
-                d -= view->wsv_anim_x;
+        //-----------------
+        // render views
+        //-----------------
+        /* Each subsequent window we render is rendered on top of the last. Because
+         * our view list is ordered front-to-back, we iterate over it backwards. */
+        struct tbx_view* view;
+        wl_list_for_each_reverse(view, &server->views, link)
+        {
+            if (!view->mapped || !view->surface) {
+                /* An unmapped view should not be rendered. */
+                continue;
             }
 
-            if (animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+            struct wlr_box window_box;
+            view_frame(view, &window_box);
+            if (!damage_check(server, &window_box)) {
+                wlr_surface_send_frame_done(view->surface, &now);
+                continue;
+            }
 
-                // is view in main_output
-                if (!view_is_visible(view, output)) {
-                    continue;
+            double offset_x = 0;
+            double offset_y = 0;
+            struct tbx_workspace* workspace = 0;
+
+            // workspace logic
+            if (in_main_output) {
+                double d = 0;
+
+                // view animation
+                if (animate && view->wsv_animate) {
+                    view->wsv_anim_x *= ANIM_SPEED;
+                    view->wsv_anim_y *= ANIM_SPEED;
+                    if ((view->wsv_anim_x * view->wsv_anim_x) < 10) {
+                        view->wsv_animate = false;
+                        view->wsv_anim_x = 0;
+                        view->wsv_anim_y = 0;
+                    }
+
+                    d -= view->wsv_anim_x;
                 }
 
-                if (server->ws_animate) {
-                    d += server->ws_anim_x;
+                if (animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+
+                    // is view in main_output
+                    if (!view_is_visible(view, output)) {
+                        continue;
+                    }
+
+                    if (server->ws_animate) {
+                        d += server->ws_anim_x;
+                    } else {
+                        d += cursor->swipe_x - cursor->swipe_begin_x;
+                        float d = server->cursor->swipe_x - server->cursor->swipe_begin_x;
+                        if (d * d < SWIPE_MIN) {
+                            d = 0;
+                        }
+                    }
+
+                    workspace = get_workspace(output->server, view->workspace);
+                    offset_x = workspace->box.x + d;
                 } else {
-                    d += cursor->swipe_x - cursor->swipe_begin_x;
-                    float d = server->cursor->swipe_x - server->cursor->swipe_begin_x;
-                    if (d * d < SWIPE_MIN) {
-                        d = 0;
+                    if (view->workspace != server->workspace) {
+                        continue;
                     }
                 }
+            }
 
-                workspace = get_workspace(output->server, view->workspace);
-                offset_x = workspace->box.x + d;
-            } else {
-                if (view->workspace != server->workspace) {
-                    continue;
+            if (view->title_dirty) {
+                generate_view_title_texture(output, view);
+            }
+
+            //-----------------
+            // render the view
+            //-----------------
+            struct render_data rdata = {
+                .output = output->wlr_output,
+                .view = view,
+                .renderer = renderer,
+                .workspace = workspace,
+                .offset_x = offset_x,
+                .offset_y = offset_y,
+                .when = &now,
+            };
+
+            // decorations
+            if (!view->csd && !view->fullscreen) {
+                render_view_frame(view->surface, 0, 0, &rdata);
+            }
+
+            // content
+            if (!view->shaded) {
+
+                if (view->view_type == VIEW_TYPE_XDG) {
+                    wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
+                        &rdata);
+                }
+
+                if (view->view_type == VIEW_TYPE_XWAYLAND) {
+                    render_view_content(view->surface, 0, 0, &rdata);
                 }
             }
         }
 
-        if (view->title_dirty) {
-            generate_view_title_texture(output, view);
-        }
-
-        //-----------------
-        // render the view
-        //-----------------
-        struct render_data rdata = {
-            .output = output->wlr_output,
-            .view = view,
-            .renderer = renderer,
-            .workspace = workspace,
-            .offset_x = offset_x,
-            .offset_y = offset_y,
-            .when = &now,
-        };
-
-        // decorations
-        if (!view->csd && !view->fullscreen) {
-            render_view_frame(view->surface, 0, 0, &rdata);
-        }
-
-        // content
-        if (!view->shaded) {
-
-            if (view->view_type == VIEW_TYPE_XDG) {
-                wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
-                    &rdata);
-            }
-
-            if (view->view_type == VIEW_TYPE_XWAYLAND) {
-                render_view_content(view->surface, 0, 0, &rdata);
-            }
+        if (damage_whole) {
+            break;
         }
     }
 
+    wlr_renderer_scissor(renderer, 0);
 
-#if DO_DAMAGE_TRACK
+    if (server->config.render_damages) {
 
-    double ox = 0, oy = 0;
-    wlr_output_layout_output_coords(server->output_layout, output->wlr_output, &ox,
-        &oy);
+        double ox = 0, oy = 0;
+        wlr_output_layout_output_coords(server->output_layout, output->wlr_output, &ox,
+            &oy);
 
-    struct tbx_damage* damage;
-    float damageColor[4] = { 1.0, 0, 1.0, 1.0 };
-    wl_list_for_each(damage, &server->damages, link) {
-        struct wlr_box damageBox;
-        memcpy(&damageBox, &damage->region, sizeof(struct wlr_box));
-        grow_box_hv(&damageBox, 4, 4);
-        damageBox.x += ox;
-        damageBox.y += oy;
-        // printf("!%d %d %d %d\n", damageBox.x, damageBox.y, damageBox.width, damageBox.height);
-        render_rect_outline(output->wlr_output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
+        struct tbx_damage* damage;
+        float damageColor[4] = { 1.0, 0, 1.0, 1.0 };
+        wl_list_for_each(damage, &server->damages, link)
+        {
+            if (damage->life <= 0 || damage->region.width == 1) {
+                continue;
+            }
+
+            if (damage->region.width > 1000 || damage->region.height > 1000) {
+                // console_log("error!");
+                continue;
+            }
+
+            struct wlr_box damageBox;
+            memcpy(&damageBox, &damage->region, sizeof(struct wlr_box));
+            grow_box_hv(&damageBox, 4, 4);
+            damageBox.x += ox;
+            damageBox.y += oy;
+            // printf("!%d %d %d %d\n", damageBox.x, damageBox.y, damageBox.width, damageBox.height);
+            render_rect_outline(output->wlr_output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
+        }
     }
-
-    damage_update(server);
-
-#endif
-
-    // if (!damages) {
-    //     struct tbx_view* view;
-    //     wl_list_for_each(view, &server->views, link)
-    //     {
-    //         if (view->mapped && view->surface) {
-    //             wlr_surface_send_frame_done(view->surface, &now);
-    //         }
-    //     }
-    // }
 
     //-----------------
     // render menus
     //-----------------
     render_menus(output);
-
 
     /* Hardware cursors are rendered by the GPU on a separate plane, and can be
    * moved around without re-rendering what's beneath them - which is more
@@ -725,7 +756,10 @@ static void server_new_output(struct wl_listener* listener, void* data)
     output->wlr_output = wlr_output;
     output->server = server;
     output->enabled = true;
-    output->damage = wlr_output_damage_create(wlr_output);
+
+    // not for now
+    // output->damage = wlr_output_damage_create(wlr_output);
+    pixman_region32_init(&server->damage_region);
 
     /* Sets up a listener for the frame notify event. */
     output->frame.notify = output_frame;

@@ -6,6 +6,7 @@
 #include "tinybox/seat.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
+#include "tinybox/damage.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,7 +91,7 @@ void exec_window_close(struct tbx_command* cmd, int argc,
     char** argv)
 {
     console_log("window close!");
-    
+
     if (!command_check_args(cmd, argc, 0)) {
         return;
     }
@@ -107,7 +108,6 @@ void exec_window_close(struct tbx_command* cmd, int argc,
 
     current_view->interface->close(current_view);
 }
-
 
 void exec_shade_window(struct tbx_command* cmd, int argc, char** argv)
 {

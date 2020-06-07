@@ -1,9 +1,9 @@
 #include "tinybox/cursor.h"
+#include "tinybox/damage.h"
 #include "tinybox/keyboard.h"
 #include "tinybox/menu.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
-#include "tinybox/damage.h"
 
 #include <stdlib.h>
 
@@ -100,9 +100,8 @@ static bool begin_interactive_sd(struct tbx_server* server,
         return true;
     }
 
-    if ((view->hotspot == HS_TITLEBAR || view->hotspot == HS_HANDLE) ||
-        cursor->swipe_fingers == 3) {
-        
+    if ((view->hotspot == HS_TITLEBAR || view->hotspot == HS_HANDLE) || cursor->swipe_fingers == 3) {
+
         wlr_xcursor_manager_set_cursor_image(cursor->xcursor_manager, "grabbing",
             cursor->cursor);
 
@@ -255,7 +254,7 @@ static void process_cursor_motion(struct tbx_server* server, uint32_t time)
             }
 
             wlr_xcursor_manager_set_cursor_image(cursor->xcursor_manager, "left_ptr",
-            cursor->cursor);
+                cursor->cursor);
 
             wlr_seat_pointer_clear_focus(server->seat->seat);
             return;
@@ -355,7 +354,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
     //--------------------
     struct tbx_menu* menu = menu_at(server, cursor->cursor->x, cursor->cursor->y);
     if (menu && cursor->mode == TBX_CURSOR_PASSTHROUGH) {
-        struct tbx_view *view = (struct tbx_view*)&menu->view;
+        struct tbx_view* view = (struct tbx_view*)&menu->view;
         if (server->menu_hovered && event->state == WLR_BUTTON_RELEASED) {
             struct tbx_menu* item = server->menu_hovered;
             if (menu->hovered == item && item->execute) {
@@ -407,7 +406,7 @@ static void server_cursor_button(struct wl_listener* listener, void* data)
         }
 
         if (view && view->hotspot == HS_TITLEBAR && (event->button == 273)) {
-            struct tbx_menu *window = find_named_menu(server, "window");
+            struct tbx_menu* window = find_named_menu(server, "window");
             if (window) {
                 menu_show(server, window, cursor->cursor->x, cursor->cursor->y);
             }

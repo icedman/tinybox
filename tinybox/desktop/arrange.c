@@ -2,6 +2,7 @@
 #include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
+#include "tinybox/damage.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -21,12 +22,13 @@ static int max_width;
 
 static int margin = 8;
 
-static void resetRoot() {
+static void resetRoot()
+{
     memset(&root, 0, sizeof(struct tbx_packer_node));
     root.x = margin;
     root.y = margin;
-    root.w = box_screen.width - margin*2;
-    root.h = box_screen.height - margin*2;
+    root.w = box_screen.width - margin * 2;
+    root.h = box_screen.height - margin * 2;
 }
 
 static Node* createNode(int x, int y, int w, int h)
@@ -69,7 +71,7 @@ static Node* findNode(Node* r, int w, int h)
     return NULL;
 }
 
-static void fitNodes(Node *_root)
+static void fitNodes(Node* _root)
 {
     struct tbx_packer_node* block;
     wl_list_for_each(block, &boxes, link)
@@ -139,13 +141,13 @@ static void arrange_add_view(struct tbx_server* server, struct tbx_view* view)
     struct wlr_box geometry;
 
     view_frame(view, &geometry);
-    geometry.width += margin/2;
-    geometry.height += margin/2;
+    geometry.width += margin / 2;
+    geometry.height += margin / 2;
 
     Node* ab = createNode(view->x, view->y, geometry.width, geometry.height);
     ab->view = view;
     wl_list_insert(&boxes, &ab->link);
-    
+
     struct tbx_output* output = view_get_preferred_output(view);
 
     struct wlr_box* main_box = wlr_output_layout_get_box(
@@ -183,6 +185,8 @@ void arrange_end(struct tbx_server* server)
     {
         free(ab);
     }
+
+    damage_whole(server);
 }
 
 bool arrange_run(struct tbx_server* server)
@@ -214,7 +218,7 @@ bool arrange_run(struct tbx_server* server)
         if (block->fit) {
             block->view->x = block->fit->x + block->view->hotspots[HS_EDGE_LEFT].width;
             block->view->y = block->fit->y + block->view->hotspots[HS_EDGE_TOP].height
-            + block->view->hotspots[HS_TITLEBAR].height;
+                + block->view->hotspots[HS_TITLEBAR].height;
         }
     }
     return true;

@@ -3,13 +3,13 @@
 #include "common/cairo.h"
 #include "common/pango.h"
 #include "common/util.h"
+#include "tinybox/damage.h"
 #include "tinybox/menu.h"
 #include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
 #include "tinybox/view.h"
 #include "tinybox/workspace.h"
-#include "tinybox/damage.h"
 
 #include <time.h>
 #include <unistd.h>
@@ -97,7 +97,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
     }
 
     cairo_surface_t* title_text = 0;
-    if (title && strlen(title) > 0) { 
+    if (title && strlen(title) > 0) {
         title_text = cairo_image_from_text(title, &tw, &th, font, color,
             tbx_output->wlr_output->subpixel);
         title_height = th + 4;
@@ -105,7 +105,6 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
     } else {
         title_height = 5;
     }
-
 
     // generate item text textures
     struct tbx_command* cmd;
@@ -149,9 +148,9 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
     menu_height += title_height;
 
     if (title_height > 0 && wl_list_length(&menu->items) > 0) {
-        menu_height += borderWidth;     
+        menu_height += borderWidth;
     }
-    
+
     menu->menu_width = menu_width;
     menu->menu_height = menu_height;
 
@@ -171,7 +170,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
         title_height
     };
     memcpy(&menu->title_box, &title_box, sizeof(struct wlr_box));
-    
+
     draw_gradient_rect_xy(cx, flags, title_box.x, title_box.y, title_box.width, title_box.height, color, colorTo);
 
     // draw title text
@@ -214,7 +213,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
 
         if (item->menu_type == TBX_MENU_ITEM_SEPARATOR) {
             cairo_translate(cx, 0, item->height);
-            draw_gradient_rect_xy(cx, flags, 0, -item->height+1, item->width, item->height-2, color, colorTo);
+            draw_gradient_rect_xy(cx, flags, 0, -item->height + 1, item->width, item->height - 2, color, colorTo);
             continue;
         }
 
@@ -255,7 +254,7 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     }
 
     // sync xy
-    struct tbx_view *view = (struct tbx_view*)&menu->view;
+    struct tbx_view* view = (struct tbx_view*)&menu->view;
     view->x = menu->menu_x;
     view->y = menu->menu_y;
 
@@ -294,7 +293,7 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 
     color_to_rgba(color, style->borderColor);
     render_rect(output, &box, color, output->scale);
-    
+
     box.x += borderWidth;
     box.y += borderWidth;
     box.width -= (borderWidth * 2);
@@ -381,7 +380,8 @@ void render_menus(struct tbx_output* output)
     struct tbx_view *view, *tmp;
 
     // remove closed menus
-    wl_list_for_each_safe(view, tmp, &server->menus, link) {
+    wl_list_for_each_safe(view, tmp, &server->menus, link)
+    {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
         struct tbx_menu* menu = menu_view->menu;
         if (menu->to_close > 0) {
@@ -394,8 +394,9 @@ void render_menus(struct tbx_output* output)
             wl_list_remove(&view->link);
         }
     }
-     
-    wl_list_for_each_reverse(view, &server->menus, link) {
+
+    wl_list_for_each_reverse(view, &server->menus, link)
+    {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
         struct tbx_menu* menu = menu_view->menu;
         if (menu->shown) {
@@ -404,11 +405,11 @@ void render_menus(struct tbx_output* output)
     }
 }
 
-void prerender_menu(struct tbx_server* server, struct tbx_menu *menu, bool force)
+void prerender_menu(struct tbx_server* server, struct tbx_menu* menu, bool force)
 {
     generate_menu_texture(server->main_output, menu, force);
 
-    struct tbx_view *view = (struct tbx_view*)&menu->view;
+    struct tbx_view* view = (struct tbx_view*)&menu->view;
     view->width = menu->menu_width;
     view->height = menu->menu_height;
 
