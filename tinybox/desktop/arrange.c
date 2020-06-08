@@ -1,8 +1,8 @@
 #include "tinybox/arrange.h"
+#include "tinybox/damage.h"
 #include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
-#include "tinybox/damage.h"
 
 #include <math.h>
 #include <stdlib.h>

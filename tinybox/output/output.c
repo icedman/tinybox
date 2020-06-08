@@ -29,7 +29,7 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
-static void output_render(struct tbx_output *output);
+static void output_render(struct tbx_output* output);
 
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
 {
@@ -120,7 +120,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         memcpy(&box, &view_geometry, sizeof(struct wlr_box));
         grow_box_hv(&box, frameWidth, frameWidth);
         // if (region_overlap(&region_box, &box)) {
-            render_rect_outline(output, &box, color, frameWidth, false, output->scale);
+        render_rect_outline(output, &box, color, frameWidth, false, output->scale);
         // }
     }
 
@@ -176,7 +176,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         if (!mini_titlebar) {
             // label
             grow_box_hv(&box, -margin, -margin);
-            
+
             render_texture(output, &box,
                 get_texture_cache(tx_window_label_focus + unfocus_offset),
                 output->scale);
@@ -472,11 +472,11 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
 
 // static void output_frame(struct wl_listener* listener, void* data)
 // {
-    // struct tbx_output* output = wl_container_of(listener, output, frame);
-    // output_render(output);
+// struct tbx_output* output = wl_container_of(listener, output, frame);
+// output_render(output);
 // }
 
-static void output_render(struct tbx_output *output)
+static void output_render(struct tbx_output* output)
 {
     /* This function is called every time an output is ready to display a frame,
    * generally at the output's refresh rate (e.g. 60Hz). */
@@ -506,13 +506,11 @@ static void output_render(struct tbx_output *output)
 
     // this keeps things simple for now
     if (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE
-        // || cursor->mode == TBX_CURSOR_MOVE
-        // || cursor->mode == TBX_CURSOR_RESIZE
-        ) {
+        || cursor->mode == TBX_CURSOR_MOVE
+        || cursor->mode == TBX_CURSOR_RESIZE
+    ) {
         damage_whole(server);
     }
-
-    bool damage_whole = server->damage_whole > 0;
 
     // uint32_t elapsed = (now.tv_nsec - output->last_frame.tv_nsec)/1000000;
     // output->run_time += elapsed;
@@ -521,14 +519,21 @@ static void output_render(struct tbx_output *output)
     if (!wlr_output_attach_render(output->wlr_output, NULL)) {
         return;
     }
+
     /* The "effective" resolution can change if you rotate your outputs. */
     int width, height;
     wlr_output_effective_resolution(output->wlr_output, &width, &height);
+
+    bool needs_frame;
+    pixman_region32_t buffer_damage;
+    pixman_region32_init(&buffer_damage);
+    if (!wlr_output_damage_attach_render(output->damage, &needs_frame,
+            &buffer_damage)) {
+        return;
+    }
+
     /* Begin the renderer (calls glViewport and some other GL sanity checks) */
     wlr_renderer_begin(renderer, width, height);
-
-    struct wl_list regions;
-    bool has_damages = damage_update(server, output, &regions);
 
     // render box
     if (server->config.render_damages) {
@@ -536,190 +541,157 @@ static void output_render(struct tbx_output *output)
         wlr_renderer_clear(renderer, color);
     }
 
-    //-----------------
-    // render workspace backgrounds
-    //-----------------
-    // int passes = 0;
-    struct tbx_damage *damage_region;
-    wl_list_for_each(damage_region, &regions, link2)
-    {
-        if (!damage_whole) {
-            if (damage_region->region.width == 1 ||
-                damage_region->region.width == 1) {
-                continue;
-            }
-            scissor_output(output->wlr_output, damage_region->region);
-        } else {
-            // printf("whole!\n");
-            wlr_renderer_scissor(renderer, 0);
-        }
+    if (!pixman_region32_not_empty(&buffer_damage)) {
 
-        // passes++;
-        // printf("%d\n", passes);
-
-        if (damage_whole || has_damages) {
-            float color[4] = { 0.0, 0, 0, 1.0 };
-            wlr_renderer_clear(renderer, color);
-            
-            if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
-                render_workspace(output, get_workspace(server, server->workspace - 1));
-                render_workspace(output, get_workspace(server, server->workspace + 1));
-            }
-            render_workspace(output, get_workspace(server, server->workspace));
-
-            // if (in_main_output) {
-            //     render_console(output);
-            // }
-        }
-
-        //-----------------
-        // render views
-        //-----------------
-        /* Each subsequent window we render is rendered on top of the last. Because
-         * our view list is ordered front-to-back, we iterate over it backwards. */
         struct tbx_view* view;
         wl_list_for_each_reverse(view, &server->views, link)
         {
             if (!view->mapped || !view->surface) {
-                /* An unmapped view should not be rendered. */
                 continue;
             }
+            wlr_surface_send_frame_done(view->surface, &now);
+        }
 
-            if (!(damage_whole || has_damages)) {
-                wlr_surface_send_frame_done(view->surface, &now);
-                continue;
-            }
-            
-            struct wlr_box window_box;
-            view_frame(view, &window_box);
-            // todo!
-            if (!damage_check(server, &window_box)) {
-                wlr_surface_send_frame_done(view->surface, &now);
-                continue;
-            }
+        // Output isn't damaged but needs buffer swap
+        goto renderer_end;
+    }
 
-            view->damage_region = damage_region;
+    int nrects;
+    pixman_box32_t *rects = pixman_region32_rectangles(&buffer_damage, &nrects);
+    for (int i = 0; i < nrects; ++i) {
+        struct wlr_box region = {
+            .x = rects[i].x1,
+            .y = rects[i].y1,
+            .width = rects[i].x2 - rects[i].x1,
+            .height = rects[i].y2 - rects[i].y1
+        };
+        // printf("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
+        scissor_output(output->wlr_output, region);
+    }
+    
+    //-----------------
+    // render workspace backgrounds
+    //-----------------
+    float color[4] = { 0.0, 0, 0, 1.0 };
+    wlr_renderer_clear(renderer, color);
 
-            double offset_x = 0;
-            double offset_y = 0;
-            struct tbx_workspace* workspace = 0;
+    if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+        render_workspace(output, get_workspace(server, server->workspace - 1));
+        render_workspace(output, get_workspace(server, server->workspace + 1));
+    }
+    render_workspace(output, get_workspace(server, server->workspace));
 
-            // workspace logic
-            if (in_main_output) {
-                double d = 0;
+    // if (in_main_output) {
+    //     render_console(output);
+    // }
 
-                // view animation
-                if (animate && view->wsv_animate) {
-                    view->wsv_anim_x *= ANIM_SPEED;
-                    view->wsv_anim_y *= ANIM_SPEED;
-                    if ((view->wsv_anim_x * view->wsv_anim_x) < 10) {
-                        view->wsv_animate = false;
-                        view->wsv_anim_x = 0;
-                        view->wsv_anim_y = 0;
-                    }
+    //-----------------
+    // render views
+    //-----------------
+    /* Each subsequent window we render is rendered on top of the last. Because
+         * our view list is ordered front-to-back, we iterate over it backwards. */
+    struct tbx_view* view;
+    wl_list_for_each_reverse(view, &server->views, link)
+    {
+        if (!view->mapped || !view->surface) {
+            /* An unmapped view should not be rendered. */
+            continue;
+        }
 
-                    d -= view->wsv_anim_x;
+        // todo use .. output->damage regions
+        // struct wlr_box window_box;
+        // view_frame(view, &window_box);
+        // if (!damage_check(server, &window_box)) {
+        //     wlr_surface_send_frame_done(view->surface, &now);
+        //     continue;
+        // }
+
+        double offset_x = 0;
+        double offset_y = 0;
+        struct tbx_workspace* workspace = 0;
+
+        // workspace logic
+        if (in_main_output) {
+            double d = 0;
+
+            // view animation
+            if (animate && view->wsv_animate) {
+                view->wsv_anim_x *= ANIM_SPEED;
+                view->wsv_anim_y *= ANIM_SPEED;
+                if ((view->wsv_anim_x * view->wsv_anim_x) < 10) {
+                    view->wsv_animate = false;
+                    view->wsv_anim_x = 0;
+                    view->wsv_anim_y = 0;
                 }
 
-                if (animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+                d -= view->wsv_anim_x;
+            }
 
-                    // is view in main_output
-                    if (!view_is_visible(view, output)) {
-                        continue;
-                    }
+            if (animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
 
-                    if (server->ws_animate) {
-                        d += server->ws_anim_x;
-                    } else {
-                        d += cursor->swipe_x - cursor->swipe_begin_x;
-                        float d = server->cursor->swipe_x - server->cursor->swipe_begin_x;
-                        if (d * d < SWIPE_MIN) {
-                            d = 0;
-                        }
-                    }
+                // is view in main_output
+                if (!view_is_visible(view, output)) {
+                    continue;
+                }
 
-                    workspace = get_workspace(output->server, view->workspace);
-                    offset_x = workspace->box.x + d;
+                if (server->ws_animate) {
+                    d += server->ws_anim_x;
                 } else {
-                    if (view->workspace != server->workspace) {
-                        continue;
+                    d += cursor->swipe_x - cursor->swipe_begin_x;
+                    float d = server->cursor->swipe_x - server->cursor->swipe_begin_x;
+                    if (d * d < SWIPE_MIN) {
+                        d = 0;
                     }
                 }
-            }
 
-            if (view->title_dirty) {
-                generate_view_title_texture(output, view);
-            }
-
-            //-----------------
-            // render the view
-            //-----------------
-            struct render_data rdata = {
-                .output = output->wlr_output,
-                .view = view,
-                .renderer = renderer,
-                .workspace = workspace,
-                .offset_x = offset_x,
-                .offset_y = offset_y,
-                .when = &now,
-            };
-
-            // decorations
-            if (!view->csd && !view->fullscreen) {
-                render_view_frame(view->surface, 0, 0, &rdata);
-            }
-
-            // content
-            if (!view->shaded) {
-
-                if (view->view_type == VIEW_TYPE_XDG) {
-                    wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
-                        &rdata);
-                }
-
-                if (view->view_type == VIEW_TYPE_XWAYLAND) {
-                    render_view_content(view->surface, 0, 0, &rdata);
+                workspace = get_workspace(output->server, view->workspace);
+                offset_x = workspace->box.x + d;
+            } else {
+                if (view->workspace != server->workspace) {
+                    continue;
                 }
             }
         }
 
-        if (damage_whole) {
-            break;
+        if (view->title_dirty) {
+            generate_view_title_texture(output, view);
+        }
+
+        //-----------------
+        // render the view
+        //-----------------
+        struct render_data rdata = {
+            .output = output->wlr_output,
+            .view = view,
+            .renderer = renderer,
+            .workspace = workspace,
+            .offset_x = offset_x,
+            .offset_y = offset_y,
+            .when = &now,
+        };
+
+        // decorations
+        if (!view->csd && !view->fullscreen) {
+            render_view_frame(view->surface, 0, 0, &rdata);
+        }
+
+        // content
+        if (!view->shaded) {
+
+            if (view->view_type == VIEW_TYPE_XDG) {
+                wlr_xdg_surface_for_each_surface(view->xdg_surface, render_view_content,
+                    &rdata);
+            }
+
+            if (view->view_type == VIEW_TYPE_XWAYLAND) {
+                render_view_content(view->surface, 0, 0, &rdata);
+            }
         }
     }
+
+renderer_end:
 
     wlr_renderer_scissor(renderer, 0);
-
-    /*
-    if (server->config.render_damages) {
-
-        double ox = 0, oy = 0;
-        wlr_output_layout_output_coords(server->output_layout, output->wlr_output, &ox,
-            &oy);
-
-        struct tbx_damage* damage;
-        float damageColor[4] = { 1.0, 0, 1.0, 1.0 };
-        wl_list_for_each(damage, &server->damages, link)
-        {
-            if (damage->life <= 0 || damage->region.width == 1) {
-                continue;
-            }
-
-            if (damage->region.width > 1000 || damage->region.height > 1000) {
-                // console_log("error!");
-                continue;
-            }
-
-            struct wlr_box damageBox;
-            memcpy(&damageBox, &damage->region, sizeof(struct wlr_box));
-            // grow_box_hv(&damageBox, 4, 4);
-            damageBox.x += ox;
-            damageBox.y += oy;
-            // printf("!%d %d %d %d\n", damageBox.x, damageBox.y, damageBox.width, damageBox.height);
-            render_rect_outline(output->wlr_output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
-        }
-    }
-    */
 
     //-----------------
     // render menus
@@ -774,17 +746,17 @@ static void output_handle_destroy(struct wl_listener* listener, void* data)
     wl_event_loop_add_idle(server->wl_event_loop, output_remove, output);
 }
 
-static void output_damage_handle_frame(struct wl_listener *listener,
-        void *data) {
-    struct tbx_output *output =
-        wl_container_of(listener, output, damage_frame);
+static void output_damage_handle_frame(struct wl_listener* listener,
+    void* data)
+{
+    struct tbx_output* output = wl_container_of(listener, output, damage_frame);
     output_render(output);
 }
 
-static void output_damage_handle_destroy(struct wl_listener *listener,
-        void *data) {
-    struct tbx_output *output =
-        wl_container_of(listener, output, damage_destroy);
+static void output_damage_handle_destroy(struct wl_listener* listener,
+    void* data)
+{
+    struct tbx_output* output = wl_container_of(listener, output, damage_destroy);
     // output_destroy(output);
 }
 
@@ -825,10 +797,9 @@ static void server_new_output(struct wl_listener* listener, void* data)
     /* Sets up a listener for the frame notify event. */
     // output->frame.notify = output_frame;
     // wl_signal_add(&wlr_output->events.frame, &output->frame);
-    
+
     output->destroy.notify = output_handle_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);
-
 
     damage_whole(server);
 

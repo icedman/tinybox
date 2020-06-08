@@ -63,7 +63,6 @@ void menu_close(struct tbx_menu* menu)
 
         menu->shown = false;
         menu->reversed = false;
-        // wl_list_remove(&view->link);
 
         damage_add_view(server, view);
 
@@ -161,7 +160,7 @@ void menu_show(struct tbx_server* server, struct tbx_menu* menu, int x, int y)
 
     prerender_menu(server, menu, false);
     damage_add_view(server, view);
-    
+
     wl_list_insert(&server->menus, &view->link);
     // console_log("show menu %d %d %d", menu->shown, menu->menu_x, menu->menu_y);
 }
@@ -467,6 +466,7 @@ void menu_setup(struct tbx_server* server, struct tbx_menu* menu)
     view->server = server;
     view->interface = &menu_view_interface;
     view->surface = NULL;
+    view->view_type = VIEW_TYPE_UNKNOWN;
 
     wl_list_init(&menu->items);
 }

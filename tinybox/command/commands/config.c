@@ -2,9 +2,9 @@
 #include "common/stringop.h"
 #include "common/util.h"
 #include "tinybox/command.h"
+#include "tinybox/damage.h"
 #include "tinybox/seat.h"
 #include "tinybox/server.h"
-#include "tinybox/damage.h"
 
 #include <stdio.h>
 #include <stdlib.h>

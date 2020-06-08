@@ -35,6 +35,7 @@ enum tbx_view_prop {
 };
 
 enum tbx_view_type {
+    VIEW_TYPE_UNKNOWN,
     VIEW_TYPE_XDG,
     // #if HAVE_XWAYLAND
     VIEW_TYPE_XWAYLAND

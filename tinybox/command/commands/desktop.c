@@ -3,10 +3,10 @@
 #include "tinybox/arrange.h"
 #include "tinybox/command.h"
 #include "tinybox/config.h"
+#include "tinybox/damage.h"
 #include "tinybox/seat.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
-#include "tinybox/damage.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -171,7 +171,7 @@ static uint32_t xwayland_view_configure(struct tbx_view* view, double lx, double
         0, width, height);
 
     damage_add_view(view->server, view);
-    
+
     view->x = lx;
     view->y = ly;
     // view->width = width;
@@ -425,7 +425,7 @@ static void xwayland_surface_unmap(struct wl_listener* listener, void* data)
     struct tbx_view* view = &xwayland_view->view;
     view->surface = NULL;
     view->mapped = false;
-    
+
     damage_add_view(view->server, view);
 
     if (view->xwayland_surface->surface) {

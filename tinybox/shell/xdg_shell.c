@@ -94,7 +94,7 @@ static uint32_t xdg_view_configure(struct tbx_view* view, double lx, double ly,
     wlr_xdg_surface_get_geometry(view->xdg_surface, &geo_box);
 
     damage_add_view(view->server, view);
-    
+
     view->x = lx - geo_box.x;
     view->y = ly - geo_box.y;
 
