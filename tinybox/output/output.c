@@ -503,7 +503,7 @@ static void output_frame(struct wl_listener* listener, void* data)
     /* Begin the renderer (calls glViewport and some other GL sanity checks) */
     wlr_renderer_begin(renderer, width, height);
 
-    damage_update(server, output);
+    bool hasDamages = damage_update(server, output);
 
     // render box
     // float color[4] = { 0, 0, 0, 1.0 };
@@ -529,14 +529,17 @@ static void output_frame(struct wl_listener* listener, void* data)
         // passes++;
         // printf("%d\n", passes);
 
-        if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
-            render_workspace(output, get_workspace(server, server->workspace - 1));
-            render_workspace(output, get_workspace(server, server->workspace + 1));
-        }
-        render_workspace(output, get_workspace(server, server->workspace));
+        // todo... if damage region is 
+        if (hasDamages) {
+            if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
+                render_workspace(output, get_workspace(server, server->workspace - 1));
+                render_workspace(output, get_workspace(server, server->workspace + 1));
+            }
+            render_workspace(output, get_workspace(server, server->workspace));
 
-        if (in_main_output) {
-            render_console(output);
+            if (in_main_output) {
+                render_console(output);
+            }
         }
 
         //-----------------
@@ -552,6 +555,11 @@ static void output_frame(struct wl_listener* listener, void* data)
                 continue;
             }
 
+            if (!hasDamages) {
+                wlr_surface_send_frame_done(view->surface, &now);
+                continue;
+            }
+            
             struct wlr_box window_box;
             view_frame(view, &window_box);
             if (!damage_check(server, &window_box)) {

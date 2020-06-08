@@ -11,8 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DAMAGE_LIFE 32
-#define DAMAGE_WHOLE 64
+// assuming 60 fps
+#define DAMAGE_LIFE 60
+#define DAMAGE_WHOLE (DAMAGE_LIFE*4)
 #define MAX_DAMAGE_RECTS 48
 
 static struct tbx_view damage_whole_view = { 0 };
@@ -161,16 +162,16 @@ void damage_whole(struct tbx_server* server)
     }
 }
 
-void damage_update(struct tbx_server* server, struct tbx_output* output)
+bool damage_update(struct tbx_server* server, struct tbx_output* output)
 {
     if (server->damage_whole > 0) {
         server->damage_whole--;
-        return;
+        return true;
     }
 
     // pixman_region32_clear(&server->damage_region);    
     // pixman_box32_t boxes[MAX_DAMAGE_RECTS];
-    // int count = 0;
+    int count = 0;
     // damage_regions = 0;
 
     struct tbx_damage *damage;
@@ -204,11 +205,13 @@ void damage_update(struct tbx_server* server, struct tbx_output* output)
         //     continue;
         // }
         
-        // count++;
+        count++;
     }
 
     // pixman_region32_init_rects(&server->damage_region, boxes, count);
     // damage_regions = count;
+
+    return count > 0;
 }
 
 bool damage_check(struct tbx_server* server, struct wlr_box* box)
