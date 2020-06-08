@@ -541,6 +541,7 @@ static void output_frame(struct wl_listener* listener, void* data)
         if (damage_whole || has_damages) {
             float color[4] = { 0.0, 0, 0, 1.0 };
             wlr_renderer_clear(renderer, color);
+            
             if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
                 render_workspace(output, get_workspace(server, server->workspace - 1));
                 render_workspace(output, get_workspace(server, server->workspace + 1));
