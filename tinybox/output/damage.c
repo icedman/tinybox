@@ -1,8 +1,10 @@
 #include "tinybox/damage.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
+#include "tinybox/output.h"
 
 #include "pixman.h"
+
 #include <wlr/types/wlr_output_damage.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/util/region.h>
@@ -11,32 +13,32 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define OUTPUT_FPS 30
-#define DAMAGE_LIFE (OUTPUT_FPS * 2)
-#define DAMAGE_WHOLE (OUTPUT_FPS * 4)
-#define MAX_DAMAGE_RECTS 120
+#define OUTPUT_FPS 12
+#define DAMAGE_LIFE (OUTPUT_FPS * 4)
+#define DAMAGE_WHOLE (OUTPUT_FPS * 8)
+#define MAX_DAMAGE_RECTS 512
 
 static struct tbx_view damage_whole_view = { 0 };
 // static int damage_regions = 0;
 
-static bool ab_overlap(struct wlr_box *a, struct wlr_box *b) 
+bool region_overlap(struct wlr_box *a, struct wlr_box *b) 
 { 
     struct wlr_box l1 = {
-        .x = a->x - a->width/2,
-        .y = a->y - a->height/2
+        .x = a->x,
+        .y = a->y
     };
     struct wlr_box r1 = {
-        .x = a->x + a->width/2,
-        .y = a->y + a->height/2
+        .x = a->x + a->width,
+        .y = a->y + a->height
     };
 
     struct wlr_box l2 = {
-        .x = b->x - b->width/2,
-        .y = b->y - b->height/2
+        .x = b->x,
+        .y = b->y
     };
     struct wlr_box r2 = {
-        .x = b->x + b->width/2,
-        .y = b->y + b->height/2
+        .x = b->x + b->width,
+        .y = b->y + b->height
     };
 
     if (l1.x >= r2.x || l2.x >= r1.x) 
@@ -88,9 +90,9 @@ void damage_add_box(struct tbx_server* server, struct wlr_box* box, struct tbx_v
         }
     }
 
-    if (!available && previous_damage) {
-        available = previous_damage;
-    }
+    // if (!available && previous_damage) {
+    //     available = previous_damage;
+    // }
 
     if (!available) {
         if (wl_list_length(&server->damages) > MAX_DAMAGE_RECTS) {
@@ -114,10 +116,11 @@ void damage_add_view(struct tbx_server* server, struct tbx_view* view)
 
 void damage_add_commit(struct tbx_server* server, struct tbx_view* view)
 {
+    #if 1
     damage_add_view(server, view);
     return;
 
-    #if 0
+    #else
     struct wlr_box box;
     view->interface->get_geometry(view, &box);
     box.x = view->x;
@@ -172,6 +175,7 @@ void damage_add_commit(struct tbx_server* server, struct tbx_view* view)
 void damage_whole(struct tbx_server* server)
 {
     server->damage_whole = DAMAGE_WHOLE;
+    // wlr_output_damage_add_whole(server->main_output->damage);
 }
 
 bool damage_update(struct tbx_server* server, struct tbx_output* output, struct wl_list *regions)
@@ -187,8 +191,8 @@ bool damage_update(struct tbx_server* server, struct tbx_output* output, struct 
     int count = 0;
     // damage_regions = 0;
 
-    struct tbx_damage *damage;
-    wl_list_for_each(damage, &server->damages, link)
+    struct tbx_damage *damage, *tmp;
+    wl_list_for_each_safe(damage, tmp, &server->damages, link)
     {
         if (damage->view == &damage_whole_view) {
             wl_list_insert(regions, &damage->link2);
@@ -201,9 +205,11 @@ bool damage_update(struct tbx_server* server, struct tbx_output* output, struct 
 
         if (damage->life > 0) {
             damage->life--;
-            if (damage->life <= 0) {
+            if (damage->life < 0) {
                 damage->view = 0;
                 damage->life = 0;
+                wl_list_remove(&damage->link);
+                continue;
             }
 
             wl_list_insert(regions, &damage->link2);
@@ -250,7 +256,7 @@ bool damage_check(struct tbx_server* server, struct wlr_box* box)
             continue;
         }
 
-        if (ab_overlap(box, &damage->region)) {
+        if (region_overlap(box, &damage->region)) {
             return true;
         }
     }

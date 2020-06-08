@@ -69,7 +69,6 @@ struct tbx_server {
 
     // damage
     struct wl_list damages;
-    pixman_region32_t damage_region;
     int damage_whole;
 };
 

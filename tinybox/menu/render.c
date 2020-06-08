@@ -3,7 +3,7 @@
 #include "common/cairo.h"
 #include "common/pango.h"
 #include "common/util.h"
-#include "tinybox/damage.h"
+// #include "tinybox/damage.h"
 #include "tinybox/menu.h"
 #include "tinybox/output.h"
 #include "tinybox/server.h"
@@ -371,7 +371,7 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
         }
     }
 
-    damage_add_view(view->server, view);
+    // damage_add_view(view->server, view);
 }
 
 void render_menus(struct tbx_output* output)

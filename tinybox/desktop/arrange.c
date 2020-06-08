@@ -86,20 +86,6 @@ static void fitNodes(Node* _root)
     }
 }
 
-#if 0
-static void findMaxWidth()
-{
-    struct tbx_packer_node* i;
-    max_width = 0;
-    wl_list_for_each(i, &boxes, link)
-    {
-        if (max_width < i->w) {
-            max_width = i->w;
-        }
-    }
-}
-#endif
-
 static void sortNodes()
 {
     struct tbx_packer_node* i;
@@ -195,22 +181,9 @@ bool arrange_run(struct tbx_server* server)
         return true;
     }
 
-    // findMaxWidth();
-
     sortNodes();
 
-    // if (split_screen) {
-    //     root.w = max_width + margin * 4;
-    // }
     fitNodes(&root);
-
-    // if (split_screen) {
-    //     // second pass
-    //     resetRoot();
-    //     root.x += max_width;
-    //     root.w -= max_width;
-    //     fitNodes(&root);
-    // }
 
     struct tbx_packer_node* block;
     wl_list_for_each(block, &boxes, link)
@@ -219,7 +192,9 @@ bool arrange_run(struct tbx_server* server)
             block->view->x = block->fit->x + block->view->hotspots[HS_EDGE_LEFT].width;
             block->view->y = block->fit->y + block->view->hotspots[HS_EDGE_TOP].height
                 + block->view->hotspots[HS_TITLEBAR].height;
+            damage_add_view(server, block->view);
         }
     }
+
     return true;
 }

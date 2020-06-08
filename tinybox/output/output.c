@@ -29,6 +29,8 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
+static void output_render(struct tbx_output *output);
+
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
 {
     if (view->csd) {
@@ -83,6 +85,11 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
     view_geometry.x += view->x + ox + sx;
     view_geometry.y += view->y + oy + sy;
 
+    // struct wlr_box region_box;
+    // memcpy(&region_box, &view->damage_region->region, sizeof(struct wlr_box));
+    // region_box.x -= (ox + sx);
+    // region_box.y -= (oy + sy);
+
     smoothen_geometry_when_resizing(view, &view_geometry);
 
     // read these from style file
@@ -112,7 +119,9 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
 
         memcpy(&box, &view_geometry, sizeof(struct wlr_box));
         grow_box_hv(&box, frameWidth, frameWidth);
-        render_rect_outline(output, &box, color, frameWidth, false, output->scale);
+        // if (region_overlap(&region_box, &box)) {
+            render_rect_outline(output, &box, color, frameWidth, false, output->scale);
+        // }
     }
 
     bool mini_titlebar = view->server->config.mini_titlebar;
@@ -150,9 +159,11 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
 
         // render the texture
         grow_box_hv(&box, -borderWidth, -borderWidth);
+
         render_texture(output, &box,
             get_texture_cache(tx_window_title_focus + unfocus_offset),
             output->scale);
+
         // render_rect(output, &box, colorDebug2, output->scale);
 
         int tflags = unfocus_offset ? style->window_title_focus : style->window_title_unfocus;
@@ -165,12 +176,13 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         if (!mini_titlebar) {
             // label
             grow_box_hv(&box, -margin, -margin);
+            
             render_texture(output, &box,
                 get_texture_cache(tx_window_label_focus + unfocus_offset),
                 output->scale);
             // render_rect(output, &box, bevelColor, output->scale);
 
-            tflags = unfocus_offset ? style->window_label_focus : style->window_label_unfocus;
+            int tflags = unfocus_offset ? style->window_label_focus : style->window_label_unfocus;
             if (tflags & sf_raised) {
                 render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
             } else if (tflags & sf_sunken) {
@@ -217,6 +229,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         box.width += ((frameWidth + borderWidth) * 2);
         box.y += view_geometry.height + frameWidth;
         box.height = handleWidth + borderWidth;
+
         render_rect(output, &box, color, output->scale);
         memcpy(&view->hotspots[HS_HANDLE], &box, sizeof(struct wlr_box));
 
@@ -250,7 +263,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
                 output->scale);
             // render_rect(output, &box, colorDebug4, output->scale);
 
-            tflags = unfocus_offset ? style->window_grip_focus : style->window_grip_unfocus;
+            int tflags = unfocus_offset ? style->window_grip_focus : style->window_grip_unfocus;
             if (tflags & sf_raised) {
                 render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
             } else if (tflags & sf_sunken) {
@@ -289,6 +302,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         box.y -= frameWidth;
         box.width = borderWidth;
         box.height += (frameWidth * 2);
+
         render_rect(output, &box, color, output->scale);
 
         memcpy(&view->hotspots[HS_EDGE_LEFT], &box, sizeof(struct wlr_box));
@@ -456,11 +470,16 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
     wlr_surface_send_frame_done(surface, rdata->when);
 }
 
-static void output_frame(struct wl_listener* listener, void* data)
+// static void output_frame(struct wl_listener* listener, void* data)
+// {
+    // struct tbx_output* output = wl_container_of(listener, output, frame);
+    // output_render(output);
+// }
+
+static void output_render(struct tbx_output *output)
 {
     /* This function is called every time an output is ready to display a frame,
    * generally at the output's refresh rate (e.g. 60Hz). */
-    struct tbx_output* output = wl_container_of(listener, output, frame);
     struct tbx_server* server = output->server;
     struct tbx_cursor* cursor = server->cursor;
     struct wlr_renderer* renderer = server->renderer;
@@ -534,7 +553,7 @@ static void output_frame(struct wl_listener* listener, void* data)
             // printf("whole!\n");
             wlr_renderer_scissor(renderer, 0);
         }
-      
+
         // passes++;
         // printf("%d\n", passes);
 
@@ -573,10 +592,13 @@ static void output_frame(struct wl_listener* listener, void* data)
             
             struct wlr_box window_box;
             view_frame(view, &window_box);
+            // todo!
             if (!damage_check(server, &window_box)) {
                 wlr_surface_send_frame_done(view->surface, &now);
                 continue;
             }
+
+            view->damage_region = damage_region;
 
             double offset_x = 0;
             double offset_y = 0;
@@ -702,6 +724,7 @@ static void output_frame(struct wl_listener* listener, void* data)
     //-----------------
     // render menus
     //-----------------
+    // todo check against damaged regions
     render_menus(output);
 
     /* Hardware cursors are rendered by the GPU on a separate plane, and can be
@@ -751,6 +774,20 @@ static void output_handle_destroy(struct wl_listener* listener, void* data)
     wl_event_loop_add_idle(server->wl_event_loop, output_remove, output);
 }
 
+static void output_damage_handle_frame(struct wl_listener *listener,
+        void *data) {
+    struct tbx_output *output =
+        wl_container_of(listener, output, damage_frame);
+    output_render(output);
+}
+
+static void output_damage_handle_destroy(struct wl_listener *listener,
+        void *data) {
+    struct tbx_output *output =
+        wl_container_of(listener, output, damage_destroy);
+    // output_destroy(output);
+}
+
 static void server_new_output(struct wl_listener* listener, void* data)
 {
     /* This event is rasied by the backend when a new output (aka a display or
@@ -779,16 +816,21 @@ static void server_new_output(struct wl_listener* listener, void* data)
     output->enabled = true;
 
     // not for now
-    // output->damage = wlr_output_damage_create(wlr_output);
-    pixman_region32_init(&server->damage_region);
+    output->damage = wlr_output_damage_create(wlr_output);
+    output->damage_frame.notify = output_damage_handle_frame;
+    wl_signal_add(&output->damage->events.frame, &output->damage_frame);
+    output->damage_destroy.notify = output_damage_handle_destroy;
+    wl_signal_add(&output->damage->events.destroy, &output->damage_destroy);
 
     /* Sets up a listener for the frame notify event. */
-    output->frame.notify = output_frame;
-    damage_whole(server);
-
-    wl_signal_add(&wlr_output->events.frame, &output->frame);
+    // output->frame.notify = output_frame;
+    // wl_signal_add(&wlr_output->events.frame, &output->frame);
+    
     output->destroy.notify = output_handle_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);
+
+
+    damage_whole(server);
 
     wl_list_insert(&server->outputs, &output->link);
 

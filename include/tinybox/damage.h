@@ -18,6 +18,7 @@ struct tbx_damage {
     struct tbx_view *view;
 };
 
+bool region_overlap(struct wlr_box *a, struct wlr_box *b);
 void damage_setup(struct tbx_server *server);
 void damage_add_box(struct tbx_server *server, struct wlr_box *box, struct tbx_view *view);
 void damage_add_view(struct tbx_server *server, struct tbx_view *view);

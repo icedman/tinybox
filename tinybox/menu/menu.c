@@ -158,6 +158,10 @@ void menu_show(struct tbx_server* server, struct tbx_menu* menu, int x, int y)
     }
 
     menu->shown = true;
+
+    prerender_menu(server, menu, false);
+    damage_add_view(server, view);
+    
     wl_list_insert(&server->menus, &view->link);
     // console_log("show menu %d %d %d", menu->shown, menu->menu_x, menu->menu_y);
 }
@@ -184,7 +188,7 @@ void menu_show_submenu(struct tbx_server* server, struct tbx_menu* menu, struct 
         struct tbx_menu* item = (struct tbx_menu*)cmd;
         if (item == submenu) {
             menu->submenu = submenu;
-            prerender_menu(server, submenu, false);
+            // prerender_menu(server, submenu, false);
 
             if (!submenu->pinned) {
 

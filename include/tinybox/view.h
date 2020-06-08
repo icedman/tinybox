@@ -116,6 +116,9 @@ struct tbx_view {
 
     // workspace
     int workspace;
+
+    // render region
+    struct tbx_damage* damage_region;
 };
 
 struct tbx_xdg_shell_view {

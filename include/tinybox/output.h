@@ -9,6 +9,7 @@
 
 struct tbx_menu;
 struct tbx_view;
+struct tbx_damage;
 
 struct tbx_output {
     struct wl_list link;
@@ -20,6 +21,8 @@ struct tbx_output {
     struct wl_listener destroy;
 
     struct wlr_output_damage* damage;
+    struct wl_listener damage_frame;
+    struct wl_listener damage_destroy;
 
     struct timespec last_frame;
     long run_time;
