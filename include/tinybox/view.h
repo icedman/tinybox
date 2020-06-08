@@ -188,8 +188,6 @@ void view_setup(struct tbx_view* view);
 
 void view_destroy(struct tbx_view* view);
 
-void view_damage(struct tbx_view* view);
-
 void view_frame(struct tbx_view *view, struct wlr_box *box);
 
 #endif // TINYBOX_VIEW_H

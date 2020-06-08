@@ -348,11 +348,6 @@ void view_close(struct tbx_view* view)
     view->interface->close(view);
 }
 
-void view_damage(struct tbx_view* view)
-{
-    damage_add_commit(view->server, view);
-}
-
 void view_frame(struct tbx_view* view, struct wlr_box* box)
 {
     box->x = view->hotspots[HS_EDGE_LEFT].x;

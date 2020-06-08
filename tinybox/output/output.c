@@ -39,6 +39,7 @@ static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_bo
     if ((view->server->cursor->resize_edges & WLR_EDGE_LEFT || view->server->cursor->resize_edges & WLR_EDGE_TOP) && (view->request_box.width > 20 && view->request_box.height > 20) && (view->request_box.width != box->width || view->request_box.height != box->height)) {
         box->width = view->request_box.width;
         box->height = view->request_box.height;
+        damage_add_view(view->server, view);
     }
 }
 
@@ -365,11 +366,13 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
 
     // commit from smooth move request
     if (view->request_wait > 0 && view->request_box.x != 0 && view->request_box.y != 0) {
+        damage_add_view(view->server, view);
         if (--view->request_wait == 0 || view->csd) {
             view->x = view->request_box.x;
             view->y = view->request_box.y;
             view->request_box.x = 0;
             view->request_box.y = 0;
+            damage_add_view(view->server, view);
         }
     }
 
@@ -482,9 +485,11 @@ static void output_frame(struct wl_listener* listener, void* data)
         damage_whole(server);
     }
 
-    if (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE ||
-        cursor->mode == TBX_CURSOR_MOVE ||
-        cursor->mode == TBX_CURSOR_RESIZE) {
+    // this keeps things simple for now
+    if (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE
+        // || cursor->mode == TBX_CURSOR_MOVE
+        // || cursor->mode == TBX_CURSOR_RESIZE
+        ) {
         damage_whole(server);
     }
 
@@ -503,43 +508,48 @@ static void output_frame(struct wl_listener* listener, void* data)
     /* Begin the renderer (calls glViewport and some other GL sanity checks) */
     wlr_renderer_begin(renderer, width, height);
 
-    bool hasDamages = damage_update(server, output);
+    struct wl_list regions;
+    bool has_damages = damage_update(server, output, &regions);
 
     // render box
-    // float color[4] = { 0, 0, 0, 1.0 };
-    // wlr_renderer_clear(renderer, color);
+    if (server->config.render_damages) {
+        float color[4] = { 1.0, 0, 0, 1.0 };
+        wlr_renderer_clear(renderer, color);
+    }
 
     //-----------------
     // render workspace backgrounds
     //-----------------
     // int passes = 0;
-
     struct tbx_damage *damage_region;
-    wl_list_for_each(damage_region, &server->damages, link)
+    wl_list_for_each(damage_region, &regions, link2)
     {
-        if (damage_region->life <= 0)
-            continue;
-
         if (!damage_whole) {
+            if (damage_region->region.width == 1 ||
+                damage_region->region.width == 1) {
+                continue;
+            }
             scissor_output(output->wlr_output, damage_region->region);
         } else {
+            // printf("whole!\n");
             wlr_renderer_scissor(renderer, 0);
         }
-        
+      
         // passes++;
         // printf("%d\n", passes);
 
-        // todo... if damage region is 
-        if (hasDamages) {
+        if (damage_whole || has_damages) {
+            float color[4] = { 0.0, 0, 0, 1.0 };
+            wlr_renderer_clear(renderer, color);
             if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
                 render_workspace(output, get_workspace(server, server->workspace - 1));
                 render_workspace(output, get_workspace(server, server->workspace + 1));
             }
             render_workspace(output, get_workspace(server, server->workspace));
 
-            if (in_main_output) {
-                render_console(output);
-            }
+            // if (in_main_output) {
+            //     render_console(output);
+            // }
         }
 
         //-----------------
@@ -555,7 +565,7 @@ static void output_frame(struct wl_listener* listener, void* data)
                 continue;
             }
 
-            if (!hasDamages) {
+            if (!(damage_whole || has_damages)) {
                 wlr_surface_send_frame_done(view->surface, &now);
                 continue;
             }
@@ -657,6 +667,7 @@ static void output_frame(struct wl_listener* listener, void* data)
 
     wlr_renderer_scissor(renderer, 0);
 
+    /*
     if (server->config.render_damages) {
 
         double ox = 0, oy = 0;
@@ -678,13 +689,14 @@ static void output_frame(struct wl_listener* listener, void* data)
 
             struct wlr_box damageBox;
             memcpy(&damageBox, &damage->region, sizeof(struct wlr_box));
-            grow_box_hv(&damageBox, 4, 4);
+            // grow_box_hv(&damageBox, 4, 4);
             damageBox.x += ox;
             damageBox.y += oy;
             // printf("!%d %d %d %d\n", damageBox.x, damageBox.y, damageBox.width, damageBox.height);
             render_rect_outline(output->wlr_output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
         }
     }
+    */
 
     //-----------------
     // render menus

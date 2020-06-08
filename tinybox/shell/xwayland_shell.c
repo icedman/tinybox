@@ -170,6 +170,8 @@ static uint32_t xwayland_view_configure(struct tbx_view* view, double lx, double
     wlr_xwayland_surface_configure(view->xwayland_surface, 0,
         0, width, height);
 
+    damage_add_view(view->server, view);
+    
     view->x = lx;
     view->y = ly;
     // view->width = width;
@@ -354,7 +356,7 @@ static void xwayland_surface_commit(struct wl_listener* listener, void* data)
     // console_log("commit xwayland");
     struct tbx_xwayland_view* xwayland_view = wl_container_of(listener, xwayland_view, commit);
     struct tbx_view* view = &xwayland_view->view;
-    view_damage(view);
+    damage_add_commit(view->server, view);
 }
 
 static void xwayland_surface_destroy(struct wl_listener* listener, void* data)
@@ -403,7 +405,6 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
         }
 
         view_set_focus(view, view->surface);
-        view_damage(view);
         return;
     }
 
@@ -415,8 +416,6 @@ static void xwayland_surface_map(struct wl_listener* listener, void* data)
 
     if (!view->parent)
         view_move_to_center(view, NULL);
-
-    view_damage(view);
 }
 
 static void xwayland_surface_unmap(struct wl_listener* listener, void* data)

@@ -431,13 +431,17 @@ void menu_show_tooltip(struct tbx_server* server, const char* text)
         menu_close(server->tooltip);
     }
 
+    struct tbx_view* view = (struct tbx_view*)&menu->view;
+    if (menu->menu_width > 0) {
+        damage_add_view(server, view);
+    }
+
     if (text) {
         strcpy(tooltip, text);
         server->tooltip->title = tooltip;
         prerender_menu(server, server->tooltip, true);
 
         // constraint to output
-        struct tbx_view* view = (struct tbx_view*)&menu->view;
         struct tbx_output* output = view_get_preferred_output(view);
 
         struct wlr_box* main_box = wlr_output_layout_get_box(

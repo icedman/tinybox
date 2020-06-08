@@ -11,15 +11,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-// assuming 60 fps
-#define DAMAGE_LIFE 60
-#define DAMAGE_WHOLE (DAMAGE_LIFE*4)
-#define MAX_DAMAGE_RECTS 48
+#define OUTPUT_FPS 30
+#define DAMAGE_LIFE (OUTPUT_FPS * 2)
+#define DAMAGE_WHOLE (OUTPUT_FPS * 4)
+#define MAX_DAMAGE_RECTS 120
 
 static struct tbx_view damage_whole_view = { 0 };
 // static int damage_regions = 0;
 
-bool ab_overlap(struct wlr_box *a, struct wlr_box *b) 
+static bool ab_overlap(struct wlr_box *a, struct wlr_box *b) 
 { 
     struct wlr_box l1 = {
         .x = a->x - a->width/2,
@@ -51,17 +51,25 @@ bool ab_overlap(struct wlr_box *a, struct wlr_box *b)
 void damage_setup(struct tbx_server* server)
 {
     wl_list_init(&server->damages);
-    server->damage_whole = 0;
-    damage_whole(server);
+    
+    struct wlr_box box = {
+        .x = 0,
+        .y = 0,
+        .width = 1,
+        .height = 1
+    };
+    damage_add_box(server, &box, &damage_whole_view);
+    server->damage_whole = DAMAGE_WHOLE * 8; // longer initial damage
 }
 
 void damage_add_box(struct tbx_server* server, struct wlr_box* box, struct tbx_view* view)
 {
     if (box->width == 0 || box->height == 0) {
-        server->damage_whole = DAMAGE_WHOLE;
+        return;
     }
 
-    struct tbx_damage* available = 0;
+    struct tbx_damage *previous_damage = 0;
+    struct tbx_damage *available = 0;
     struct tbx_damage *damage;
     wl_list_for_each(damage, &server->damages, link)
     {
@@ -70,10 +78,18 @@ void damage_add_box(struct tbx_server* server, struct wlr_box* box, struct tbx_v
                 damage->life = DAMAGE_LIFE;
                 return;
             }
+
+            if (!previous_damage || previous_damage->life < damage->life) {
+                previous_damage = damage;
+            }
         }
         if (damage->life <= 0) {
             available = damage;
         }
+    }
+
+    if (!available && previous_damage) {
+        available = previous_damage;
     }
 
     if (!available) {
@@ -98,6 +114,10 @@ void damage_add_view(struct tbx_server* server, struct tbx_view* view)
 
 void damage_add_commit(struct tbx_server* server, struct tbx_view* view)
 {
+    damage_add_view(server, view);
+    return;
+
+    #if 0
     struct wlr_box box;
     view->interface->get_geometry(view, &box);
     box.x = view->x;
@@ -146,28 +166,21 @@ void damage_add_commit(struct tbx_server* server, struct tbx_view* view)
     if (!added) {
         damage_add_box(server, &box, view);
     }
+    #endif
 }
 
 void damage_whole(struct tbx_server* server)
 {
-    struct wlr_box box = {
-        .x = 0,
-        .y = 0,
-        .width = 1,
-        .height = 1
-    };
-    damage_add_box(server, &box, &damage_whole_view);
-    if (server->damage_whole < DAMAGE_WHOLE) {
-        server->damage_whole = DAMAGE_WHOLE;
-    }
+    server->damage_whole = DAMAGE_WHOLE;
 }
 
-bool damage_update(struct tbx_server* server, struct tbx_output* output)
+bool damage_update(struct tbx_server* server, struct tbx_output* output, struct wl_list *regions)
 {
     if (server->damage_whole > 0) {
         server->damage_whole--;
-        return true;
     }
+
+    wl_list_init(regions);
 
     // pixman_region32_clear(&server->damage_region);    
     // pixman_box32_t boxes[MAX_DAMAGE_RECTS];
@@ -178,17 +191,23 @@ bool damage_update(struct tbx_server* server, struct tbx_output* output)
     wl_list_for_each(damage, &server->damages, link)
     {
         if (damage->view == &damage_whole_view) {
+            wl_list_insert(regions, &damage->link2);
             continue;
         }
 
-        if (damage->life >= 0) {
+        if (server->damage_whole > 0) {
+            damage->life = 0;
+        }
+
+        if (damage->life > 0) {
             damage->life--;
             if (damage->life <= 0) {
                 damage->view = 0;
                 damage->life = 0;
             }
-        } else {
-            continue;
+
+            wl_list_insert(regions, &damage->link2);
+            count++;
         }
 
         // boxes[count].x1 = damage->region.x;
@@ -205,7 +224,7 @@ bool damage_update(struct tbx_server* server, struct tbx_output* output)
         //     continue;
         // }
         
-        count++;
+        
     }
 
     // pixman_region32_init_rects(&server->damage_region, boxes, count);

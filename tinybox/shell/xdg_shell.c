@@ -92,6 +92,9 @@ static uint32_t xdg_view_configure(struct tbx_view* view, double lx, double ly,
 {
     struct wlr_box geo_box;
     wlr_xdg_surface_get_geometry(view->xdg_surface, &geo_box);
+
+    damage_add_view(view->server, view);
+    
     view->x = lx - geo_box.x;
     view->y = ly - geo_box.y;
 
@@ -232,7 +235,7 @@ static void xdg_surface_commit(struct wl_listener* listener, void* data)
 {
     struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
     struct tbx_view* view = &xdg_shell_view->view;
-    view_damage(view);
+    damage_add_commit(view->server, view);
 }
 
 static void xdg_surface_map(struct wl_listener* listener, void* data)
