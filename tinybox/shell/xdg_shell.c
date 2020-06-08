@@ -266,7 +266,9 @@ static void xdg_surface_unmap(struct wl_listener* listener, void* data)
     struct tbx_view* view = &xdg_shell_view->view;
     view->surface = NULL;
     view->mapped = false;
-    damage_add_view(view->server, view);
+
+    damage_whole(view->server);
+
     if (view->xdg_surface->surface) {
         wl_list_remove(&xdg_shell_view->commit.link);
     }

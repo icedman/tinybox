@@ -23,6 +23,7 @@ window manager based started from tinywl;
 * bar
 * damage tracking
 * hdpi
+
 ## issues
 
 * proper popup handling

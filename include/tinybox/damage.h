@@ -27,6 +27,5 @@ void damage_add_commit(struct tbx_server *server, struct tbx_view *view);
 
 void damage_whole(struct tbx_server *server);
 bool damage_check(struct tbx_server *server, struct wlr_box *box);
-bool damage_update(struct tbx_server *server, struct tbx_output *output, struct wl_list *regions);
 
 #endif // DAMAGE_H

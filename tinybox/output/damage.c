@@ -2,6 +2,7 @@
 #include "tinybox/output.h"
 #include "tinybox/server.h"
 #include "tinybox/view.h"
+#include "tinybox/render.h"
 
 #include "pixman.h"
 
@@ -52,13 +53,17 @@ void damage_add_box(struct tbx_server* server, struct wlr_box* box, struct tbx_v
     wl_list_for_each(output, &server->outputs, link)
     {
         wlr_output_damage_add_box(output->damage, box);
+        // wlr_output_schedule_frame(output->wlr_output);
     }
 }
 
-static void damage_surface(struct tbx_output *output,
+static void damage_add_surface(struct tbx_output *output,
         struct wlr_surface *surface, struct wlr_box *_box, bool whole) {
 
     struct wlr_box box = *_box;
+
+#if 0
+    // printf("box: %d %d %d %d\n", box.x, box.y, box.width, box.height);
 
     // scale_box(&box, output->wlr_output->scale);
     
@@ -66,13 +71,23 @@ static void damage_surface(struct tbx_output *output,
         pixman_region32_t damage;
         pixman_region32_init(&damage);
         wlr_surface_get_effective_damage(surface, &damage);
-        wlr_region_scale(&damage, &damage, output->wlr_output->scale);
-        if (ceil(output->wlr_output->scale) > surface->current.scale) {
-            wlr_region_expand(&damage, &damage,
-                ceil(output->wlr_output->scale) - surface->current.scale);
-        }
-        pixman_region32_translate(&damage, box.x, box.y);
-        wlr_output_damage_add(output->damage, &damage);
+       
+        // int nrects;
+        // pixman_box32_t* rects = pixman_region32_rectangles(&damage, &nrects);
+
+        // if (nrects > 10 || !rects) {
+        //     whole = true;
+        // } else {
+            wlr_region_scale(&damage, &damage, output->wlr_output->scale);
+            if (ceil(output->wlr_output->scale) > surface->current.scale) {
+                wlr_region_expand(&damage, &damage,
+                    ceil(output->wlr_output->scale) - surface->current.scale);
+            }
+
+            pixman_region32_translate(&damage, box.x, box.y);
+            wlr_output_damage_add(output->damage, &damage);
+        // }
+
         pixman_region32_fini(&damage);
     }
 
@@ -80,7 +95,11 @@ static void damage_surface(struct tbx_output *output,
         wlr_output_damage_add_box(output->damage, &box);
     }
 
-    wlr_output_schedule_frame(output->wlr_output);
+#else
+    wlr_output_damage_add_box(output->damage, &box);
+#endif
+    
+    // wlr_output_schedule_frame(output->wlr_output);
 }
 
 void damage_add_view(struct tbx_server* server, struct tbx_view* view)
@@ -88,35 +107,36 @@ void damage_add_view(struct tbx_server* server, struct tbx_view* view)
     struct wlr_box box;
     view_frame(view, &box);
 
-    /*
-    if (!view->surface && view->view_type == VIEW_TYPE_UNKNOWN) {
+    if (view->view_type == VIEW_TYPE_UNKNOWN) {
         // damage_add_box(server, &box, view);
         // TODO: menus!
         damage_whole(server);
         return;
     }
 
-    if (view->mapped && view->surface) {
-        struct tbx_output* output;
-        wl_list_for_each(output, &view->server->outputs, link)
-        {
-            damage_surface(output, view->surface, &box, false);
-        }
+    // view->interface->get_geometry(view, &box);
+    // box.x = view->x;
+    // box.y = view->y;
+
+    struct tbx_output* output;
+    wl_list_for_each(output, &view->server->outputs, link)
+    {
+        damage_add_surface(output, view->surface, &box, true);
     }
-    */
-    
-    damage_whole(server);
 }
 
 void damage_add_commit(struct tbx_server* server, struct tbx_view* view)
 {
     struct wlr_box box;
-    view_frame(view, &box);
+
+    view->interface->get_geometry(view, &box);
+    box.x = view->x;
+    box.y = view->y;
 
     struct tbx_output* output;
     wl_list_for_each(output, &view->server->outputs, link)
     {
-        damage_surface(output, view->surface, &box, true);
+        damage_add_surface(output, view->surface, &box, false);
     }
 }
 

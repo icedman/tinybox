@@ -23,6 +23,7 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/util/region.h>
 
 #include <GLES2/gl2.h>
 #include <cairo/cairo.h>
@@ -470,11 +471,11 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
     wlr_surface_send_frame_done(surface, rdata->when);
 }
 
-// static void output_frame(struct wl_listener* listener, void* data)
-// {
-// struct tbx_output* output = wl_container_of(listener, output, frame);
-// output_render(output);
-// }
+static void output_frame(struct wl_listener* listener, void* data)
+{
+struct tbx_output* output = wl_container_of(listener, output, frame);
+output_render(output);
+}
 
 static void output_render(struct tbx_output* output)
 {
@@ -536,21 +537,21 @@ static void output_render(struct tbx_output* output)
     wlr_renderer_begin(renderer, width, height);
 
     // render box
-    if (server->config.render_damages) {
-        float color[4] = { 1.0, 0, 0, 1.0 };
-        wlr_renderer_clear(renderer, color);
-    }
+    // if (server->config.render_damages) {
+    //     float color[4] = { 1.0, 0, 0, 1.0 };
+    //     wlr_renderer_clear(renderer, color);
+    // }
 
     if (!pixman_region32_not_empty(&buffer_damage)) {
 
-        struct tbx_view* view;
-        wl_list_for_each_reverse(view, &server->views, link)
-        {
-            if (!view->mapped || !view->surface) {
-                continue;
-            }
-            wlr_surface_send_frame_done(view->surface, &now);
-        }
+        // struct tbx_view* view;
+        // wl_list_for_each_reverse(view, &server->views, link)
+        // {
+        //     if (!view->mapped || !view->surface) {
+        //         continue;
+        //     }
+        //     wlr_surface_send_frame_done(view->surface, &now);
+        // }
 
         // Output isn't damaged but needs buffer swap
         goto renderer_end;
@@ -567,6 +568,7 @@ static void output_render(struct tbx_output* output)
         };
         // printf("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
         scissor_output(output->wlr_output, region);
+        // if (region.x) {}
     }
     
     //-----------------
@@ -693,6 +695,26 @@ renderer_end:
 
     wlr_renderer_scissor(renderer, 0);
 
+    if (server->config.render_damages) {
+        double ox = 0, oy = 0;
+        wlr_output_layout_output_coords(server->output_layout, output->wlr_output, &ox,
+            &oy);
+        int nrects;
+        pixman_box32_t *rects = pixman_region32_rectangles(&buffer_damage, &nrects);
+        for (int i = 0; i < nrects; ++i) {
+            struct wlr_box region = {
+                .x = rects[i].x1 + ox,
+                .y = rects[i].y1 + oy,
+                .width = rects[i].x2 - rects[i].x1,
+                .height = rects[i].y2 - rects[i].y1
+            };
+            // printf("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
+            float damageColor[4] = { 1.0, 0, 1.00, 1.0 };
+            render_rect_outline(output->wlr_output, &region, damageColor, 2, false, output->wlr_output->scale);
+            // if (region.x) {}
+        }
+    }
+
     //-----------------
     // render menus
     //-----------------
@@ -710,6 +732,20 @@ renderer_end:
     /* Conclude rendering and swap the buffers, showing the final frame
    * on-screen. */
     wlr_renderer_end(renderer);
+
+    pixman_region32_t frame_damage;
+    pixman_region32_init(&frame_damage);
+
+    enum wl_output_transform transform =
+        wlr_output_transform_invert(output->wlr_output->transform);
+    wlr_region_transform(&frame_damage, &output->damage->current,
+        transform, width, height);
+
+    wlr_output_set_damage(output->wlr_output, &frame_damage);
+    pixman_region32_fini(&frame_damage);
+
+
+    wlr_output_set_damage(output->wlr_output, &frame_damage);
     wlr_output_commit(output->wlr_output);
 
     output->last_frame = now;
@@ -790,13 +826,13 @@ static void server_new_output(struct wl_listener* listener, void* data)
     // not for now
     output->damage = wlr_output_damage_create(wlr_output);
     output->damage_frame.notify = output_damage_handle_frame;
-    wl_signal_add(&output->damage->events.frame, &output->damage_frame);
+    // wl_signal_add(&output->damage->events.frame, &output->damage_frame);
     output->damage_destroy.notify = output_damage_handle_destroy;
-    wl_signal_add(&output->damage->events.destroy, &output->damage_destroy);
+    // wl_signal_add(&output->damage->events.destroy, &output->damage_destroy);
 
     /* Sets up a listener for the frame notify event. */
-    // output->frame.notify = output_frame;
-    // wl_signal_add(&wlr_output->events.frame, &output->frame);
+    output->frame.notify = output_frame;
+    wl_signal_add(&wlr_output->events.frame, &output->frame);
 
     output->destroy.notify = output_handle_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);

@@ -426,7 +426,7 @@ static void xwayland_surface_unmap(struct wl_listener* listener, void* data)
     view->surface = NULL;
     view->mapped = false;
 
-    damage_add_view(view->server, view);
+    damage_whole(view->server);
 
     if (view->xwayland_surface->surface) {
         wl_list_remove(&xwayland_view->commit.link);
