@@ -10,14 +10,6 @@ struct tbx_server;
 struct tbx_output;
 struct tbx_view;
 
-struct tbx_damage {
-    struct wl_list link;
-    struct wl_list link2;
-    struct wlr_box region;
-    int life;
-    struct tbx_view *view;
-};
-
 bool region_overlap(struct wlr_box *a, struct wlr_box *b);
 void damage_setup(struct tbx_server *server);
 

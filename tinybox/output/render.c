@@ -245,7 +245,7 @@ void generate_view_title_texture(struct tbx_output* output,
     int w = max_title_width;
     int h = 32;
 
-    // printf(">>%d\n", w);
+    printf(">>%d\n", w);
 
     color_to_rgba(color, style->window_label_focus_textColor);
     cairo_surface_t* title1 = cairo_image_from_text((char*)title,

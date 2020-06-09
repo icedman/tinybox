@@ -381,6 +381,8 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
     struct tbx_output* tbx_output = rdata->output;
     struct wlr_output* output = tbx_output->wlr_output;
 
+    view->life++;
+
     // commit from smooth move request
     if (view->request_wait > 0 && view->request_box.x != 0 && view->request_box.y != 0) {
         damage_add_view(view->server, view);
@@ -664,8 +666,10 @@ static void output_render(struct tbx_output* output)
             }
         }
 
+        if (view->title_box.width <= 0) {
+            view->title_dirty = true;
+        }
         if (view->title_dirty) {
-            // printf("generate title!\n");
             generate_view_title_texture(output, view);
         }
 

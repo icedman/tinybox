@@ -62,7 +62,7 @@ static void damage_add_surface(struct tbx_output *output,
 
     struct wlr_box box = *_box;
 
-#if 0
+    if (!whole) {
     printf("box: %d %d %d %d\n", box.x, box.y, box.width, box.height);
 
     // scale_box(&box, output->wlr_output->scale);
@@ -97,7 +97,7 @@ static void damage_add_surface(struct tbx_output *output,
 
         if (!whole) {
             
-            printf("extents: %d %d %d %d\n",
+            fprintf(stderr, "extents: %d %d %d %d\n",
                 extents->x1,extents->y1,
                 extents->x2 - extents->x1,extents->y2 - extents->y1
                 );
@@ -115,14 +115,10 @@ static void damage_add_surface(struct tbx_output *output,
         pixman_region32_fini(&damage);
     }
 
-    if (whole) {
+    } else {
         wlr_output_damage_add_box(output->damage, &box);
     }
 
-#else
-    wlr_output_damage_add_box(output->damage, &box);
-#endif
-    
     // wlr_output_schedule_frame(output->wlr_output);
 }
 
@@ -160,7 +156,7 @@ void damage_add_commit(struct tbx_server* server, struct tbx_view* view)
     struct tbx_output* output;
     wl_list_for_each(output, &view->server->outputs, link)
     {
-        damage_add_surface(output, view->surface, &box, false);
+        damage_add_surface(output, view->surface, &box, true);
     }
 }
 
