@@ -177,6 +177,10 @@ static uint32_t xwayland_view_configure(struct tbx_view* view, double lx, double
     // view->width = width;
     // view->height = height;
 
+    // if (width != box.width) {
+    //     view->title_dirty = true;
+    // }
+
     view->request_box.x = lx;
     view->request_box.y = ly;
     view->request_box.width = width;

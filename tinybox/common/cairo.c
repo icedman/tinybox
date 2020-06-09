@@ -273,6 +273,9 @@ cairo_surface_t* cairo_image_from_text(char* text,
     int w = 400;
     int h = 32;
 
+    int max_width = *width;
+    int max_height = *height;
+
     // We must use a non-nil cairo_t for cairo_set_font_options to work.
     // Therefore, we cannot use cairo_create(NULL).
     cairo_surface_t* dummy_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 0, 0);
@@ -294,6 +297,12 @@ cairo_surface_t* cairo_image_from_text(char* text,
     cairo_surface_destroy(dummy_surface);
     cairo_destroy(c);
 
+    if (w > max_width) {
+        w = max_width;
+    }
+    if (h > max_height) {
+        h = max_height;
+    }
     cairo_surface_t* surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
     cairo_t* cx = cairo_create(surf);
 

@@ -63,7 +63,7 @@ static void damage_add_surface(struct tbx_output *output,
     struct wlr_box box = *_box;
 
 #if 0
-    // printf("box: %d %d %d %d\n", box.x, box.y, box.width, box.height);
+    printf("box: %d %d %d %d\n", box.x, box.y, box.width, box.height);
 
     // scale_box(&box, output->wlr_output->scale);
     
@@ -72,12 +72,36 @@ static void damage_add_surface(struct tbx_output *output,
         pixman_region32_init(&damage);
         wlr_surface_get_effective_damage(surface, &damage);
        
-        // int nrects;
-        // pixman_box32_t* rects = pixman_region32_rectangles(&damage, &nrects);
+        int nrects = 0;
+        pixman_box32_t* rects = 0;
+        pixman_box32_t* extents = pixman_region32_extents(&damage);
 
-        // if (nrects > 10 || !rects) {
-        //     whole = true;
-        // } else {
+        float w = extents->x2 - extents->x1;
+        float h = extents->y2 - extents->y1;
+
+        // validate
+        if (extents->x1 < 0 || extents->y1 < 0 ||
+            w > box.width || h > box.height || 
+            w <=0 || h <= 0) {
+            whole = true;
+        }
+
+        if (!whole) {
+            pixman_region32_rectangles(&damage, &nrects);
+        }
+
+        // validate again
+        if (nrects == 0 || nrects > 10 || !rects) {
+            whole = true;
+        }
+
+        if (!whole) {
+            
+            printf("extents: %d %d %d %d\n",
+                extents->x1,extents->y1,
+                extents->x2 - extents->x1,extents->y2 - extents->y1
+                );
+
             wlr_region_scale(&damage, &damage, output->wlr_output->scale);
             if (ceil(output->wlr_output->scale) > surface->current.scale) {
                 wlr_region_expand(&damage, &damage,
@@ -86,7 +110,7 @@ static void damage_add_surface(struct tbx_output *output,
 
             pixman_region32_translate(&damage, box.x, box.y);
             wlr_output_damage_add(output->damage, &damage);
-        // }
+        }
 
         pixman_region32_fini(&damage);
     }

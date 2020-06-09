@@ -54,7 +54,8 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
     /* This function is called for every surface that needs to be rendered. */
     struct render_data* rdata = data;
     struct tbx_view* view = rdata->view;
-    struct wlr_output* output = rdata->output;
+    struct tbx_output* tbx_output = rdata->output;
+    struct wlr_output* output = tbx_output->wlr_output;
     struct wlr_seat* seat = view->server->seat->seat;
     struct tbx_style* style = &view->server->style;
 
@@ -121,7 +122,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         memcpy(&box, &view_geometry, sizeof(struct wlr_box));
         grow_box_hv(&box, frameWidth, frameWidth);
         // if (region_overlap(&region_box, &box)) {
-        render_rect_outline(output, &box, color, frameWidth, false, output->scale);
+        render_rect_outline(tbx_output, &box, color, frameWidth, false, output->scale);
         // }
     }
 
@@ -145,7 +146,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         box.width += ((frameWidth + borderWidth) * 2);
         box.y -= (frameWidth + borderWidth + titlebarHeight);
         box.height = titlebarHeight + borderWidth;
-        render_rect(output, &box, color, output->scale);
+        render_rect(tbx_output, &box, color, output->scale);
 
         memcpy(&view->hotspots[HS_TITLEBAR], &box, sizeof(struct wlr_box));
         memcpy(&view->hotspots[HS_EDGE_TOP_LEFT], &box, sizeof(struct wlr_box));
@@ -161,33 +162,33 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         // render the texture
         grow_box_hv(&box, -borderWidth, -borderWidth);
 
-        render_texture(output, &box,
+        render_texture(tbx_output, &box,
             get_texture_cache(tx_window_title_focus + unfocus_offset),
             output->scale);
 
-        // render_rect(output, &box, colorDebug2, output->scale);
+        // render_rect(tbx_output, &box, colorDebug2, output->scale);
 
         int tflags = unfocus_offset ? style->window_title_focus : style->window_title_unfocus;
         if (tflags & sf_raised) {
-            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+            render_rect_outline(tbx_output, &box, bevelColor, 1, 1, output->scale);
         } else if (tflags & sf_sunken) {
-            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+            render_rect_outline(tbx_output, &box, bevelColor, 1, -1, output->scale);
         }
 
         if (!mini_titlebar) {
             // label
             grow_box_hv(&box, -margin, -margin);
 
-            render_texture(output, &box,
+            render_texture(tbx_output, &box,
                 get_texture_cache(tx_window_label_focus + unfocus_offset),
                 output->scale);
-            // render_rect(output, &box, bevelColor, output->scale);
+            // render_rect(tbx_output, &box, bevelColor, output->scale);
 
             int tflags = unfocus_offset ? style->window_label_focus : style->window_label_unfocus;
             if (tflags & sf_raised) {
-                render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+                render_rect_outline(tbx_output, &box, bevelColor, 1, 1, output->scale);
             } else if (tflags & sf_sunken) {
-                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+                render_rect_outline(tbx_output, &box, bevelColor, 1, -1, output->scale);
             }
 
             // title
@@ -210,9 +211,9 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             if (view->title) {
                 // scissor_output(output, sc_box);
                 if (!unfocus_offset) {
-                    render_texture(output, &box, view->title, output->scale);
+                    render_texture(tbx_output, &box, view->title, output->scale);
                 } else {
-                    render_texture(output, &box, view->title_unfocused, output->scale);
+                    render_texture(tbx_output, &box, view->title_unfocused, output->scale);
                 }
                 // wlr_renderer_scissor(rdata->renderer, NULL);
             }
@@ -231,7 +232,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         box.y += view_geometry.height + frameWidth;
         box.height = handleWidth + borderWidth;
 
-        render_rect(output, &box, color, output->scale);
+        render_rect(tbx_output, &box, color, output->scale);
         memcpy(&view->hotspots[HS_HANDLE], &box, sizeof(struct wlr_box));
 
         // render the texture
@@ -240,18 +241,18 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             grow_box_hv(&box, -(gripWidth + (borderWidth * 2) + 1), 0);
         }
 
-        render_texture(output, &box,
+        render_texture(tbx_output, &box,
             get_texture_cache(tx_window_handle_focus + unfocus_offset),
             output->scale);
 
         int tflags = unfocus_offset ? style->window_handle_focus : style->window_handle_unfocus;
         if (tflags & sf_raised) {
-            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+            render_rect_outline(tbx_output, &box, bevelColor, 1, 1, output->scale);
         } else if (tflags & sf_sunken) {
-            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+            render_rect_outline(tbx_output, &box, bevelColor, 1, -1, output->scale);
         }
 
-        // render_rect(output, &box, colorDebug2, output->scale);
+        // render_rect(tbx_output, &box, colorDebug2, output->scale);
 
         // grips
         if (gripWidth) {
@@ -259,34 +260,34 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
             box.y = view_geometry.y + view_geometry.height + frameWidth + borderWidth;
             box.width = gripWidth + (frameWidth * 2);
             box.height = handleWidth - borderWidth;
-            render_texture(output, &box,
+            render_texture(tbx_output, &box,
                 get_texture_cache(tx_window_grip_focus + unfocus_offset),
                 output->scale);
-            // render_rect(output, &box, colorDebug4, output->scale);
+            // render_rect(tbx_output, &box, colorDebug4, output->scale);
 
             int tflags = unfocus_offset ? style->window_grip_focus : style->window_grip_unfocus;
             if (tflags & sf_raised) {
-                render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+                render_rect_outline(tbx_output, &box, bevelColor, 1, 1, output->scale);
             } else if (tflags & sf_sunken) {
-                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+                render_rect_outline(tbx_output, &box, bevelColor, 1, -1, output->scale);
             }
 
             memcpy(&view->hotspots[HS_EDGE_BOTTOM_LEFT], &box, sizeof(struct wlr_box));
             grow_box_hv(&view->hotspots[HS_EDGE_BOTTOM_LEFT], borderWidth, borderWidth);
 
             box.x += view_geometry.width - gripWidth;
-            render_texture(output, &box,
+            render_texture(tbx_output, &box,
                 get_texture_cache(tx_window_grip_focus + unfocus_offset),
                 output->scale);
-            // render_rect(output, &box, colorDebug4, output->scale);
+            // render_rect(tbx_output, &box, colorDebug4, output->scale);
 
             memcpy(&view->hotspots[HS_EDGE_BOTTOM_RIGHT], &box, sizeof(struct wlr_box));
             grow_box_hv(&view->hotspots[HS_EDGE_BOTTOM_RIGHT], borderWidth, borderWidth);
 
             if (tflags & sf_raised) {
-                render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+                render_rect_outline(tbx_output, &box, bevelColor, 1, 1, output->scale);
             } else if (tflags & sf_sunken) {
-                render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+                render_rect_outline(tbx_output, &box, bevelColor, 1, -1, output->scale);
             }
         }
     }
@@ -304,13 +305,13 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         box.width = borderWidth;
         box.height += (frameWidth * 2);
 
-        render_rect(output, &box, color, output->scale);
+        render_rect(tbx_output, &box, color, output->scale);
 
         memcpy(&view->hotspots[HS_EDGE_LEFT], &box, sizeof(struct wlr_box));
 
         // right
         box.x = view_geometry.x + view_geometry.width + frameWidth;
-        render_rect(output, &box, color, output->scale);
+        render_rect(tbx_output, &box, color, output->scale);
 
         memcpy(&view->hotspots[HS_EDGE_RIGHT], &box, sizeof(struct wlr_box));
 
@@ -330,7 +331,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         if (titlebarHeight) {
             box.y -= titlebarHeight;
         } else {
-            render_rect(output, &box, color, output->scale);
+            render_rect(tbx_output, &box, color, output->scale);
         }
 
         memcpy(&view->hotspots[HS_EDGE_TOP], &box, sizeof(struct wlr_box));
@@ -341,7 +342,7 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
         if (handleWidth) {
             box.y += handleWidth;
         } else {
-            render_rect(output, &box, color, output->scale);
+            render_rect(tbx_output, &box, color, output->scale);
         }
 
         memcpy(&view->hotspots[HS_EDGE_BOTTOM], &box, sizeof(struct wlr_box));
@@ -377,7 +378,8 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
     /* This function is called for every surface that needs to be rendered. */
     struct render_data* rdata = data;
     struct tbx_view* view = rdata->view;
-    struct wlr_output* output = rdata->output;
+    struct tbx_output* tbx_output = rdata->output;
+    struct wlr_output* output = tbx_output->wlr_output;
 
     // commit from smooth move request
     if (view->request_wait > 0 && view->request_box.x != 0 && view->request_box.y != 0) {
@@ -473,8 +475,8 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
 
 static void output_frame(struct wl_listener* listener, void* data)
 {
-struct tbx_output* output = wl_container_of(listener, output, frame);
-output_render(output);
+    struct tbx_output* output = wl_container_of(listener, output, frame);
+    output_render(output);
 }
 
 static void output_render(struct tbx_output* output)
@@ -537,10 +539,10 @@ static void output_render(struct tbx_output* output)
     wlr_renderer_begin(renderer, width, height);
 
     // render box
-    // if (server->config.render_damages) {
-    //     float color[4] = { 1.0, 0, 0, 1.0 };
-    //     wlr_renderer_clear(renderer, color);
-    // }
+    if (server->config.render_damages) {
+        float color[4] = { 1.0, 0, 0, 1.0 };
+        wlr_renderer_clear(renderer, color);
+    }
 
     if (!pixman_region32_not_empty(&buffer_damage)) {
 
@@ -557,25 +559,32 @@ static void output_render(struct tbx_output* output)
         goto renderer_end;
     }
 
+    memset(&output->scissors, 0, sizeof(struct wlr_box));
+    output->scissors_count = 0;
+
+    double ox = 0, oy = 0;
+    wlr_output_layout_output_coords(server->output_layout, output->wlr_output, &ox, &oy);
+
+    float color[4] = { 0.0, 0, 0, 1.0 };
     int nrects;
     pixman_box32_t *rects = pixman_region32_rectangles(&buffer_damage, &nrects);
-    for (int i = 0; i < nrects; ++i) {
-        struct wlr_box region = {
-            .x = rects[i].x1,
-            .y = rects[i].y1,
-            .width = rects[i].x2 - rects[i].x1,
-            .height = rects[i].y2 - rects[i].y1
-        };
+    for (int i = 0; i < nrects && i<MAX_OUTPUT_SCISSORS; ++i) {
+        if (rects[i].x2 - rects[i].x1 == 0 || rects[i].y2 - rects[i].y1) {
+            continue;
+        }
+        output->scissors[i].x = rects[i].x1 + ox;
+        output->scissors[i].y = rects[i].y1 + oy;
+        output->scissors[i].width = rects[i].x2 - rects[i].x1;
+        output->scissors[i].height = rects[i].y2 - rects[i].y1;
+        output->scissors_count = i+1;
         // printf("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
-        scissor_output(output->wlr_output, region);
-        // if (region.x) {}
+        scissor_output(output->wlr_output, output->scissors[i]);
+        wlr_renderer_clear(renderer, color);
     }
     
     //-----------------
     // render workspace backgrounds
     //-----------------
-    float color[4] = { 0.0, 0, 0, 1.0 };
-    wlr_renderer_clear(renderer, color);
 
     if (in_main_output && animate && (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE || server->ws_animate)) {
         render_workspace(output, get_workspace(server, server->workspace - 1));
@@ -656,6 +665,7 @@ static void output_render(struct tbx_output* output)
         }
 
         if (view->title_dirty) {
+            // printf("generate title!\n");
             generate_view_title_texture(output, view);
         }
 
@@ -663,7 +673,7 @@ static void output_render(struct tbx_output* output)
         // render the view
         //-----------------
         struct render_data rdata = {
-            .output = output->wlr_output,
+            .output = output,
             .view = view,
             .renderer = renderer,
             .workspace = workspace,
@@ -696,21 +706,10 @@ renderer_end:
     wlr_renderer_scissor(renderer, 0);
 
     if (server->config.render_damages) {
-        double ox = 0, oy = 0;
-        wlr_output_layout_output_coords(server->output_layout, output->wlr_output, &ox,
-            &oy);
-        int nrects;
-        pixman_box32_t *rects = pixman_region32_rectangles(&buffer_damage, &nrects);
-        for (int i = 0; i < nrects; ++i) {
-            struct wlr_box region = {
-                .x = rects[i].x1 + ox,
-                .y = rects[i].y1 + oy,
-                .width = rects[i].x2 - rects[i].x1,
-                .height = rects[i].y2 - rects[i].y1
-            };
+        for (int i = 0; i < output->scissors_count; ++i) {
             // printf("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
             float damageColor[4] = { 1.0, 0, 1.00, 1.0 };
-            render_rect_outline(output->wlr_output, &region, damageColor, 2, false, output->wlr_output->scale);
+            render_rect_outline(output, &output->scissors[i], damageColor, 2, false, output->wlr_output->scale);
             // if (region.x) {}
         }
     }

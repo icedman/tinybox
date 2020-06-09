@@ -238,8 +238,14 @@ void generate_view_title_texture(struct tbx_output* output,
 
     // console_log("%s %s", appId, title);
 
-    int w = 400;
+    int borderWidth = 3;
+    int margin = 4;
+
+    int max_title_width = view->hotspots[HS_TITLEBAR].width - (borderWidth + margin) * 2;
+    int w = max_title_width;
     int h = 32;
+
+    // printf(">>%d\n", w);
 
     color_to_rgba(color, style->window_label_focus_textColor);
     cairo_surface_t* title1 = cairo_image_from_text((char*)title,
@@ -248,8 +254,10 @@ void generate_view_title_texture(struct tbx_output* output,
     unsigned char* data = cairo_image_surface_get_data(title1);
     view->title = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
         cairo_image_surface_get_stride(title1), w, h, data);
+    view->title_box.width = w;
+    view->title_box.height = h;
 
-    w = 400;
+    w = max_title_width;
     h = 32;
     color_to_rgba(color, style->window_label_unfocus_textColor);
     cairo_surface_t* title2 = cairo_image_from_text((char*)title,
@@ -307,10 +315,47 @@ void generate_background(struct tbx_output* output,
     cairo_surface_destroy(surface);
 }
 
-void render_rect(struct wlr_output* output, struct wlr_box* box, float color[4],
+void render_texture(struct tbx_output* output, struct wlr_box* box,
+    struct wlr_texture* texture, float scale)
+{
+    if (!texture) {
+        return;
+    }
+
+    struct wlr_renderer* renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+    struct wlr_box box_scaled = {
+        .x = box->x * scale,
+        .y = box->y * scale,
+        .width = box->width * scale,
+        .height = box->height * scale,
+    };
+
+    struct wlr_gles2_texture_attribs attribs;
+    wlr_gles2_texture_get_attribs(texture, &attribs);
+    glBindTexture(attribs.target, attribs.tex);
+    glTexParameteri(attribs.target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    float matrix[9];
+    wlr_matrix_project_box(matrix, &box_scaled, WL_OUTPUT_TRANSFORM_NORMAL, 0.0,
+        output->wlr_output->transform_matrix);
+
+    for(int i=0; i<output->scissors_count; i++) {
+        scissor_output(output->wlr_output, output->scissors[i]);
+        wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0);
+    }
+
+    wlr_renderer_scissor(renderer, 0);
+    if (!output->scissors_count) {
+        wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0);
+    }
+
+    glBindTexture(attribs.target, 0);
+}
+
+void render_rect(struct tbx_output* output, struct wlr_box* box, float color[4],
     float scale)
 {
-    struct wlr_renderer* renderer = wlr_backend_get_renderer(output->backend);
+    struct wlr_renderer* renderer = wlr_backend_get_renderer(output->wlr_output->backend);
 
     struct wlr_box box_scaled = {
         .x = box->x * scale,
@@ -319,10 +364,17 @@ void render_rect(struct wlr_output* output, struct wlr_box* box, float color[4],
         .height = box->height * scale,
     };
 
-    wlr_render_rect(renderer, &box_scaled, color, output->transform_matrix);
+    for(int i=0; i<output->scissors_count; i++) {
+        scissor_output(output->wlr_output, output->scissors[i]);
+        wlr_render_rect(renderer, &box_scaled, color, output->wlr_output->transform_matrix);
+    }
+    wlr_renderer_scissor(renderer, 0);
+    if (!output->scissors_count) {
+        wlr_render_rect(renderer, &box_scaled, color, output->wlr_output->transform_matrix);
+    }
 }
 
-void render_rect_outline(struct wlr_output* output, struct wlr_box* box, float color[4],
+void render_rect_outline(struct tbx_output* output, struct wlr_box* box, float color[4],
     float width, int bevel, float scale)
 {
     struct wlr_texture* bevelTop;
@@ -371,36 +423,6 @@ void render_rect_outline(struct wlr_output* output, struct wlr_box* box, float c
     } else {
         render_rect(output, &edge, color, scale);
     }
-}
-
-void render_texture(struct wlr_output* output, struct wlr_box* box,
-    struct wlr_texture* texture, float scale)
-{
-    if (!texture) {
-        return;
-    }
-
-    struct wlr_renderer* renderer = wlr_backend_get_renderer(output->backend);
-
-    struct wlr_box box_scaled = {
-        .x = box->x * scale,
-        .y = box->y * scale,
-        .width = box->width * scale,
-        .height = box->height * scale,
-    };
-
-    struct wlr_gles2_texture_attribs attribs;
-    wlr_gles2_texture_get_attribs(texture, &attribs);
-    glBindTexture(attribs.target, attribs.tex);
-    glTexParameteri(attribs.target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    float matrix[9];
-    wlr_matrix_project_box(matrix, &box_scaled, WL_OUTPUT_TRANSFORM_NORMAL, 0.0,
-        output->transform_matrix);
-
-    wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0);
-
-    glBindTexture(attribs.target, 0);
 }
 
 void scissor_output(struct wlr_output* wlr_output, struct wlr_box box)

@@ -230,7 +230,7 @@ void render_console(struct tbx_output* output)
         struct wlr_box console_box = {
             .x = 10, .y = 10, .width = CONSOLE_WIDTH, .height = CONSOLE_HEIGHT
         };
-        render_texture(output->wlr_output, &console_box,
+        render_texture(output, &console_box,
             output->server->console->texture, output->wlr_output->scale);
     }
 }

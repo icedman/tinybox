@@ -291,14 +291,14 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     box.height += (borderWidth * 2);
 
     color_to_rgba(color, style->borderColor);
-    render_rect(output, &box, color, output->scale);
+    render_rect(tbx_output, &box, color, output->scale);
 
     box.x += borderWidth;
     box.y += borderWidth;
     box.width -= (borderWidth * 2);
     box.height -= (borderWidth * 2);
 
-    render_texture(output, &box, menu->menu_texture, output->scale);
+    render_texture(tbx_output, &box, menu->menu_texture, output->scale);
 
     //-------------------
     // add the bevels
@@ -311,9 +311,9 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
         box.x += menu->menu_x + borderWidth;
         box.y += menu->menu_y + borderWidth;
         if (tflags & sf_raised) {
-            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+            render_rect_outline(tbx_output, &box, bevelColor, 1, 1, output->scale);
         } else if (tflags & sf_sunken) {
-            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+            render_rect_outline(tbx_output, &box, bevelColor, 1, -1, output->scale);
         }
     }
 
@@ -328,9 +328,9 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     box.x += menu->menu_x + borderWidth;
     box.y += menu->menu_y + borderWidth;
     if (tflags & sf_raised) {
-        render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+        render_rect_outline(tbx_output, &box, bevelColor, 1, 1, output->scale);
     } else if (tflags & sf_sunken) {
-        render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+        render_rect_outline(tbx_output, &box, bevelColor, 1, -1, output->scale);
     }
 
     tflags = style->menu_hilite;
@@ -360,13 +360,13 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
         if (item->menu_type == TBX_MENU_ITEM_SEPARATOR) {
             continue;
         } else {
-            render_texture(output, &box, item->item_texture, output->scale);
+            render_texture(tbx_output, &box, item->item_texture, output->scale);
         }
 
         if (tflags & sf_raised) {
-            render_rect_outline(output, &box, bevelColor, 1, 1, output->scale);
+            render_rect_outline(tbx_output, &box, bevelColor, 1, 1, output->scale);
         } else if (tflags & sf_sunken) {
-            render_rect_outline(output, &box, bevelColor, 1, -1, output->scale);
+            render_rect_outline(tbx_output, &box, bevelColor, 1, -1, output->scale);
         }
     }
 }

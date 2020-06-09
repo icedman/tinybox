@@ -213,5 +213,5 @@ void render_workspace(struct tbx_output* output,
     box.width = layout_box->width;
     box.height = layout_box->height;
 
-    render_texture(output->wlr_output, &box, texture, output->wlr_output->scale);
+    render_texture(output, &box, texture, output->wlr_output->scale);
 }

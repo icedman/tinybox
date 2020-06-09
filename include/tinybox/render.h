@@ -41,7 +41,7 @@ enum {
 /* Used to move all of the data necessary to render a surface from the top-level
  * frame handler to the per-surface render function. */
 struct render_data {
-    struct wlr_output* output;
+    struct tbx_output* output;
     struct wlr_renderer* renderer;
     struct tbx_view* view;
     struct tbx_workspace* workspace;
@@ -50,13 +50,13 @@ struct render_data {
     double offset_y;
 };
 
-void render_rect(struct wlr_output* output, struct wlr_box* box, float color[4],
+void render_rect(struct tbx_output* output, struct wlr_box* box, float color[4],
     float scale);
 
-void render_rect_outline(struct wlr_output* output, struct wlr_box* box, float color[4],
+void render_rect_outline(struct tbx_output* output, struct wlr_box* box, float color[4],
     float width, int bevel, float scale);
 
-void render_texture(struct wlr_output* output, struct wlr_box* box,
+void render_texture(struct tbx_output* output, struct wlr_box* box,
     struct wlr_texture* texture, float scale);
 void generate_textures(struct tbx_output* output, bool forced);
 void generate_view_title_texture(struct tbx_output* output,

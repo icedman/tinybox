@@ -90,13 +90,17 @@ uint32_t xdg_get_int_prop(struct tbx_view* view, enum tbx_view_prop prop)
 static uint32_t xdg_view_configure(struct tbx_view* view, double lx, double ly,
     int width, int height)
 {
-    struct wlr_box geo_box;
-    wlr_xdg_surface_get_geometry(view->xdg_surface, &geo_box);
+    struct wlr_box box;
+    wlr_xdg_surface_get_geometry(view->xdg_surface, &box);
 
     damage_add_view(view->server, view);
 
-    view->x = lx - geo_box.x;
-    view->y = ly - geo_box.y;
+    view->x = lx - box.x;
+    view->y = ly - box.y;
+
+    if (width != box.width) {
+        view->title_dirty = true;
+    }
 
     wlr_xdg_toplevel_set_size(view->xdg_surface, width, height);
     view->request_box.x = view->x;
