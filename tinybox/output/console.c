@@ -29,61 +29,56 @@
 
 static struct tbx_console theConsole = { 0 };
 
-cairo_surface_t* console_surface = NULL;
+// static cairo_surface_t* console_surface = NULL;
 
 void console_setup(struct tbx_server* server)
 {
     server->console = &theConsole;
     server->console->server = server;
-
-    int w = CONSOLE_WIDTH;
-    int h = CONSOLE_HEIGHT;
-
-    console_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-
     console_clear();
 }
 
 void console_clear()
 {
     struct tbx_console* console = &theConsole;
-
     if (!console->server->config.console) {
         return;
     }
 
-    console->inputIdx = 0;
-    console->renderIdx = 0;
-    console->dirty = true;
-    memset(console->lines, 0, sizeof(char) * 255 * CONSOLE_LINES);
+    FILE *console_file = fopen("/tmp/tinybox.log", "w");
+    if (!console_file) {
+        return;
+    }
+    fclose(console_file);
 }
 
 void console_log(const char* format, ...)
 {
     struct tbx_console* console = &theConsole;
-
     if (!console->server->config.console) {
         return;
     }
 
-    char string[255] = "";
+    char string[512] = "";
 
     va_list args;
     va_start(args, format);
     vsnprintf(string, 255, format, args);
     va_end(args);
 
+    FILE *console_file = fopen("/tmp/tinybox.log", "a");
+    if (!console_file) {
+        return;
+
+    }
     char* token = strtok(string, "\n");
     while (token != NULL) {
-        strcpy(console->lines[console->inputIdx % CONSOLE_LINES], token);
-        console->inputIdx++;
-        if (console->inputIdx >= CONSOLE_LINES) {
-            console->renderIdx = (console->inputIdx + 1) % CONSOLE_LINES;
-        }
+        fprintf(console_file, token);
+        fprintf(console_file, "\n");
+
         token = strtok(NULL, "\n");
     }
-    console->lines[(console->inputIdx + 1) % CONSOLE_LINES][0] = 0;
-    console->dirty = true;
+    fclose(console_file);
 }
 
 const char* header = "-------------\n%s\n";
@@ -137,102 +132,5 @@ void console_dump()
         console_log("%s%c (%d, %d) - (%d %d) %d", output->wlr_output->name, main,
             (int)ox, (int)oy, (int)box->width, (int)box->height,
             output->last_frame.tv_nsec / 1000000);
-    }
-}
-
-static void console_render_cache(struct tbx_output* output)
-{
-    struct tbx_console* console = &theConsole;
-    struct tbx_server* server = output->server;
-    ;
-    struct wlr_renderer* renderer = output->server->renderer;
-
-    if (console->texture) {
-        wlr_texture_destroy(console->texture);
-    }
-
-    // float scale = 1.0f;
-    const char* font = output->server->style.font;
-
-    // We must use a non-nil cairo_t for cairo_set_font_options to work.
-    // Therefore, we cannot use cairo_create(NULL).
-    cairo_surface_t* dummy_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 0, 0);
-    cairo_t* c = cairo_create(dummy_surface);
-    cairo_set_antialias(c, CAIRO_ANTIALIAS_BEST);
-    cairo_font_options_t* fo = cairo_font_options_create();
-    cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_FULL);
-    if (output->wlr_output->subpixel == WL_OUTPUT_SUBPIXEL_NONE) {
-        cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_GRAY);
-    } else {
-        cairo_font_options_set_antialias(fo, CAIRO_ANTIALIAS_SUBPIXEL);
-
-        // cairo.c
-        cairo_font_options_set_subpixel_order(
-            fo, to_cairo_subpixel_order(output->wlr_output->subpixel));
-    }
-    cairo_set_font_options(c, fo);
-    cairo_surface_destroy(dummy_surface);
-    cairo_destroy(c);
-
-    cairo_t* cx = cairo_create(console_surface);
-    cairo_set_font_options(cx, fo);
-    cairo_font_options_destroy(fo);
-
-    cairo_save(cx);
-    cairo_set_source_rgba(cx, 0.0, 0.0, 0.0, 0.0);
-    cairo_set_operator(cx, CAIRO_OPERATOR_CLEAR);
-    cairo_rectangle(cx, 0, 0, CONSOLE_WIDTH, CONSOLE_HEIGHT);
-    cairo_paint(cx);
-    cairo_restore(cx);
-
-    cairo_move_to(cx, 0, 0);
-
-    float color[4];
-    color_to_rgba(color, server->style.window_label_focus_textColor);
-    cairo_set_source_rgba(cx, color[0], color[1], color[2], color[3]);
-
-    cairo_select_font_face(cx, font, 0, 0);
-    cairo_set_font_size(cx, 12);
-
-    for (int i = 0; i < CONSOLE_LINES; i++) {
-        int idx = (console->renderIdx + i) % CONSOLE_LINES;
-        cairo_move_to(cx, 0, 14 + (14 * i));
-        cairo_show_text(cx, console->lines[idx]);
-    }
-
-    // char fname[255] = "";
-    // sprintf(fname, "/tmp/text_%s.png", appId);
-    // cairo_surface_write_to_png(surf, fname);
-
-    unsigned char* data = cairo_image_surface_get_data(console_surface);
-    console->texture = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
-        cairo_image_surface_get_stride(console_surface),
-        CONSOLE_WIDTH, CONSOLE_HEIGHT, data);
-
-    cairo_destroy(cx);
-    console->dirty = false;
-}
-
-void render_console(struct tbx_output* output)
-{
-    if (!output->server->config.console) {
-        return;
-    }
-
-    // -----------------------
-    // render the console
-    // -----------------------
-    if (output->server->console->dirty) {
-        console_render_cache(output);
-        damage_whole(output->server);
-    }
-
-    // console
-    if (output->server->console->texture) {
-        struct wlr_box console_box = {
-            .x = 10, .y = 10, .width = CONSOLE_WIDTH, .height = CONSOLE_HEIGHT
-        };
-        render_texture(output, &console_box,
-            output->server->console->texture, output->wlr_output->scale);
     }
 }

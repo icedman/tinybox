@@ -329,6 +329,7 @@ static void xdg_set_title(struct wl_listener* listener, void* data)
     struct tbx_xdg_shell_view* xdg_shell_view = wl_container_of(listener, xdg_shell_view, set_title);
     struct tbx_view* view = &xdg_shell_view->view;
     view->title_dirty = true;
+    damage_whole(view->server);
 }
 
 static void server_new_xdg_surface(struct wl_listener* listener, void* data)

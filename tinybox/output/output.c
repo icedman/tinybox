@@ -603,10 +603,6 @@ static void output_render(struct tbx_output* output)
     }
     render_workspace(output, get_workspace(server, server->workspace));
 
-    if (in_main_output) {
-        render_console(output);
-    }
-
     //-----------------
     // render views
     //-----------------

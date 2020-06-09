@@ -474,6 +474,7 @@ static void xwayland_set_title(struct wl_listener* listener, void* data)
     struct tbx_xwayland_view* xview = wl_container_of(listener, xview, set_title);
     struct tbx_view* view = &xview->view;
     view->title_dirty = true;
+    damage_whole(view->server);
 }
 
 static void xwayland_set_class(struct wl_listener* listener, void* data)

@@ -142,7 +142,7 @@ static void damage_add_surface(struct tbx_output* output,
 void damage_add_view(struct tbx_server* server, struct tbx_view* view)
 {
     struct wlr_box box;
-    view_frame(view, &box);
+    view_frame(view, &box); // TODO! check multi-outputs
 
     if (view->view_type == VIEW_TYPE_UNKNOWN) {
         // damage_add_box(server, &box, view);
