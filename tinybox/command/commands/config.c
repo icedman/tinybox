@@ -132,6 +132,8 @@ static void exec_render_damages(struct tbx_command* cmd, int argc,
     if (config->render_damages) {
         console_log("rendering damages");
     }
+
+    damage_whole(cmd->server);
 }
 
 static void exec_console(struct tbx_command* cmd, int argc, char** argv)

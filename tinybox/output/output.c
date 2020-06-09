@@ -468,7 +468,16 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
 
     /* This takes our matrix, the texture, and an alpha, and performs the actual
    * rendering on the GPU. */
-    wlr_render_texture_with_matrix(rdata->renderer, texture, matrix, alpha);
+
+    for (int i = 0; i < tbx_output->scissors_count; i++) {
+        scissor_output(output, tbx_output->scissors[i]);
+        wlr_render_texture_with_matrix(rdata->renderer, texture, matrix, alpha);
+    }
+    wlr_renderer_scissor(rdata->renderer, 0);
+    if (!tbx_output->scissors_count) {
+        wlr_render_texture_with_matrix(rdata->renderer, texture, matrix, alpha);
+    }
+
 
     /* This lets the client know that we've displayed that frame and it can
    * prepare another one now if it likes. */
@@ -512,8 +521,7 @@ static void output_render(struct tbx_output* output)
     // this keeps things simple for now
     if (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE
         || cursor->mode == TBX_CURSOR_MOVE
-        || cursor->mode == TBX_CURSOR_RESIZE
-    ) {
+        || cursor->mode == TBX_CURSOR_RESIZE) {
         damage_whole(server);
     }
 
@@ -547,7 +555,6 @@ static void output_render(struct tbx_output* output)
     }
 
     if (!pixman_region32_not_empty(&buffer_damage)) {
-
         // struct tbx_view* view;
         // wl_list_for_each_reverse(view, &server->views, link)
         // {
@@ -569,21 +576,28 @@ static void output_render(struct tbx_output* output)
 
     float color[4] = { 0.0, 0, 0, 1.0 };
     int nrects;
-    pixman_box32_t *rects = pixman_region32_rectangles(&buffer_damage, &nrects);
-    for (int i = 0; i < nrects && i<MAX_OUTPUT_SCISSORS; ++i) {
-        if (rects[i].x2 - rects[i].x1 == 0 || rects[i].y2 - rects[i].y1) {
+    pixman_box32_t* rects = pixman_region32_rectangles(&buffer_damage, &nrects);
+    for (int i = 1; i < nrects && i < MAX_OUTPUT_SCISSORS; ++i) {
+        if ((rects[i].x2 - rects[i].x1 <= 0 || rects[i].y2 - rects[i].y1 <= 0)) {
             continue;
         }
         output->scissors[i].x = rects[i].x1 + ox;
         output->scissors[i].y = rects[i].y1 + oy;
         output->scissors[i].width = rects[i].x2 - rects[i].x1;
         output->scissors[i].height = rects[i].y2 - rects[i].y1;
-        output->scissors_count = i+1;
-        // printf("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
+        output->scissors_count = i + 1;
+
+        // printf("wlr: %d %d %d %d\n",
+        //         output->scissors[i].x,
+        //         output->scissors[i].y,
+        //         output->scissors[i].width, 
+        //         output->scissors[i].height
+        //     );
+
         scissor_output(output->wlr_output, output->scissors[i]);
         wlr_renderer_clear(renderer, color);
     }
-    
+
     //-----------------
     // render workspace backgrounds
     //-----------------
@@ -594,9 +608,9 @@ static void output_render(struct tbx_output* output)
     }
     render_workspace(output, get_workspace(server, server->workspace));
 
-    // if (in_main_output) {
-    //     render_console(output);
-    // }
+    if (in_main_output) {
+        render_console(output);
+    }
 
     //-----------------
     // render views
@@ -611,13 +625,23 @@ static void output_render(struct tbx_output* output)
             continue;
         }
 
-        // todo use .. output->damage regions
-        // struct wlr_box window_box;
-        // view_frame(view, &window_box);
-        // if (!damage_check(server, &window_box)) {
-        //     wlr_surface_send_frame_done(view->surface, &now);
-        //     continue;
-        // }
+        if (output->scissors_count > 0) {
+            struct wlr_box window_box;
+            view_frame(view, &window_box);
+            window_box.x += ox;
+            window_box.y += oy;
+            pixman_box32_t window_region = {
+                .x1 = window_box.x,
+                .y1 = window_box.y,
+                .x2 = window_box.x + window_box.width,
+                .y2 = window_box.y + window_box.height
+            };
+            if (!pixman_region32_contains_rectangle(&buffer_damage, &window_region)) {
+                // printf("drop!\n");
+                wlr_surface_send_frame_done(view->surface, &now);
+                continue;
+            }
+        }
 
         double offset_x = 0;
         double offset_y = 0;
@@ -739,14 +763,13 @@ renderer_end:
     pixman_region32_t frame_damage;
     pixman_region32_init(&frame_damage);
 
-    enum wl_output_transform transform =
-        wlr_output_transform_invert(output->wlr_output->transform);
+    enum wl_output_transform transform = wlr_output_transform_invert(output->wlr_output->transform);
     wlr_region_transform(&frame_damage, &output->damage->current,
         transform, width, height);
 
     wlr_output_set_damage(output->wlr_output, &frame_damage);
     pixman_region32_fini(&frame_damage);
-
+    pixman_region32_fini(&buffer_damage);
 
     wlr_output_set_damage(output->wlr_output, &frame_damage);
     wlr_output_commit(output->wlr_output);

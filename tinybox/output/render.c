@@ -245,8 +245,6 @@ void generate_view_title_texture(struct tbx_output* output,
     int w = max_title_width;
     int h = 32;
 
-    printf(">>%d\n", w);
-
     color_to_rgba(color, style->window_label_focus_textColor);
     cairo_surface_t* title1 = cairo_image_from_text((char*)title,
         &w, &h, (char*)font, color, output->wlr_output->subpixel);
@@ -339,7 +337,7 @@ void render_texture(struct tbx_output* output, struct wlr_box* box,
     wlr_matrix_project_box(matrix, &box_scaled, WL_OUTPUT_TRANSFORM_NORMAL, 0.0,
         output->wlr_output->transform_matrix);
 
-    for(int i=0; i<output->scissors_count; i++) {
+    for (int i = 0; i < output->scissors_count; i++) {
         scissor_output(output->wlr_output, output->scissors[i]);
         wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0);
     }
@@ -364,7 +362,7 @@ void render_rect(struct tbx_output* output, struct wlr_box* box, float color[4],
         .height = box->height * scale,
     };
 
-    for(int i=0; i<output->scissors_count; i++) {
+    for (int i = 0; i < output->scissors_count; i++) {
         scissor_output(output->wlr_output, output->scissors[i]);
         wlr_render_rect(renderer, &box_scaled, color, output->wlr_output->transform_matrix);
     }

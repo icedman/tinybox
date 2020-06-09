@@ -381,7 +381,7 @@ void render_menus(struct tbx_output* output)
     {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
         struct tbx_menu* menu = menu_view->menu;
-                    
+
         if (menu->to_close > 0) {
             menu->to_close--;
             if (menu->to_close == 0) {
@@ -399,7 +399,7 @@ void render_menus(struct tbx_output* output)
     {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
         struct tbx_menu* menu = menu_view->menu;
-        if (menu->shown && !(menu->to_close>0)) {
+        if (menu->shown && !(menu->to_close > 0)) {
             render_menu(output, menu);
         }
     }

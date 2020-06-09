@@ -1,6 +1,7 @@
 #include "tinybox/console.h"
 #include "common/cairo.h"
 #include "common/util.h"
+#include "tinybox/damage.h"
 #include "tinybox/output.h"
 #include "tinybox/render.h"
 #include "tinybox/server.h"
@@ -223,6 +224,7 @@ void render_console(struct tbx_output* output)
     // -----------------------
     if (output->server->console->dirty) {
         console_render_cache(output);
+        damage_whole(output->server);
     }
 
     // console
