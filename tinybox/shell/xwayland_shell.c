@@ -170,8 +170,6 @@ static uint32_t xwayland_view_configure(struct tbx_view* view, double lx, double
     wlr_xwayland_surface_configure(view->xwayland_surface, 0,
         0, width, height);
 
-    damage_add_view(view->server, view);
-
     view->x = lx;
     view->y = ly;
     // view->width = width;
@@ -186,7 +184,7 @@ static uint32_t xwayland_view_configure(struct tbx_view* view, double lx, double
     view->request_box.width = width;
     view->request_box.height = height;
 
-    damage_add_view(view->server, view);
+    damage_whole(view->server);
     return 0;
 }
 

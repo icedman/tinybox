@@ -87,11 +87,6 @@ static void render_view_frame(struct wlr_surface* surface, int sx, int sy,
     view_geometry.x += view->x + ox + sx;
     view_geometry.y += view->y + oy + sy;
 
-    // struct wlr_box region_box;
-    // memcpy(&region_box, &view->damage_region->region, sizeof(struct wlr_box));
-    // region_box.x -= (ox + sx);
-    // region_box.y -= (oy + sy);
-
     smoothen_geometry_when_resizing(view, &view_geometry);
 
     // read these from style file
@@ -575,14 +570,14 @@ static void output_render(struct tbx_output* output)
     wlr_output_layout_output_coords(server->output_layout, output->wlr_output, &ox, &oy);
 
     float color[4] = { 0.0, 0, 0, 1.0 };
-    int nrects;
+    int nrects = 0;
     pixman_box32_t* rects = pixman_region32_rectangles(&buffer_damage, &nrects);
     for (int i = 1; i < nrects && i < MAX_OUTPUT_SCISSORS; ++i) {
         if ((rects[i].x2 - rects[i].x1 <= 0 || rects[i].y2 - rects[i].y1 <= 0)) {
             continue;
         }
-        output->scissors[i].x = rects[i].x1 + ox;
-        output->scissors[i].y = rects[i].y1 + oy;
+        output->scissors[i].x = rects[i].x1;
+        output->scissors[i].y = rects[i].y1;
         output->scissors[i].width = rects[i].x2 - rects[i].x1;
         output->scissors[i].height = rects[i].y2 - rects[i].y1;
         output->scissors_count = i + 1;
@@ -625,6 +620,7 @@ static void output_render(struct tbx_output* output)
             continue;
         }
 
+        // todo scissors for multi-output
         if (output->scissors_count > 0) {
             struct wlr_box window_box;
             view_frame(view, &window_box);
@@ -637,7 +633,6 @@ static void output_render(struct tbx_output* output)
                 .y2 = window_box.y + window_box.height
             };
             if (!pixman_region32_contains_rectangle(&buffer_damage, &window_region)) {
-                // printf("drop!\n");
                 wlr_surface_send_frame_done(view->surface, &now);
                 continue;
             }
@@ -695,6 +690,7 @@ static void output_render(struct tbx_output* output)
         }
         if (view->title_dirty) {
             generate_view_title_texture(output, view);
+            // damage the frame
         }
 
         //-----------------
@@ -737,8 +733,11 @@ renderer_end:
         for (int i = 0; i < output->scissors_count; ++i) {
             // printf("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
             float damageColor[4] = { 1.0, 0, 1.00, 1.0 };
-            render_rect_outline(output, &output->scissors[i], damageColor, 2, false, output->wlr_output->scale);
-            // if (region.x) {}
+            struct wlr_box damageBox;
+            memcpy(&output->scissors, &damageBox, sizeof(struct wlr_box));
+            damageBox.x += ox;
+            damageBox.y += oy;
+            render_rect_outline(output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
         }
     }
 

@@ -93,8 +93,6 @@ static uint32_t xdg_view_configure(struct tbx_view* view, double lx, double ly,
     struct wlr_box box;
     wlr_xdg_surface_get_geometry(view->xdg_surface, &box);
 
-    damage_add_view(view->server, view);
-
     view->x = lx - box.x;
     view->y = ly - box.y;
 
@@ -108,7 +106,7 @@ static uint32_t xdg_view_configure(struct tbx_view* view, double lx, double ly,
     view->request_box.width = width;
     view->request_box.height = height;
 
-    damage_add_view(view->server, view);
+    damage_whole(view->server);
     return 0;
 }
 

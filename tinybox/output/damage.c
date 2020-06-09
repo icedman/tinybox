@@ -7,12 +7,15 @@
 #include "pixman.h"
 
 #include <wlr/types/wlr_output_damage.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/util/region.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define VIEW_EARLY_LIFE 30
 
 bool region_overlap(struct wlr_box* a, struct wlr_box* b)
 {
@@ -47,28 +50,35 @@ void damage_setup(struct tbx_server* server)
 {
 }
 
-void damage_add_box(struct tbx_server* server, struct wlr_box* box, struct tbx_view* view)
-{
-    struct tbx_output* output;
-    wl_list_for_each(output, &server->outputs, link)
-    {
-        wlr_output_damage_add_box(output->damage, box);
-        wlr_output_schedule_frame(output->wlr_output);
-    }
-}
-
 static void damage_add_surface(struct tbx_output* output,
     struct wlr_surface* surface, struct wlr_box* _box, bool whole)
 {
-    struct wlr_box box = *_box;
+    if (!output->enabled) {
+        return;
+    }
 
+    struct wlr_box box;
+    memcpy(&box, _box, sizeof(struct wlr_box));
+
+    // double ox = 0, oy = 0;
+    // wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
+    // box.x += ox;
+    // box.y += oy;
+
+    struct wlr_box *output_box = wlr_output_layout_get_box(output->server->output_layout, output->wlr_output);
+    if (!region_overlap(&box, output_box)) {
+        return;
+    }
+
+    // console_log("whole %d", whole);
+    
     if (!whole) {
-        printf("box: %d %d %d %d\n", box.x, box.y, box.width, box.height);
+        // console_log("box: %d %d %d %d (%d %d)\n", box.x, box.y, box.width, box.height, (int)output_box->x, (int)output_box->y);
 
         // scale_box(&box, output->wlr_output->scale);
 
         if (!(surface->current.committed & WLR_SURFACE_STATE_SURFACE_DAMAGE)) {
-            printf("failed validate 0\n");
+            // console_log("failed validate 0\n");
             whole = true;
         }
 
@@ -87,7 +97,7 @@ static void damage_add_surface(struct tbx_output* output,
             // validate
             if (extents->x1 < 0 || extents->y1 < 0 || w > box.width || h > box.height || w <= 0 || h <= 0) {
                 whole = true;
-                printf("failed validate 1\n");
+                // console_log("failed validate 1\n");
             }
 
             if (!whole) {
@@ -99,13 +109,13 @@ static void damage_add_surface(struct tbx_output* output,
                 nrects > 20 || 
                 !rects) {
                 whole = true;
-                printf("failed validate 2 %d\n", nrects);
+                // console_log("failed validate 2 %d\n", nrects);
             }
 
             if (!whole) {
-                printf("extents: %d %d %d %d\n",
-                    extents->x1, extents->y1,
-                    extents->x2 - extents->x1, extents->y2 - extents->y1);
+                // console_log("extents: %d %d %d %d\n",
+                //     extents->x1, extents->y1,
+                //     extents->x2 - extents->x1, extents->y2 - extents->y1);
 
                 wlr_region_scale(&damage, &damage, output->wlr_output->scale);
                 if (ceil(output->wlr_output->scale) > surface->current.scale) {
@@ -113,20 +123,8 @@ static void damage_add_surface(struct tbx_output* output,
                         ceil(output->wlr_output->scale) - surface->current.scale);
                 }
 
-                pixman_region32_translate(&damage, box.x, box.y);
+                pixman_region32_translate(&damage, box.x - output_box->x, box.y - output_box->y);
                 wlr_output_damage_add(output->damage, &damage);
-                
-                /*
-                for (int i = 0; i < nrects; ++i) {
-                    struct wlr_box region = {
-                        .x = rects[i].x1 + box.x,
-                        .y = rects[i].y1 + box.y,
-                        .width = rects[i].x2 - rects[i].x1,
-                        .height = rects[i].y2 - rects[i].y1,
-                    };
-                    wlr_output_damage_add_box(output->damage, &region);
-                }
-                */
             }
 
             pixman_region32_fini(&damage);
@@ -153,6 +151,10 @@ void damage_add_view(struct tbx_server* server, struct tbx_view* view)
         return;
     }
 
+    // todo handle subsurface
+    if (view->view_type == VIEW_TYPE_XDG) {
+    }
+
     // view->interface->get_geometry(view, &box);
     // box.x = view->x;
     // box.y = view->y;
@@ -160,13 +162,14 @@ void damage_add_view(struct tbx_server* server, struct tbx_view* view)
     struct tbx_output* output;
     wl_list_for_each(output, &view->server->outputs, link)
     {
+        // console_log("add view %d %d", box.x, box.y);
         damage_add_surface(output, view->surface, &box, true);
     }
 }
 
 void damage_add_commit(struct tbx_server* server, struct tbx_view* view)
 {
-    if (view->life < 120
+    if (view->life < VIEW_EARLY_LIFE
         || view->view_type == VIEW_TYPE_XDG // problematic
         ) {
         // xdg problematic
@@ -192,6 +195,9 @@ void damage_whole(struct tbx_server* server)
     struct tbx_output* output;
     wl_list_for_each(output, &server->outputs, link)
     {
+        if (!output->enabled) {
+            continue;
+        }
         wlr_output_damage_add_whole(output->damage);
     }
 }
