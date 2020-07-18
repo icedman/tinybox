@@ -136,6 +136,22 @@ static void exec_render_damages(struct tbx_command* cmd, int argc,
     damage_whole(cmd->server);
 }
 
+static void exec_render_damage_rects(struct tbx_command* cmd, int argc,
+    char** argv)
+{
+    struct tbx_config* config = &cmd->server->config;
+    if (argc) {
+        config->render_damage_rects = parse_boolean(argv[0], false);
+    } else {
+        config->render_damage_rects = !config->render_damage_rects;
+    }
+    if (config->render_damage_rects) {
+        console_log("rendering damage rects");
+    }
+
+    damage_whole(cmd->server);
+}
+
 static void exec_console(struct tbx_command* cmd, int argc, char** argv)
 {
     struct tbx_config* config = &cmd->server->config;
@@ -159,6 +175,7 @@ static void exec_font(struct tbx_command* cmd, int argc, char** argv)
     strip_quotes(argv[0]);
     // struct tbx_config* config = &cmd->server->config;
     strcpy(cmd->server->style.font, argv[0]);
+    
     console_log(">font %s", argv[0]);
 }
 
@@ -170,6 +187,8 @@ static void exec_show_tooltip(struct tbx_command* cmd, int argc, char** argv)
     } else {
         config->show_tooltip = !config->show_tooltip;
     }
+
+    console_log("tooltip: %d", config->show_tooltip);
 }
 
 static void exec_mini_titlebar(struct tbx_command* cmd, int argc, char** argv)
@@ -207,4 +226,5 @@ void register_config_commands(struct tbx_server* server)
     register_command(server->command, "font", exec_font);
     register_command(server->command, "move_resize_alpha", exec_move_resize_alpha);
     register_command(server->command, "render_damages", exec_render_damages);
+    register_command(server->command, "render_damage_rects", exec_render_damage_rects);
 }

@@ -229,7 +229,7 @@ void generate_view_title_texture(struct tbx_output* output,
     snprintf(title, 128, "%s", view->interface->get_string_prop(view, VIEW_PROP_TITLE));
     snprintf(appId, 64, "%s", view->interface->get_string_prop(view, VIEW_PROP_APP_ID));
 
-    console_log("%s::%s", title, appId);
+    // console_log("%s::%s", title, appId);
 
     if (strlen(title) == 0) {
         view->title_dirty = false;

@@ -197,7 +197,7 @@ void load_style(struct tbx_server* server, const char* path)
 
     fclose(f);
 
-    if (!config_style->font) {
+    if (config_style->font == NULL) {
         strcpy(style->font, DEFAULT_FONT);
     }
     strcpy(style->font, config_style->font);

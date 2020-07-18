@@ -243,10 +243,11 @@ static struct tbx_menu* menu_at_items(struct tbx_menu* menu, int x, int y)
             if ((x >= px + item->x && x <= px + item->x + item->width) && (y >= py + item->y && y <= py + item->y + item->height)) {
                 menu->hovered = item;
                 cmd->server->menu_hovered = item;
-
                 if (menu->submenu && menu->hovered != menu->submenu) {
                     menu_close(menu->submenu);
                 }
+
+                damage_add_view(view->server, view);
                 return menu;
             }
         }
@@ -425,6 +426,9 @@ void menu_show_tooltip(struct tbx_server* server, const char* text)
         // struct tbx_command* m = &menu->command;
         menu_setup(server, menu);
         server->tooltip = menu;
+
+        struct tbx_view* view = (struct tbx_view*)&menu->view;
+        view->view_type = VIEW_TYPE_TOOLTIP;
     }
 
     menu = server->tooltip;
@@ -439,14 +443,15 @@ void menu_show_tooltip(struct tbx_server* server, const char* text)
         damage_add_view(server, view);
     }
 
-    if (text) {
+    if (text) {    
         strcpy(tooltip, text);
         server->tooltip->title = tooltip;
         prerender_menu(server, server->tooltip, true);
+    
+        // damage_add_view(server, view);
 
         // constraint to output
         struct tbx_output* output = view_get_preferred_output(view);
-
         struct wlr_box* main_box = wlr_output_layout_get_box(
             server->output_layout, output->wlr_output);
 
@@ -466,7 +471,7 @@ void menu_setup(struct tbx_server* server, struct tbx_menu* menu)
     view->server = server;
     view->interface = &menu_view_interface;
     view->surface = NULL;
-    view->view_type = VIEW_TYPE_UNKNOWN;
+    view->view_type = VIEW_TYPE_MENU;
 
     wl_list_init(&menu->items);
 }

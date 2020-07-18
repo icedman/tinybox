@@ -50,7 +50,7 @@ void damage_setup(struct tbx_server* server)
 {
 }
 
-static void damage_add_surface(struct tbx_output* output,
+static void damage_add_surface(struct tbx_output* output, struct tbx_view* view,
     struct wlr_surface* surface, struct wlr_box* _box, bool whole)
 {
     if (!output->enabled) {
@@ -59,14 +59,13 @@ static void damage_add_surface(struct tbx_output* output,
 
     struct wlr_box box;
     memcpy(&box, _box, sizeof(struct wlr_box));
-
-    // double ox = 0, oy = 0;
-    // wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
-    // box.x += ox;
-    // box.y += oy;
-
     struct wlr_box *output_box = wlr_output_layout_get_box(output->server->output_layout, output->wlr_output);
     if (!region_overlap(&box, output_box)) {
+        return;
+    }
+
+    if (view->fullscreen) {
+        wlr_output_damage_add_box(output->damage, &box);
         return;
     }
 
@@ -136,7 +135,7 @@ static void damage_add_surface(struct tbx_output* output,
         wlr_output_damage_add_box(output->damage, &box);
     }
 
-    wlr_output_schedule_frame(output->wlr_output);
+    // wlr_output_schedule_frame(output->wlr_output);
 }
 
 void damage_add_view(struct tbx_server* server, struct tbx_view* view)
@@ -144,7 +143,10 @@ void damage_add_view(struct tbx_server* server, struct tbx_view* view)
     struct wlr_box box;
     view_frame(view, &box); // TODO! check multi-outputs
 
-    if (view->view_type == VIEW_TYPE_UNKNOWN) {
+    if (view->view_type == VIEW_TYPE_MENU ||
+        view->view_type == VIEW_TYPE_TOOLTIP) {
+
+        console_log("close menu!");
         // damage_add_box(server, &box, view);
         // TODO: menus!
         damage_whole(server);
@@ -163,7 +165,7 @@ void damage_add_view(struct tbx_server* server, struct tbx_view* view)
     wl_list_for_each(output, &view->server->outputs, link)
     {
         // console_log("add view %d %d", box.x, box.y);
-        damage_add_surface(output, view->surface, &box, true);
+        damage_add_surface(output, view, view->surface, &box, true);
     }
 }
 
@@ -186,7 +188,7 @@ void damage_add_commit(struct tbx_server* server, struct tbx_view* view)
     struct tbx_output* output;
     wl_list_for_each(output, &view->server->outputs, link)
     {
-        damage_add_surface(output, view->surface, &box, false);
+        damage_add_surface(output, view, view->surface, &box, false);
     }
 }
 

@@ -248,7 +248,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
 
 static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
 {
-    if (!menu->menu_type == TBX_MENU) {
+    if (menu->menu_type != TBX_MENU) {
         return;
     }
 
@@ -256,6 +256,8 @@ static void render_menu(struct tbx_output* tbx_output, struct tbx_menu* menu)
     struct tbx_view* view = (struct tbx_view*)&menu->view;
     view->x = menu->menu_x;
     view->y = menu->menu_y;
+
+    // console_log("menu %d", view->view_type);
 
     double ox = 0, oy = 0;
     wlr_output_layout_output_coords(tbx_output->server->output_layout, tbx_output->wlr_output, &ox,
@@ -399,7 +401,8 @@ void render_menus(struct tbx_output* output)
     {
         struct tbx_menu_view* menu_view = (struct tbx_menu_view*)view;
         struct tbx_menu* menu = menu_view->menu;
-        if (menu->shown && !(menu->to_close > 0)) {
+        if (menu->shown) {
+            damage_add_view(server, view);
             render_menu(output, menu);
         }
     }

@@ -151,7 +151,7 @@ static bool handle_keybinding(struct tbx_server* server,
 {
 
     struct tbx_keys_pressed k = {
-        .pressed = { WLR_MODIFIER_ALT, XKB_KEY_Escape, 0 }
+        .pressed = { WLR_MODIFIER_CTRL, WLR_MODIFIER_ALT, XKB_KEY_Escape, 0 }
     };
     if (compare_keys(keys, &k)) {
         wl_display_terminate(server->wl_display);

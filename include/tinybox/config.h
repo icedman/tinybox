@@ -74,6 +74,7 @@ struct tbx_config {
     bool show_tooltip;
     float move_resize_alpha;
     bool render_damages;
+    bool render_damage_rects;
 
     uint32_t super_key;
 

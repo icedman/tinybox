@@ -38,8 +38,12 @@ enum tbx_view_type {
     VIEW_TYPE_UNKNOWN,
     VIEW_TYPE_XDG,
     // #if HAVE_XWAYLAND
-    VIEW_TYPE_XWAYLAND
+    VIEW_TYPE_XWAYLAND,
     // #endif
+
+    VIEW_TYPE_MENU,
+    VIEW_TYPE_BAR,
+    VIEW_TYPE_TOOLTIP
 };
 
 struct tbx_view_interface {

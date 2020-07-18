@@ -550,15 +550,16 @@ static void output_render(struct tbx_output* output)
     }
 
     if (!pixman_region32_not_empty(&buffer_damage)) {
-        // struct tbx_view* view;
-        // wl_list_for_each_reverse(view, &server->views, link)
-        // {
-        //     if (!view->mapped || !view->surface) {
-        //         continue;
-        //     }
-        //     wlr_surface_send_frame_done(view->surface, &now);
-        // }
+        struct tbx_view* view;
+        wl_list_for_each_reverse(view, &server->views, link)
+        {
+            if (!view->mapped || !view->surface) {
+                continue;
+            }
+            wlr_surface_send_frame_done(view->surface, &now);
+        }
 
+        // console_log("humm...\n");
         // Output isn't damaged but needs buffer swap
         goto renderer_end;
     }
@@ -572,7 +573,7 @@ static void output_render(struct tbx_output* output)
     float color[4] = { 0.0, 0, 0, 1.0 };
     int nrects = 0;
     pixman_box32_t* rects = pixman_region32_rectangles(&buffer_damage, &nrects);
-    for (int i = 1; i < nrects && i < MAX_OUTPUT_SCISSORS; ++i) {
+    for (int i = 0; i < nrects && i < MAX_OUTPUT_SCISSORS; ++i) {
         if ((rects[i].x2 - rects[i].x1 <= 0 || rects[i].y2 - rects[i].y1 <= 0)) {
             continue;
         }
@@ -582,12 +583,15 @@ static void output_render(struct tbx_output* output)
         output->scissors[i].height = rects[i].y2 - rects[i].y1;
         output->scissors_count = i + 1;
 
-        // printf("wlr: %d %d %d %d\n",
-        //         output->scissors[i].x,
-        //         output->scissors[i].y,
-        //         output->scissors[i].width, 
-        //         output->scissors[i].height
-        //     );
+        /*
+        console_log("wlr #%d: %d %d %d %d\n",
+                i,
+                output->scissors[i].x,
+                output->scissors[i].y,
+                output->scissors[i].width, 
+                output->scissors[i].height
+            );
+        */
 
         scissor_output(output->wlr_output, output->scissors[i]);
         wlr_renderer_clear(renderer, color);
@@ -616,6 +620,9 @@ static void output_render(struct tbx_output* output)
             continue;
         }
 
+        //-----------------
+        // scissors
+        //-----------------
         // todo scissors for multi-output
         if (output->scissors_count > 0) {
             struct wlr_box window_box;
@@ -638,6 +645,9 @@ static void output_render(struct tbx_output* output)
         double offset_y = 0;
         struct tbx_workspace* workspace = 0;
 
+        //-----------------
+        // render workspace
+        //-----------------
         // workspace logic
         if (in_main_output) {
             double d = 0;
@@ -681,6 +691,9 @@ static void output_render(struct tbx_output* output)
             }
         }
 
+        //-----------------
+        // render the view
+        //-----------------
         if (view->title_box.width <= 0) {
             view->title_dirty = true;
         }
@@ -689,9 +702,6 @@ static void output_render(struct tbx_output* output)
             // damage the frame
         }
 
-        //-----------------
-        // render the view
-        //-----------------
         struct render_data rdata = {
             .output = output,
             .view = view,
@@ -702,12 +712,16 @@ static void output_render(struct tbx_output* output)
             .when = &now,
         };
 
+        //-----------------
         // decorations
+        //-----------------
         if (!view->csd && !view->fullscreen) {
             render_view_frame(view->surface, 0, 0, &rdata);
         }
 
+        //-----------------
         // content
+        //-----------------
         if (!view->shaded) {
 
             if (view->view_type == VIEW_TYPE_XDG) {
@@ -725,14 +739,18 @@ renderer_end:
 
     wlr_renderer_scissor(renderer, 0);
 
-    if (server->config.render_damages) {
+    if (output == server->main_output)
+    if (server->config.render_damage_rects) {
+
+        struct wlr_box *output_box = wlr_output_layout_get_box(output->server->output_layout, output->wlr_output);
+
         for (int i = 0; i < output->scissors_count; ++i) {
-            // printf("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
+            //console.log("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
             float damageColor[4] = { 1.0, 0, 1.00, 1.0 };
             struct wlr_box damageBox;
             memcpy(&output->scissors, &damageBox, sizeof(struct wlr_box));
-            damageBox.x += ox;
-            damageBox.y += oy;
+            damageBox.x += output_box->x;
+            damageBox.y += output_box->y;
             render_rect_outline(output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
         }
     }
