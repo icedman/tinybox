@@ -32,7 +32,7 @@ bool tbx_server_setup(struct tbx_server* server)
         return false;
     }
 
-    server->backend = wlr_backend_autocreate(server->wl_display, NULL);
+    server->backend = wlr_backend_autocreate(server->wl_display);
     if (!server->backend) {
         return false;
     }

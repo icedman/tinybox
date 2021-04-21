@@ -4,6 +4,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+
+#define fourcc_code(a, b, c, d) ((uint32_t)(a) | ((uint32_t)(b) << 8) | \
+                 ((uint32_t)(c) << 16) | ((uint32_t)(d) << 24))
+
+#define DRM_FORMAT_ARGB8888 fourcc_code('A', 'R', '2', '4') /* [31:0] A:R:G:B 8:8:8:8 little endian */
+
 // #include <wayland-server-protocol.h>
 
 /**

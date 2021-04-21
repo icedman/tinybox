@@ -48,21 +48,21 @@ pixman         = dependency('pixman-1')
 
 wlroots = dependency('wlroots', version: '>=0.10.0')
 
-#wlroots_version = ['>=0.10.0', '<0.11.0']
-#wlroots_proj = subproject(
-#  'wlroots',
-#  default_options: ['examples=false'],
-#  required: false,
-#  version: wlroots_version,
-#)
-#if wlroots_proj.found()
-#  wlroots = wlroots_proj.get_variable('wlroots')
-#  wlroots_conf = wlroots_proj.get_variable('conf_data')
-#  wlroots_has_xwayland = wlroots_conf.get('WLR_HAS_XWAYLAND') == 1
-#else
-#  wlroots = dependency('wlroots', version: wlroots_version)
-#  wlroots_has_xwayland = cc.get_define('WLR_HAS_XWAYLAND', prefix: '#include <wlr/config.h>', dependencies: wlroots) == '1'
-#endif
+wlroots_version = ['>=0.10.0', '<0.11.0']
+wlroots_proj = subproject(
+  'wlroots',
+  default_options: ['examples=false'],
+  required: false,
+  version: wlroots_version,
+)
+if wlroots_proj.found()
+  wlroots = wlroots_proj.get_variable('wlroots')
+  wlroots_conf = wlroots_proj.get_variable('conf_data')
+  wlroots_has_xwayland = wlroots_conf.get('WLR_HAS_XWAYLAND') == 1
+else
+  wlroots = dependency('wlroots', version: wlroots_version)
+  wlroots_has_xwayland = cc.get_define('WLR_HAS_XWAYLAND', prefix: 'include <wlr/config.h>', dependencies: wlroots) == '1'
+endif
 
 subdir('protocols')
 subdir('tinybox')

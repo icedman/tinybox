@@ -33,6 +33,8 @@ static struct modifier_key {
     { "Mod5", WLR_MODIFIER_MOD5 }, // Mod5
 };
 
+#define KEY_PRESSED 1
+
 static uint32_t get_modifier_mask_by_name(const char* name)
 {
     int i;
@@ -217,11 +219,11 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
     bool handled = false;
     uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
 
-    if (!modifiers && event->state == WLR_KEY_PRESSED && kp->pressed[1]) {
+    if (!modifiers && event->state == KEY_PRESSED && kp->pressed[1]) {
         keys_clear(kp);
     }
 
-    if (modifiers && event->state == WLR_KEY_PRESSED) {
+    if (modifiers && event->state == KEY_PRESSED) {
         keys_add_modifiers(kp, modifiers);
         for (int i = 0; i < nsyms; i++) {
             uint32_t k = syms[i];
@@ -235,7 +237,7 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
         }
     }
 
-    if (!handled && nsyms == 1 && event->state == WLR_KEY_PRESSED) {
+    if (!handled && nsyms == 1 && event->state == KEY_PRESSED) {
         struct tbx_keys_pressed k = {
             .pressed = { syms[0], 0 }
         };
@@ -246,7 +248,7 @@ static void keyboard_handle_key(struct wl_listener* listener, void* data)
         server->menu_navigation_grab = NULL;
     }
 
-    if (!handled && server->menu_navigation_grab && event->state == WLR_KEY_PRESSED) {
+    if (!handled && server->menu_navigation_grab && event->state == KEY_PRESSED) {
         console_log("menu grabbed %s", server->menu_navigation_grab->label);
         for (int i = 0; i < nsyms; i++) {
             menu_navigation(server, syms[i]);

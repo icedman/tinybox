@@ -66,7 +66,7 @@ static void generate_texture(struct wlr_renderer* renderer, int idx, int flags,
     draw_gradient_rect(cx, flags, w, h, color, colorTo);
 
     unsigned char* data = cairo_image_surface_get_data(surf);
-    texture_cache[idx] = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+    texture_cache[idx] = wlr_texture_from_pixels(renderer, DRM_FORMAT_ARGB8888,
         cairo_image_surface_get_stride(surf), w, h, data);
 
     // char fname[255] = "";
@@ -107,7 +107,7 @@ static void generate_texture_pixmap(struct wlr_renderer* renderer, int idx,
     /* draw_gradient_rect(cx, flags, w, h, color, colorTo); */
 
     unsigned char* data = cairo_image_surface_get_data(surf);
-    texture_cache[idx] = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+    texture_cache[idx] = wlr_texture_from_pixels(renderer, DRM_FORMAT_ARGB8888,
         cairo_image_surface_get_stride(surf), w, h, data);
 
     // char fname[255] = "";
@@ -250,7 +250,7 @@ void generate_view_title_texture(struct tbx_output* output,
         &w, &h, (char*)font, color, output->wlr_output->subpixel);
 
     unsigned char* data = cairo_image_surface_get_data(title1);
-    view->title = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+    view->title = wlr_texture_from_pixels(renderer, DRM_FORMAT_ARGB8888,
         cairo_image_surface_get_stride(title1), w, h, data);
     view->title_box.width = w;
     view->title_box.height = h;
@@ -262,7 +262,7 @@ void generate_view_title_texture(struct tbx_output* output,
         &w, &h, (char*)font, color, output->wlr_output->subpixel);
 
     data = cairo_image_surface_get_data(title2);
-    view->title_unfocused = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+    view->title_unfocused = wlr_texture_from_pixels(renderer, DRM_FORMAT_ARGB8888,
         cairo_image_surface_get_stride(title2), w, h, data);
 
     view->title_box.width = w;
@@ -300,7 +300,7 @@ void generate_background(struct tbx_output* output,
 
     unsigned char* data = cairo_image_surface_get_data(surface);
     texture_cache[texture_id] = wlr_texture_from_pixels(
-        renderer, WL_SHM_FORMAT_ARGB8888, cairo_image_surface_get_stride(surface),
+        renderer, DRM_FORMAT_ARGB8888, cairo_image_surface_get_stride(surface),
         w, h, data);
 
     char fname[255] = "";

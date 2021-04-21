@@ -228,7 +228,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
         }
 
         unsigned char* data = cairo_image_surface_get_data(item_image);
-        item->item_texture = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+        item->item_texture = wlr_texture_from_pixels(renderer, DRM_FORMAT_ARGB8888,
             cairo_image_surface_get_stride(item_image), item->width, item->height, data);
 
         cairo_surface_destroy(item_image);
@@ -239,7 +239,7 @@ static struct wlr_texture* generate_menu_texture(struct tbx_output* tbx_output, 
     cairo_destroy(cx);
 
     unsigned char* data = cairo_image_surface_get_data(menu_image);
-    menu->menu_texture = wlr_texture_from_pixels(renderer, WL_SHM_FORMAT_ARGB8888,
+    menu->menu_texture = wlr_texture_from_pixels(renderer, DRM_FORMAT_ARGB8888,
         cairo_image_surface_get_stride(menu_image), menu->menu_width, menu->menu_height, data);
 
     cairo_surface_destroy(menu_image);
