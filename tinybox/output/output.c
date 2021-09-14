@@ -503,17 +503,17 @@ static void output_render(struct tbx_output* output)
         break;
     }
 
-    struct tbx_view* view_;
-    wl_list_for_each_reverse(view_, &server->views, link)
+    struct tbx_view* view;
+    wl_list_for_each_reverse(view, &server->views, link)
     {
-        if (!view_->mapped || !view_->surface) {
+        if (!view->mapped || !view->surface) {
             continue;
         }
-        if (view_->title_box.width <= 0) {
-            view_->title_dirty = true;
+        if (view->title_box.width <= 0) {
+            view->title_dirty = true;
         }
-        if (view_->title_dirty) {
-            generate_view_title_texture(output, view_);
+        if (view->title_dirty) {
+            generate_view_title_texture(output, view);
         }
     }
 
@@ -532,17 +532,7 @@ static void output_render(struct tbx_output* output)
 
     if (!needs_frame) {
         wlr_output_rollback(output->wlr_output);
-        pixman_region32_fini(&buffer_damage);
-
-        wl_list_for_each_reverse(view_, &server->views, link)
-        {
-            if (!view_->mapped || !view_->surface) {
-                continue;
-            }
-            wlr_surface_send_frame_done(view_->surface, &now);
-        }
-
-        return;
+        goto buffer_damage_end;
     }
 #endif
 
@@ -572,9 +562,11 @@ static void output_render(struct tbx_output* output)
 #endif
     }
 
-    // if (!wlr_output_attach_render(output->wlr_output, NULL)) {
-    //     return;
-    // }
+#ifndef DAMAGING
+    if (!wlr_output_attach_render(output->wlr_output, NULL)) {
+        return;
+    }
+#endif
 
     int width, height;
     wlr_output_effective_resolution(output->wlr_output, &width, &height);
@@ -582,25 +574,16 @@ static void output_render(struct tbx_output* output)
     wlr_renderer_begin(renderer, width, height);
 
 #ifdef DAMAGING
+    
+    if (!pixman_region32_not_empty(&buffer_damage)) {
+        // Output isn't damaged but needs buffer swap
+        goto renderer_end;
+    }
+
     // render box
     if (server->config.render_damages) {
         float color[4] = { 1.0, 0, 0, 1.0 };
         wlr_renderer_clear(renderer, color);
-    }
-
-    if (!pixman_region32_not_empty(&buffer_damage)) {
-        struct tbx_view* view;
-        wl_list_for_each_reverse(view, &server->views, link)
-        {
-            if (!view->mapped || !view->surface) {
-                continue;
-            }
-            wlr_surface_send_frame_done(view->surface, &now);
-        }
-
-        // console_log("humm...\n");
-        // Output isn't damaged but needs buffer swap
-        goto renderer_end;
     }
 
     memset(&output->scissors, 0, sizeof(struct wlr_box));
@@ -654,7 +637,6 @@ static void output_render(struct tbx_output* output)
     //-----------------
     /* Each subsequent window we render is rendered on top of the last. Because
          * our view list is ordered front-to-back, we iterate over it backwards. */
-    struct tbx_view* view;
     wl_list_for_each_reverse(view, &server->views, link)
     {
         if (!view->mapped || !view->surface) {
@@ -679,7 +661,7 @@ static void output_render(struct tbx_output* output)
                 .y2 = window_box.y + window_box.height
             };
             if (!pixman_region32_contains_rectangle(&buffer_damage, &window_region)) {
-                wlr_surface_send_frame_done(view->surface, &now);
+                // wlr_surface_send_frame_done(view->surface, &now);
                 continue;
             }
         }
@@ -792,6 +774,9 @@ static void output_render(struct tbx_output* output)
     }
 #endif
 
+    goto renderer_end;
+renderer_end:
+
     render_menus(output);
 
     wlr_renderer_end(renderer);
@@ -806,13 +791,28 @@ static void output_render(struct tbx_output* output)
 
     wlr_output_set_damage(output->wlr_output, &frame_damage);
     pixman_region32_fini(&frame_damage);
+#endif
+
+    wlr_output_commit(output->wlr_output);
+
+    goto buffer_damage_end;
+buffer_damage_end:
+
+#ifdef DAMAGING
     pixman_region32_fini(&buffer_damage);
 #endif
 
-    goto renderer_end;
-renderer_end:
+    goto send_frame_done;
+send_frame_done:
 
-    wlr_output_commit(output->wlr_output);
+    wl_list_for_each_reverse(view, &server->views, link)
+    {
+        if (!view->mapped || !view->surface) {
+            continue;
+        }
+        wlr_surface_send_frame_done(view->surface, &now);
+    }
+
 
     output->last_frame = now;
 }
