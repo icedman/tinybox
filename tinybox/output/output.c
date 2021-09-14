@@ -483,6 +483,10 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
 static void output_frame(struct wl_listener* listener, void* data)
 {
     struct tbx_output* output = wl_container_of(listener, output, frame);
+    #ifdef DAMAGING
+    printf("\n");
+    return;
+    #endif
     output_render(output);
 }
 
@@ -553,14 +557,13 @@ static void output_render(struct tbx_output* output)
 #endif
     }
 
-    // this keeps things simple for now
+#ifdef DAMAGING
     if (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE
         || cursor->mode == TBX_CURSOR_MOVE
         || cursor->mode == TBX_CURSOR_RESIZE) {
-#ifdef DAMAGING
         damage_whole(server);
-#endif
     }
+#endif
 
 #ifndef DAMAGING
     if (!wlr_output_attach_render(output->wlr_output, NULL)) {

@@ -14,6 +14,7 @@
 #include "tinybox/config.h"
 #include "tinybox/server.h"
 #include "tinybox/style.h"
+#include "tinybox/output.h"
 
 struct tbx_server theServer = { 0 };
 
@@ -75,6 +76,9 @@ int main(int argc, char** argv)
             execl("/bin/sh", "/bin/sh", "-c", startup_cmd, (void*)NULL);
         }
     }
+
+
+    // struct wl_event_loop* loop = wl_display_get_event_loop(theServer.wl_display);
 
     wl_display_run(theServer.wl_display);
 
