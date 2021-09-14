@@ -574,7 +574,7 @@ static void output_render(struct tbx_output* output)
     wlr_renderer_begin(renderer, width, height);
 
 #ifdef DAMAGING
-    
+
     if (!pixman_region32_not_empty(&buffer_damage)) {
         // Output isn't damaged but needs buffer swap
         goto renderer_end;
@@ -812,7 +812,6 @@ send_frame_done:
         }
         wlr_surface_send_frame_done(view->surface, &now);
     }
-
 
     output->last_frame = now;
 }
