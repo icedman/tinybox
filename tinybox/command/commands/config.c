@@ -175,7 +175,7 @@ static void exec_font(struct tbx_command* cmd, int argc, char** argv)
     strip_quotes(argv[0]);
     // struct tbx_config* config = &cmd->server->config;
     strcpy(cmd->server->style.font, argv[0]);
-    
+
     console_log(">font %s", argv[0]);
 }
 

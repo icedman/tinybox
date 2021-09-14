@@ -473,7 +473,6 @@ static void render_view_content(struct wlr_surface* surface, int sx, int sy,
         wlr_render_texture_with_matrix(rdata->renderer, texture, matrix, alpha);
     }
 
-
     /* This lets the client know that we've displayed that frame and it can
    * prepare another one now if it likes. */
     wlr_surface_send_frame_done(surface, rdata->when);
@@ -740,20 +739,20 @@ renderer_end:
     wlr_renderer_scissor(renderer, 0);
 
     if (output == server->main_output)
-    if (server->config.render_damage_rects) {
+        if (server->config.render_damage_rects) {
 
-        struct wlr_box *output_box = wlr_output_layout_get_box(output->server->output_layout, output->wlr_output);
+            struct wlr_box* output_box = wlr_output_layout_get_box(output->server->output_layout, output->wlr_output);
 
-        for (int i = 0; i < output->scissors_count; ++i) {
-            //console.log("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
-            float damageColor[4] = { 1.0, 0, 1.00, 1.0 };
-            struct wlr_box damageBox;
-            memcpy(&output->scissors, &damageBox, sizeof(struct wlr_box));
-            damageBox.x += output_box->x;
-            damageBox.y += output_box->y;
-            render_rect_outline(output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
+            for (int i = 0; i < output->scissors_count; ++i) {
+                //console.log("wlr: %d %d %d %d\n", region.x, region.y, region.width, region.height);
+                float damageColor[4] = { 1.0, 0, 1.00, 1.0 };
+                struct wlr_box damageBox;
+                memcpy(&output->scissors, &damageBox, sizeof(struct wlr_box));
+                damageBox.x += output_box->x;
+                damageBox.y += output_box->y;
+                render_rect_outline(output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
+            }
         }
-    }
 
     //-----------------
     // render menus

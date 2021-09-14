@@ -45,7 +45,7 @@ void console_clear()
         return;
     }
 
-    FILE *console_file = fopen("/tmp/tinybox.log", "w");
+    FILE* console_file = fopen("/tmp/tinybox.log", "w");
     if (!console_file) {
         return;
     }
@@ -66,10 +66,9 @@ void console_log(const char* format, ...)
     vsnprintf(string, 255, format, args);
     va_end(args);
 
-    FILE *console_file = fopen("/tmp/tinybox.log", "a");
+    FILE* console_file = fopen("/tmp/tinybox.log", "a");
     if (!console_file) {
         return;
-
     }
     char* token = strtok(string, "\n");
     while (token != NULL) {

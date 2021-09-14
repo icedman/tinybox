@@ -2,7 +2,7 @@
 #define TINYBOX_CURSOR_H
 
 #include "tinybox/server.h"
-#include <wlr/render/wlr_renderer.h>
+#include <wlr/util/box.h>
 
 struct tbx_server;
 struct wlr_cursor;

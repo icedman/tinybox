@@ -59,7 +59,7 @@ static void damage_add_surface(struct tbx_output* output, struct tbx_view* view,
 
     struct wlr_box box;
     memcpy(&box, _box, sizeof(struct wlr_box));
-    struct wlr_box *output_box = wlr_output_layout_get_box(output->server->output_layout, output->wlr_output);
+    struct wlr_box* output_box = wlr_output_layout_get_box(output->server->output_layout, output->wlr_output);
     if (!region_overlap(&box, output_box)) {
         return;
     }
@@ -70,7 +70,7 @@ static void damage_add_surface(struct tbx_output* output, struct tbx_view* view,
     }
 
     // console_log("whole %d", whole);
-    
+
     if (!whole) {
         // console_log("box: %d %d %d %d (%d %d)\n", box.x, box.y, box.width, box.height, (int)output_box->x, (int)output_box->y);
 
@@ -104,9 +104,7 @@ static void damage_add_surface(struct tbx_output* output, struct tbx_view* view,
             }
 
             // validate again
-            if (nrects == 0 ||
-                nrects > 20 || 
-                !rects) {
+            if (nrects == 0 || nrects > 20 || !rects) {
                 whole = true;
                 // console_log("failed validate 2 %d\n", nrects);
             }
@@ -143,8 +141,7 @@ void damage_add_view(struct tbx_server* server, struct tbx_view* view)
     struct wlr_box box;
     view_frame(view, &box); // TODO! check multi-outputs
 
-    if (view->view_type == VIEW_TYPE_MENU ||
-        view->view_type == VIEW_TYPE_TOOLTIP) {
+    if (view->view_type == VIEW_TYPE_MENU || view->view_type == VIEW_TYPE_TOOLTIP) {
 
         console_log("close menu!");
         // damage_add_box(server, &box, view);
@@ -173,7 +170,7 @@ void damage_add_commit(struct tbx_server* server, struct tbx_view* view)
 {
     if (view->life < VIEW_EARLY_LIFE
         || view->view_type == VIEW_TYPE_XDG // problematic
-        ) {
+    ) {
         // xdg problematic
         damage_add_view(server, view);
         return;

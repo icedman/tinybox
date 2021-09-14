@@ -3,7 +3,7 @@ project(
   'c',
   version: '0.0.2',
   license: 'MIT',
-  meson_version: '>=0.43.0',
+  meson_version: '>=0.46.0',
   default_options: [
     'c_std=c11',
     'warning_level=2',
@@ -48,7 +48,7 @@ pixman         = dependency('pixman-1')
 
 wlroots = dependency('wlroots', version: '>=0.10.0')
 
-wlroots_version = ['>=0.10.0', '<0.11.0']
+wlroots_version = ['>=0.10.0', '<0.15.0']
 wlroots_proj = subproject(
   'wlroots',
   default_options: ['examples=false'],

@@ -443,11 +443,11 @@ void menu_show_tooltip(struct tbx_server* server, const char* text)
         damage_add_view(server, view);
     }
 
-    if (text) {    
+    if (text) {
         strcpy(tooltip, text);
         server->tooltip->title = tooltip;
         prerender_menu(server, server->tooltip, true);
-    
+
         // damage_add_view(server, view);
 
         // constraint to output

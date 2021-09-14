@@ -43,6 +43,9 @@ bool tbx_server_setup(struct tbx_server* server)
     wlr_renderer_init_wl_display(server->renderer, server->wl_display);
 
     server->compositor = wlr_compositor_create(server->wl_display, server->renderer);
+    if (!server->compositor) {
+        return false;
+    }
 
     wlr_data_device_manager_create(server->wl_display);
 
