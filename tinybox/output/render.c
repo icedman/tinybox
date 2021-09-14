@@ -212,7 +212,8 @@ void generate_view_title_texture(struct tbx_output* output,
     struct tbx_view* view)
 {
     struct tbx_style* style = &output->server->style;
-    struct wlr_renderer* renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+    // struct wlr_renderer* renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+    struct wlr_renderer* renderer = output->server->renderer;
 
     if (view->title) {
         wlr_texture_destroy(view->title);
@@ -241,7 +242,11 @@ void generate_view_title_texture(struct tbx_output* output,
     int borderWidth = 3;
     int margin = 4;
 
-    int max_title_width = view->hotspots[HS_TITLEBAR].width - (borderWidth + margin) * 2;
+    struct wlr_box view_geometry;
+    view->interface->get_geometry(view, &view_geometry);
+
+    // int max_title_width = view->hotspots[HS_TITLEBAR].width - (borderWidth + margin) * 2;
+    int max_title_width = view_geometry.width - (borderWidth + margin) * 2;
     int w = max_title_width;
     int h = 32;
 
@@ -252,6 +257,7 @@ void generate_view_title_texture(struct tbx_output* output,
     unsigned char* data = cairo_image_surface_get_data(title1);
     view->title = wlr_texture_from_pixels(renderer, DRM_FORMAT_ARGB8888,
         cairo_image_surface_get_stride(title1), w, h, data);
+
     view->title_box.width = w;
     view->title_box.height = h;
 
@@ -278,15 +284,20 @@ void generate_view_title_texture(struct tbx_output* output,
 }
 
 void generate_background(struct tbx_output* output,
-    struct tbx_workspace* workspace)
+    struct tbx_workspace* workspace, bool forced)
 {
     int texture_id = workspace->id + tx_workspace_1;
     if (texture_cache[texture_id]) {
-        wlr_texture_destroy(texture_cache[texture_id]);
-        texture_cache[texture_id] = NULL;
+        if (forced) {
+            wlr_texture_destroy(texture_cache[texture_id]);
+            texture_cache[texture_id] = NULL;
+        } else {
+            return;
+        }
     }
 
-    struct wlr_renderer* renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+    // struct wlr_renderer* renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+    struct wlr_renderer* renderer = output->server->renderer;
     cairo_surface_t* surface = cairo_image_surface_create_from_png(workspace->background);
     if (!surface) {
         console_log("error loading");
@@ -303,9 +314,9 @@ void generate_background(struct tbx_output* output,
         renderer, DRM_FORMAT_ARGB8888, cairo_image_surface_get_stride(surface),
         w, h, data);
 
-    char fname[255] = "";
-    sprintf(fname, "/tmp/text_%s.png", workspace->background);
-    cairo_surface_write_to_png(surface, fname);
+    // char fname[255] = "";
+    // sprintf(fname, "/tmp/text_%s.png", workspace->background);
+    // cairo_surface_write_to_png(surface, fname);
 
     if (texture_cache[texture_id]) {
         console_log("we have an image");

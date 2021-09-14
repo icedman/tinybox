@@ -30,6 +30,8 @@
 #include <pango/pangocairo.h>
 #include <wlr/render/gles2.h>
 
+#define DAMAGING
+
 static void output_render(struct tbx_output* output);
 
 static void smoothen_geometry_when_resizing(struct tbx_view* view, struct wlr_box* box)
@@ -486,6 +488,7 @@ static void output_frame(struct wl_listener* listener, void* data)
 
 static void output_render(struct tbx_output* output)
 {
+
     /* This function is called every time an output is ready to display a frame,
    * generally at the output's refresh rate (e.g. 60Hz). */
     struct tbx_server* server = output->server;
@@ -493,9 +496,55 @@ static void output_render(struct tbx_output* output)
     struct wlr_renderer* renderer = server->renderer;
 
     generate_textures(output, false);
+    for (int i = 0; i < MAX_WORKSPACES; i++) {
+        if (!get_texture_cache(i + tx_workspace_1)) {
+            generate_background(output, get_workspace(server, i), false);
+        }
+        break;
+    }
+
+    struct tbx_view* view_;
+    wl_list_for_each_reverse(view_, &server->views, link)
+    {
+        if (!view_->mapped || !view_->surface) {
+            continue;
+        }
+        if (view_->title_box.width <= 0) {
+            view_->title_dirty = true;
+        }
+        if (view_->title_dirty) {
+            generate_view_title_texture(output, view_);
+        }
+    }
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
+
+#ifdef DAMAGING
+    bool needs_frame;
+    pixman_region32_t buffer_damage;
+    pixman_region32_init(&buffer_damage);
+
+    if (!wlr_output_damage_attach_render(output->damage, &needs_frame,
+            &buffer_damage)) {
+        return;
+    }
+
+    if (!needs_frame) {
+        wlr_output_rollback(output->wlr_output);
+        pixman_region32_fini(&buffer_damage);
+
+        wl_list_for_each_reverse(view_, &server->views, link)
+        {
+            if (!view_->mapped || !view_->surface) {
+                continue;
+            }
+            wlr_surface_send_frame_done(view_->surface, &now);
+        }
+
+        return;
+    }
+#endif
 
     bool in_main_output = (output == server->main_output);
 
@@ -509,39 +558,30 @@ static void output_render(struct tbx_output* output)
             server->ws_anim_x = 0;
             server->ws_anim_y = 0;
         }
+#ifdef DAMAGING
         damage_whole(server);
+#endif
     }
 
     // this keeps things simple for now
     if (cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE
         || cursor->mode == TBX_CURSOR_MOVE
         || cursor->mode == TBX_CURSOR_RESIZE) {
+#ifdef DAMAGING
         damage_whole(server);
+#endif
     }
 
-    // uint32_t elapsed = (now.tv_nsec - output->last_frame.tv_nsec)/1000000;
-    // output->run_time += elapsed;
+    // if (!wlr_output_attach_render(output->wlr_output, NULL)) {
+    //     return;
+    // }
 
-    /* wlr_output_attach_render makes the OpenGL context current. */
-    if (!wlr_output_attach_render(output->wlr_output, NULL)) {
-        return;
-    }
-
-    /* The "effective" resolution can change if you rotate your outputs. */
     int width, height;
     wlr_output_effective_resolution(output->wlr_output, &width, &height);
 
-    bool needs_frame;
-    pixman_region32_t buffer_damage;
-    pixman_region32_init(&buffer_damage);
-    if (!wlr_output_damage_attach_render(output->damage, &needs_frame,
-            &buffer_damage)) {
-        return;
-    }
-
-    /* Begin the renderer (calls glViewport and some other GL sanity checks) */
     wlr_renderer_begin(renderer, width, height);
 
+#ifdef DAMAGING
     // render box
     if (server->config.render_damages) {
         float color[4] = { 1.0, 0, 0, 1.0 };
@@ -565,10 +605,12 @@ static void output_render(struct tbx_output* output)
 
     memset(&output->scissors, 0, sizeof(struct wlr_box));
     output->scissors_count = 0;
+#endif
 
     double ox = 0, oy = 0;
     wlr_output_layout_output_coords(server->output_layout, output->wlr_output, &ox, &oy);
 
+#ifdef DAMAGING
     float color[4] = { 0.0, 0, 0, 1.0 };
     int nrects = 0;
     pixman_box32_t* rects = pixman_region32_rectangles(&buffer_damage, &nrects);
@@ -595,6 +637,7 @@ static void output_render(struct tbx_output* output)
         scissor_output(output->wlr_output, output->scissors[i]);
         wlr_renderer_clear(renderer, color);
     }
+#endif
 
     //-----------------
     // render workspace backgrounds
@@ -619,6 +662,7 @@ static void output_render(struct tbx_output* output)
             continue;
         }
 
+#ifdef DAMAGING
         //-----------------
         // scissors
         //-----------------
@@ -639,6 +683,7 @@ static void output_render(struct tbx_output* output)
                 continue;
             }
         }
+#endif
 
         double offset_x = 0;
         double offset_y = 0;
@@ -693,14 +738,6 @@ static void output_render(struct tbx_output* output)
         //-----------------
         // render the view
         //-----------------
-        if (view->title_box.width <= 0) {
-            view->title_dirty = true;
-        }
-        if (view->title_dirty) {
-            generate_view_title_texture(output, view);
-            // damage the frame
-        }
-
         struct render_data rdata = {
             .output = output,
             .view = view,
@@ -734,11 +771,10 @@ static void output_render(struct tbx_output* output)
         }
     }
 
-renderer_end:
-
     wlr_renderer_scissor(renderer, 0);
 
-    if (output == server->main_output)
+#ifdef DAMAGING
+    if (output == server->main_output) {
         if (server->config.render_damage_rects) {
 
             struct wlr_box* output_box = wlr_output_layout_get_box(output->server->output_layout, output->wlr_output);
@@ -753,25 +789,14 @@ renderer_end:
                 render_rect_outline(output, &damageBox, damageColor, 2, false, output->wlr_output->scale);
             }
         }
+    }
+#endif
 
-    //-----------------
-    // render menus
-    //-----------------
-    // todo check against damaged regions
     render_menus(output);
 
-    /* Hardware cursors are rendered by the GPU on a separate plane, and can be
-   * moved around without re-rendering what's beneath them - which is more
-   * efficient. However, not all hardware supports hardware cursors. For this
-   * reason, wlroots provides a software fallback, which we ask it to render
-   * here. wlr_cursor handles configuring hardware vs software cursors for you,
-   * and this function is a no-op when hardware cursors are in use. */
-    wlr_output_render_software_cursors(output->wlr_output, NULL);
-
-    /* Conclude rendering and swap the buffers, showing the final frame
-   * on-screen. */
     wlr_renderer_end(renderer);
 
+#ifdef DAMAGING
     pixman_region32_t frame_damage;
     pixman_region32_init(&frame_damage);
 
@@ -782,8 +807,11 @@ renderer_end:
     wlr_output_set_damage(output->wlr_output, &frame_damage);
     pixman_region32_fini(&frame_damage);
     pixman_region32_fini(&buffer_damage);
+#endif
 
-    wlr_output_set_damage(output->wlr_output, &frame_damage);
+    goto renderer_end;
+renderer_end:
+
     wlr_output_commit(output->wlr_output);
 
     output->last_frame = now;
@@ -824,6 +852,9 @@ static void output_damage_handle_frame(struct wl_listener* listener,
     void* data)
 {
     struct tbx_output* output = wl_container_of(listener, output, damage_frame);
+    if (!output->enabled) {
+        return;
+    }
     output_render(output);
 }
 
@@ -861,16 +892,18 @@ static void server_new_output(struct wl_listener* listener, void* data)
     output->server = server;
     output->enabled = true;
 
-    // not for now
     output->damage = wlr_output_damage_create(wlr_output);
-    output->damage_frame.notify = output_damage_handle_frame;
-    // wl_signal_add(&output->damage->events.frame, &output->damage_frame);
-    output->damage_destroy.notify = output_damage_handle_destroy;
-    // wl_signal_add(&output->damage->events.destroy, &output->damage_destroy);
 
-    /* Sets up a listener for the frame notify event. */
     output->frame.notify = output_frame;
+    output->damage_frame.notify = output_damage_handle_frame;
+    output->damage_destroy.notify = output_damage_handle_destroy;
+
+#ifdef DAMAGING
+    wl_signal_add(&output->damage->events.frame, &output->damage_frame);
+    wl_signal_add(&output->damage->events.destroy, &output->damage_destroy);
+#else
     wl_signal_add(&wlr_output->events.frame, &output->frame);
+#endif
 
     output->destroy.notify = output_handle_destroy;
     wl_signal_add(&wlr_output->events.destroy, &output->destroy);
@@ -894,6 +927,8 @@ static void server_new_output(struct wl_listener* listener, void* data)
     if (!server->main_output) {
         server->main_output = output;
     }
+
+    wlr_output_commit(wlr_output);
 }
 
 bool output_setup(struct tbx_server* server)

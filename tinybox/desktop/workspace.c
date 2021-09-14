@@ -175,9 +175,10 @@ void render_workspace(struct tbx_output* output,
     int texture_id = tx_workspace_1 + workspace->id;
 
     texture = get_texture_cache(texture_id);
+
     if (!texture && workspace->background) {
         // generate and try again
-        generate_background(output, workspace);
+        generate_background(output, workspace, true);
         texture = get_texture_cache(texture_id);
         if (!texture) {
             // invalid image
