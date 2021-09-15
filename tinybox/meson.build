@@ -13,7 +13,7 @@ tinybox_src = files(
   'command/commands/output.c',
   'command/commands/style.c',
   'command/commands/keybindings.c',
-  'command/commands/desktop.c',
+  'command/commands/workspace.c',
   'command/commands/menu.c',
   
   'config/config.c',
@@ -24,10 +24,9 @@ tinybox_src = files(
   'input/seat.c',
   'input/libinput.c',
   
-  'desktop/arrange.c',
-  'desktop/view.c',
-  'desktop/workspace.c',
-  'desktop/tree.c',
+  'workspace/arrange.c',
+  'workspace/view.c',
+  'workspace/workspace.c',
 
   'output/output.c',
   'output/render.c',

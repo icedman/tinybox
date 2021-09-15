@@ -46,9 +46,9 @@ egl            = dependency('egl')
 xcb            = dependency('xcb')
 pixman         = dependency('pixman-1')
 
-wlroots = dependency('wlroots', version: '>=0.10.0')
+wlroots = dependency('wlroots', version: '>=0.14.0')
 
-wlroots_version = ['>=0.10.0', '<0.15.0']
+wlroots_version = ['>=0.14.0', '<0.16.0']
 wlroots_proj = subproject(
   'wlroots',
   default_options: ['examples=false'],
