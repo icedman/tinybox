@@ -131,9 +131,9 @@ exec_track_damages(struct tbx_command *cmd, int argc, char **argv)
   } else {
     config->track_damages = !config->track_damages;
   }
-  if (config->track_damages) {
-    console_log("tracking damages");
-  }
+  // if (config->track_damages) {
+    console_log("tracking damages %d", config->track_damages);
+  // }
 
   damage_whole(cmd->server);
 }

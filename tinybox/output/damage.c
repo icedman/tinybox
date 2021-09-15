@@ -205,3 +205,17 @@ damage_check(struct tbx_server *server, struct wlr_box *box)
 {
   return false;
 }
+
+bool
+should_track_damages(struct tbx_server *server)
+{
+  if (!server->config.track_damages) {
+    return false;
+  }
+  struct tbx_cursor *cursor = server->cursor;
+  if (cursor->server->ws_animate) {
+    damage_whole(server);
+    return false;
+  }
+  return true;
+}

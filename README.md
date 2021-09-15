@@ -21,13 +21,8 @@ window manager based started from tinywl;
 
 * pixmap based themes (fluxbox/openbox)
 * bar
-* damage tracking
-* hdpi
-
-## issues
-
-* proper popup handling
-
+* damage tracking - improve
+* arrange view - improve
 
 ## more screenshots
 

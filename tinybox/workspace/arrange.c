@@ -199,7 +199,12 @@ arrange_run(struct tbx_server *server)
       block->view->y = block->fit->y +
                        block->view->hotspots[HS_EDGE_TOP].height +
                        block->view->hotspots[HS_TITLEBAR].height;
-      damage_add_view(server, block->view);
+
+      console_log(">%f %f %f %f\n",
+          block->fit->x,
+          block->fit->y,
+          block->fit->w,
+          block->fit->h);
     }
   }
 

@@ -31,7 +31,7 @@
 #include <wlr/render/gles2.h>
 
 static void
-output_render(struct tbx_output *output);
+output_render(struct tbx_output *output, bool track_damages);
 
 static void
 smoothen_geometry_when_resizing(struct tbx_view *view, struct wlr_box *box)
@@ -502,14 +502,14 @@ static void
 output_frame(struct wl_listener *listener, void *data)
 {
   struct tbx_output *output = wl_container_of(listener, output, frame);
-  if (output->server->config.track_damages || !output->enabled) {
+  if (should_track_damages(output->server) || !output->enabled) {
     return;
   }
-  output_render(output);
+  output_render(output, false);
 }
 
 static void
-output_render(struct tbx_output *output)
+output_render(struct tbx_output *output, bool track_damages)
 {
 
   /* This function is called every time an output is ready to display a frame,
@@ -543,7 +543,7 @@ output_render(struct tbx_output *output)
   clock_gettime(CLOCK_MONOTONIC, &now);
 
   pixman_region32_t buffer_damage;
-  if (server->config.track_damages) {
+  if (track_damages) {
     bool needs_frame;
     pixman_region32_init(&buffer_damage);
 
@@ -579,7 +579,7 @@ output_render(struct tbx_output *output)
     damage_whole(server);
   }
 
-  if (!server->config.track_damages &&
+  if (!track_damages &&
       !wlr_output_attach_render(output->wlr_output, NULL)) {
     return;
   }
@@ -589,14 +589,14 @@ output_render(struct tbx_output *output)
 
   wlr_renderer_begin(renderer, width, height);
 
-  if (server->config.track_damages &&
+  if (track_damages &&
       !pixman_region32_not_empty(&buffer_damage)) {
     // Output isn't damaged but needs buffer swap
     goto renderer_end;
   }
 
   // render box
-  if (server->config.track_damages && server->config.debug_damages) {
+  if (track_damages && server->config.debug_damages) {
     float color[4] = { 1.0, 0, 0, 1.0 };
     wlr_renderer_clear(renderer, color);
   }
@@ -608,7 +608,7 @@ output_render(struct tbx_output *output)
   wlr_output_layout_output_coords(
       server->output_layout, output->wlr_output, &ox, &oy);
 
-  if (server->config.track_damages) {
+  if (track_damages) {
     float color[4] = { 0.0, 0, 0, 1.0 };
     int nrects = 0;
     pixman_box32_t *rects = pixman_region32_rectangles(&buffer_damage, &nrects);
@@ -622,15 +622,15 @@ output_render(struct tbx_output *output)
       output->scissors[i].height = rects[i].y2 - rects[i].y1;
       output->scissors_count = i + 1;
 
-      /*
-      console_log("wlr #%d: %d %d %d %d\n",
-              i,
-              output->scissors[i].x,
-              output->scissors[i].y,
-              output->scissors[i].width,
-              output->scissors[i].height
-          );
-      */
+      if (server->config.debug_damages) {
+        console_log("wlr #%d: %d %d %d %d\n",
+                i,
+                output->scissors[i].x,
+                output->scissors[i].y,
+                output->scissors[i].width,
+                output->scissors[i].height
+            );
+      }
 
       scissor_output(output->wlr_output, output->scissors[i]);
       wlr_renderer_clear(renderer, color);
@@ -656,7 +656,7 @@ output_render(struct tbx_output *output)
       continue;
     }
 
-    if (server->config.track_damages) {
+    if (track_damages) {
       //-----------------
       // scissors
       //-----------------
@@ -771,7 +771,7 @@ renderer_end:
 
   wlr_renderer_end(renderer);
 
-  if (server->config.track_damages) {
+  if (track_damages) {
     pixman_region32_t frame_damage;
     pixman_region32_init(&frame_damage);
 
@@ -789,7 +789,7 @@ renderer_end:
   goto buffer_damage_end;
 buffer_damage_end:
 
-  if (server->config.track_damages) {
+  if (track_damages) {
     pixman_region32_fini(&buffer_damage);
   }
 
@@ -842,10 +842,10 @@ static void
 output_damage_handle_frame(struct wl_listener *listener, void *data)
 {
   struct tbx_output *output = wl_container_of(listener, output, damage_frame);
-  if (!output->server->config.track_damages || !output->enabled) {
+  if (!should_track_damages(output->server) || !output->enabled) {
     return;
   }
-  output_render(output);
+  output_render(output, true);
 }
 
 static void

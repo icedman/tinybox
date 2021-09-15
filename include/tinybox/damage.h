@@ -23,4 +23,7 @@ damage_add_commit(struct tbx_server *server, struct tbx_view *view);
 void
 damage_whole(struct tbx_server *server);
 
+bool
+should_track_damages(struct tbx_server *server);
+
 #endif // DAMAGE_H

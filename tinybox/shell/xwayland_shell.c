@@ -72,7 +72,8 @@ xwayland_get_geometry(struct tbx_view *view, struct wlr_box *box)
 static void
 xwayland_set_activated(struct tbx_view *view, bool activated)
 {
-  console_log("set activated %d\n", view->xwayland_surface ? view->xwayland_surface->window_id : 0);
+  console_log("set activated %d\n",
+      view->xwayland_surface ? view->xwayland_surface->window_id : 0);
 
   struct wlr_seat *seat = view->server->seat->seat;
   struct wlr_xwayland *xwayland = view->server->xwayland_shell->wlr_xwayland;
@@ -319,7 +320,7 @@ xwayland_surface_map(struct wl_listener *listener, void *data)
   }
 
   view_set_focus(view, view->surface);
-  
+
   // always set to zero
   wlr_xwayland_surface_configure(
       view->xwayland_surface, 0, 0, view->width, view->height);
@@ -354,8 +355,8 @@ xwayland_request_configure(struct wl_listener *listener, void *data)
   struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
 
   if (!xsurface->mapped) {
-     wlr_xwayland_surface_configure(
-         xsurface, ev->x, ev->y, ev->width, ev->height);
+    wlr_xwayland_surface_configure(
+        xsurface, ev->x, ev->y, ev->width, ev->height);
   }
 
   view->x = ev->x;
