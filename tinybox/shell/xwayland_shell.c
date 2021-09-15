@@ -72,7 +72,7 @@ xwayland_get_geometry(struct tbx_view *view, struct wlr_box *box)
 static void
 xwayland_set_activated(struct tbx_view *view, bool activated)
 {
-  console_log("set activated %d\n", view->xwayland_surface->window_id);
+  console_log("set activated %d\n", view->xwayland_surface ? view->xwayland_surface->window_id : 0);
 
   struct wlr_seat *seat = view->server->seat->seat;
   struct wlr_xwayland *xwayland = view->server->xwayland_shell->wlr_xwayland;
@@ -285,8 +285,8 @@ xwayland_surface_map(struct wl_listener *listener, void *data)
 
   damage_whole(view->server);
 
-  xwayland_view->commit.notify = xwayland_surface_commit;
   if (xsurface->surface) {
+    xwayland_view->commit.notify = xwayland_surface_commit;
     wl_signal_add(&xsurface->surface->events.commit, &xwayland_view->commit);
   }
 
@@ -314,11 +314,12 @@ xwayland_surface_map(struct wl_listener *listener, void *data)
     }
 
     view_raise(view);
+    view_set_focus(view, view->surface);
     return;
   }
 
   view_set_focus(view, view->surface);
-
+  
   // always set to zero
   wlr_xwayland_surface_configure(
       view->xwayland_surface, 0, 0, view->width, view->height);
@@ -327,7 +328,7 @@ xwayland_surface_map(struct wl_listener *listener, void *data)
 static void
 xwayland_surface_unmap(struct wl_listener *listener, void *data)
 {
-  /* Called when the surface is unmapped, and should no longer be shown. */
+  console_log("unmap");
   struct tbx_xwayland_view *xwayland_view =
       wl_container_of(listener, xwayland_view, unmap);
   struct tbx_view *view = &xwayland_view->view;
@@ -344,7 +345,7 @@ xwayland_surface_unmap(struct wl_listener *listener, void *data)
 static void
 xwayland_request_configure(struct wl_listener *listener, void *data)
 {
-  /* Called when the surface is destroyed and should never be shown again. */
+  console_log("request configure");
   struct tbx_xwayland_view *xwayland_view =
       wl_container_of(listener, xwayland_view, request_configure);
   struct tbx_view *view = &xwayland_view->view;
@@ -353,8 +354,8 @@ xwayland_request_configure(struct wl_listener *listener, void *data)
   struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
 
   if (!xsurface->mapped) {
-    wlr_xwayland_surface_configure(
-        xsurface, ev->x, ev->y, ev->width, ev->height);
+     wlr_xwayland_surface_configure(
+         xsurface, ev->x, ev->y, ev->width, ev->height);
   }
 
   view->x = ev->x;
@@ -482,7 +483,7 @@ new_xwayland_surface(struct wl_listener *listener, void *data)
   view_setup(view);
 
   console_log(">new xwayland_view %s\n",
-      view->override_redirect ? "unmanaged" : "managed");
+      view->override_redirect ? "override_redirect" : "");
 }
 
 void
@@ -513,8 +514,6 @@ handle_xwayland_ready(struct wl_listener *listener, void *data)
     free(reply);
 
     if (error != NULL) {
-      // sway_log(SWAY_ERROR, "could not resolve atom %s, X11 error code %d",
-      //     atom_map[i], error->error_code);
       free(error);
       break;
     }
