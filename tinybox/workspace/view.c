@@ -67,12 +67,18 @@ view_set_focus(struct tbx_view *view, struct wlr_surface *surface)
   }
 
   /* Move the view to the front */
-  wl_list_remove(&view->link);
-  wl_list_insert(&server->views, &view->link);
+  view_raise(view);
 
   view->interface->set_activated(view, true);
 
   damage_whole(server);
+}
+
+void
+view_raise(struct tbx_view *view)
+{
+  wl_list_remove(&view->link);
+  wl_list_insert(&view->server->views, &view->link);
 }
 
 bool

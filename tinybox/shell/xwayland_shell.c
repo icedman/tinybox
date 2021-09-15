@@ -72,7 +72,7 @@ xwayland_get_geometry(struct tbx_view *view, struct wlr_box *box)
 static void
 xwayland_set_activated(struct tbx_view *view, bool activated)
 {
-  console_log("set activated");
+  console_log("set activated %d\n", view->xwayland_surface->window_id);
 
   struct wlr_seat *seat = view->server->seat->seat;
   struct wlr_xwayland *xwayland = view->server->xwayland_shell->wlr_xwayland;
@@ -182,26 +182,23 @@ static uint32_t
 xwayland_view_configure(
     struct tbx_view *view, double lx, double ly, int width, int height)
 {
+  if (height < 0)
+    return 0;
+
+  console_log("configure %d %d %d %d\n", lx, ly, width, height);
+
   wlr_xwayland_surface_configure(view->xwayland_surface, 0, 0, width, height);
 
   view->x = lx;
   view->y = ly;
-  // view->width = width;
-  // view->height = height;
-
-  // if (width != box.width) {
-  //     view->title_dirty = true;
-  // }
 
   view->request_box.x = lx;
   view->request_box.y = ly;
-
   view->request_box.width = width;
   view->request_box.height = height;
 
   damage_whole(view->server);
 
-  console_log("configure %d %d %d %d\n", lx, ly, width, height);
   return 0;
 }
 
@@ -235,19 +232,6 @@ xwayland_destroy(struct tbx_view *view)
   view_destroy(view);
 }
 
-static bool
-xwayland_is_transient_for(struct tbx_view *child, struct tbx_view *ancestor)
-{
-  struct wlr_xwayland_surface *surface = child->xwayland_surface;
-  while (surface) {
-    if (surface->parent == ancestor->xwayland_surface) {
-      return true;
-    }
-    surface = surface->parent;
-  }
-  return false;
-}
-
 struct tbx_view_interface xwayland_view_interface = {
   .get_constraints = xwayland_get_constraints,
   .get_geometry = xwayland_get_geometry,
@@ -256,130 +240,10 @@ struct tbx_view_interface xwayland_view_interface = {
   .configure = xwayland_view_configure,
   .set_activated = xwayland_set_activated,
   .set_fullscreen = xwaylan_set_fullscreen,
-  .is_transient_for = xwayland_is_transient_for,
   .close = xwayland_close,
   .close_popups = xwayland_close_popups,
   .destroy = xwayland_destroy
 };
-
-#if 0
-static struct tbx_view *
-get_root(struct tbx_view *view)
-{
-  if (view->parent) {
-    return get_root(view->parent);
-  }
-  return view;
-}
-
-static void
-xwayland_view_set_parent(struct tbx_view *view)
-{
-  struct tbx_view *ancestor;
-  struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
-  wl_list_for_each (ancestor, &view->server->views, link) {
-    if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
-      if (view->interface->is_transient_for(view, ancestor)) {
-        view->parent = ancestor;
-
-        struct tbx_view *root = get_root(ancestor);
-
-        view->x = xsurface->x + root->x;
-        view->y = xsurface->y + root->y;
-        console_log("set parent %d", root->x);
-        break;
-      }
-    }
-  }
-}
-
-static void
-xwayland_view_try_set_parent(struct tbx_view *view)
-{
-  struct tbx_server *server = view->server;
-  struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
-  uint32_t window_type = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
-
-  if (window_type == 0) {
-    return;
-  }
-
-  struct tbx_view *_view;
-  struct tbx_view *candidate = NULL;
-  struct tbx_view *fallback = NULL;
-  wl_list_for_each (_view, &server->views, link) {
-    if (_view->view_type != VIEW_TYPE_XWAYLAND || _view == view) {
-      continue;
-    }
-    int wt = xwayland_get_int_prop(_view, VIEW_PROP_WINDOW_TYPE);
-
-    if (!_view->width || !_view->height) {
-      continue;
-    }
-
-    double sx, sy;
-    struct wlr_surface *surface;
-    if (view_at(_view,
-            server->cursor->cursor->x,
-            server->cursor->cursor->y,
-            &surface,
-            &sx,
-            &sy)) {
-      if (wt == 0) {
-        candidate = _view;
-        break;
-      } else {
-        fallback = _view;
-      }
-    }
-  }
-
-  //-------------------------
-  // hacky: adopt a parent?
-  //-------------------------
-  // properly implement popups
-  if (!candidate) {
-    struct tbx_view *focused = view_from_surface(
-        server, server->seat->seat->keyboard_state.focused_surface);
-
-    if (!focused || focused->view_type != VIEW_TYPE_XWAYLAND) {
-      focused = NULL;
-      struct tbx_view *ancestor;
-      wl_list_for_each (ancestor, &view->server->views, link) {
-        if (ancestor == view || ancestor->parent || !ancestor->mapped ||
-            !ancestor->x || ancestor->width < view->width) {
-          continue;
-        }
-        if (ancestor->view_type == VIEW_TYPE_XWAYLAND) {
-          focused = ancestor;
-          break;
-        }
-      }
-    }
-
-    while (focused && focused->parent) {
-      focused = focused->parent;
-    }
-
-    candidate = focused;
-  }
-
-  if (!candidate) {
-    candidate = fallback;
-  }
-
-  if (candidate && xsurface) {
-    console_log(
-        "adopted %d %d %d", candidate->width, candidate->x, candidate->y);
-    view->parent = candidate;
-
-    // // (candidate->xwayland_surface->x) .. when surface coords not yet
-    // configured.. it wouldn't be zero
-    view->x = xsurface->x + candidate->x - (candidate->xwayland_surface->x);
-    view->y = xsurface->y + candidate->y - (candidate->xwayland_surface->y);
-  }
-}
-#endif
 
 static void
 xwayland_surface_commit(struct wl_listener *listener, void *data)
@@ -404,49 +268,52 @@ xwayland_surface_destroy(struct wl_listener *listener, void *data)
 static void
 xwayland_surface_map(struct wl_listener *listener, void *data)
 {
-  console_log("map");
-
   /* Called when the surface is mapped, or ready to display on-screen. */
   struct wlr_xwayland_surface *xsurface = data;
 
   struct tbx_xwayland_view *xwayland_view =
       wl_container_of(listener, xwayland_view, map);
   struct tbx_view *view = &xwayland_view->view;
-  // struct tbx_server* server = view->server;
+  struct tbx_server *server = view->server;
+
+  console_log("map %d", view->xwayland_surface->window_id);
 
   view->mapped = true;
   view->title_dirty = true;
-  view->surface = view->xwayland_surface->surface;
+  view->xwayland_surface = xsurface;
+  view->surface = xsurface->surface;
 
   damage_whole(view->server);
-
-  // view->xwayland_surface = xsurface;
-  // view->surface = xsurface->surface;
 
   xwayland_view->commit.notify = xwayland_surface_commit;
   if (xsurface->surface) {
     wl_signal_add(&xsurface->surface->events.commit, &xwayland_view->commit);
   }
 
-  // if override redirect .. position as requested
-#if 0
-  if (view->override_redirect && !view->parent) {
+  if (view->override_redirect) {
+    view->x = xsurface->x;
+    view->y = xsurface->y;
 
-    if (view->xwayland_surface->parent) {
-      xwayland_view_set_parent(view);
-    } else {
-      xwayland_view_try_set_parent(view);
-      if (view->parent) {
-        return;
+    if (!view->parent && view->xwayland_surface->parent) {
+
+      // root
+      struct wlr_xwayland_surface *root = view->xwayland_surface->parent;
+      while (root->parent) {
+        root = root->parent;
+      }
+
+      struct tbx_view *ancestor;
+      wl_list_for_each (ancestor, &server->views, link) {
+        if (root->window_id == ancestor->xwayland_surface->window_id) {
+          view->x += ancestor->x;
+          view->y += ancestor->y;
+          view->parent = ancestor;
+          break;
+        }
       }
     }
 
-    view_set_focus(view, view->surface);
-    return;
-  }
-#endif
-
-  if (view->override_redirect) {
+    view_raise(view);
     return;
   }
 
@@ -455,9 +322,6 @@ xwayland_surface_map(struct wl_listener *listener, void *data)
   // always set to zero
   wlr_xwayland_surface_configure(
       view->xwayland_surface, 0, 0, view->width, view->height);
-
-  // if (!view->parent)
-  //   view_move_to_center(view, NULL);
 }
 
 static void
@@ -497,12 +361,6 @@ xwayland_request_configure(struct wl_listener *listener, void *data)
   view->y = ev->y;
   view->width = ev->width;
   view->height = ev->height;
-
-  // if (view->parent) {
-  //   view->x += view->parent->x;
-  //   view->y += view->parent->y;
-  //   console_log("conf with parent");
-  // }
 }
 
 static void
@@ -623,7 +481,8 @@ new_xwayland_surface(struct wl_listener *listener, void *data)
   wl_list_insert(&server->views, &view->link);
   view_setup(view);
 
-  console_log(">new xwayland_view %s\n", view->override_redirect ? "unmanaged": "managed");
+  console_log(">new xwayland_view %s\n",
+      view->override_redirect ? "unmanaged" : "managed");
 }
 
 void

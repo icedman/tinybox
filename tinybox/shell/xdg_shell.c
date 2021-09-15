@@ -19,12 +19,6 @@
 //     wlr_surface_iterator_func_t iterator, void *user_data);
 */
 
-static bool
-xdg_is_transient_for(struct tbx_view *child, struct tbx_view *ancestor)
-{
-  return false;
-}
-
 static void
 xdg_get_constraints(struct tbx_view *view,
     double *min_width,
@@ -198,7 +192,6 @@ static struct tbx_view_interface xdg_view_interface = { .get_constraints =
   .configure = xdg_view_configure,
   .set_activated = xdg_set_activated,
   .set_fullscreen = xdg_set_fullscreen,
-  .is_transient_for = xdg_is_transient_for,
   .close = xdg_close,
   .close_popups = xdg_close_popups,
   .destroy = xdg_destroy };
