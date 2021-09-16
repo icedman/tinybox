@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <wayland-server-core.h>
 #include <wlr/render/wlr_renderer.h>
-#include <wlr/util/box.h>
+#include <wlr/types/wlr_box.h>
 
 #define MAX_OUTPUT_SCISSORS 128
 

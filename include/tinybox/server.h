@@ -48,6 +48,7 @@ struct tbx_server {
   bool ws_animate;
   double ws_anim_x;
   double ws_anim_y;
+  int ws_animate_frames;
 
   // input
   struct tbx_cursor *cursor;

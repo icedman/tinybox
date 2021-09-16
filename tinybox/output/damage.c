@@ -1,4 +1,5 @@
 #include "tinybox/damage.h"
+#include "tinybox/damage.h"
 #include "tinybox/output.h"
 #include "tinybox/render.h"
 #include "tinybox/server.h"
@@ -142,8 +143,6 @@ damage_add_view(struct tbx_server *server, struct tbx_view *view)
 
   if (view->view_type == VIEW_TYPE_MENU ||
       view->view_type == VIEW_TYPE_TOOLTIP) {
-
-    console_log("close menu!");
     // damage_add_box(server, &box, view);
     // TODO: menus!
     damage_whole(server);
@@ -154,13 +153,16 @@ damage_add_view(struct tbx_server *server, struct tbx_view *view)
   if (view->view_type == VIEW_TYPE_XDG) {
   }
 
+  // if (view->identifier != 1000) {
+    // console_log("view: %d %d %d %d %d", view->identifier, box.x, box.y, box.width, box.height);
+  // }
+
   // view->interface->get_geometry(view, &box);
   // box.x = view->x;
   // box.y = view->y;
 
   struct tbx_output *output;
   wl_list_for_each (output, &view->server->outputs, link) {
-    // console_log("add view %d %d", box.x, box.y);
     damage_add_surface(output, view, view->surface, &box, true);
   }
 }
@@ -172,6 +174,7 @@ damage_add_commit(struct tbx_server *server, struct tbx_view *view)
       view->view_type == VIEW_TYPE_XDG // problematic
   ) {
     // xdg problematic
+    server->ws_animate_frames = 40;
     damage_add_view(server, view);
     return;
   }
@@ -213,7 +216,11 @@ should_track_damages(struct tbx_server *server)
     return false;
   }
   struct tbx_cursor *cursor = server->cursor;
-  if (cursor->server->ws_animate) {
+  if (cursor->server->ws_animate ||
+      cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE) {
+    cursor->server->ws_animate_frames = 40;
+  }
+  if (cursor->server->ws_animate_frames-- > 0) {
     damage_whole(server);
     return false;
   }

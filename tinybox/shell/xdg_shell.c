@@ -20,6 +20,16 @@
 */
 
 static void
+xdg_new_popup(struct wl_listener *listener, void *data)
+{
+  struct tbx_xdg_shell_view *xdg_shell_view =
+      wl_container_of(listener, xdg_shell_view, new_popup);
+  // struct tbx_view *view = &xdg_shell_view->view;
+  // damage_whole(view->server);
+  console_log("new popup!");
+}
+
+static void
 xdg_get_constraints(struct tbx_view *view,
     double *min_width,
     double *max_width,
@@ -48,6 +58,7 @@ xdg_get_geometry(struct tbx_view *view, struct wlr_box *box)
 static void
 xdg_set_activated(struct tbx_view *view, bool activated)
 {
+  console_log("xdg activated %d\n", view->identifier);
   struct wlr_seat *seat = view->server->seat->seat;
   struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
 
@@ -266,10 +277,11 @@ xdg_surface_map(struct wl_listener *listener, void *data)
 
   damage_whole(view->server);
 
-  xdg_shell_view->commit.notify = xdg_surface_commit;
   if (view->xdg_surface->surface) {
+    xdg_shell_view->commit.notify = xdg_surface_commit;
     wl_signal_add(
-        &view->xdg_surface->surface->events.commit, &xdg_shell_view->commit);
+      &view->xdg_surface->surface->events.commit,
+      &xdg_shell_view->commit);
   }
 }
 
@@ -386,7 +398,6 @@ server_new_xdg_surface(struct wl_listener *listener, void *data)
   xdg_shell_view->destroy.notify = xdg_surface_destroy;
   wl_signal_add(&xdg_surface->events.destroy, &xdg_shell_view->destroy);
 
-  /* cotd */
   struct wlr_xdg_toplevel *toplevel = xdg_surface->toplevel;
   xdg_shell_view->request_move.notify = xdg_toplevel_request_move;
   wl_signal_add(&toplevel->events.request_move, &xdg_shell_view->request_move);
@@ -397,9 +408,13 @@ server_new_xdg_surface(struct wl_listener *listener, void *data)
   wl_signal_add(&toplevel->events.request_fullscreen,
       &xdg_shell_view->request_fullscreen);
 
-  /* title */
+  // title
   xdg_shell_view->set_title.notify = xdg_set_title;
   wl_signal_add(&toplevel->events.set_title, &xdg_shell_view->set_title);
+
+  // popup
+  xdg_shell_view->new_popup.notify = xdg_new_popup;
+  wl_signal_add(&xdg_surface->events.new_popup, &xdg_shell_view->new_popup);
 
   // move to workspace
   view->workspace = server->workspace;
@@ -410,7 +425,7 @@ server_new_xdg_surface(struct wl_listener *listener, void *data)
   wl_list_insert(&server->views, &view->link);
   view_setup(view);
 
-  console_log(">new xdg_view\n");
+  console_log(">new xdg_view %d\n", view->identifier);
 }
 
 bool

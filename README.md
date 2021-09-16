@@ -21,8 +21,10 @@ window manager based started from tinywl;
 
 * pixmap based themes (fluxbox/openbox)
 * bar
+* arrange view - improve - balance view on screen
 * damage tracking - improve
-* arrange view - improve
+* xwayland popup problem with damage tracking
+* rollup problem with damage tracking
 
 ## more screenshots
 

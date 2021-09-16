@@ -579,8 +579,7 @@ output_render(struct tbx_output *output, bool track_damages)
     damage_whole(server);
   }
 
-  if (!track_damages &&
-      !wlr_output_attach_render(output->wlr_output, NULL)) {
+  if (!track_damages && !wlr_output_attach_render(output->wlr_output, NULL)) {
     return;
   }
 
@@ -589,8 +588,7 @@ output_render(struct tbx_output *output, bool track_damages)
 
   wlr_renderer_begin(renderer, width, height);
 
-  if (track_damages &&
-      !pixman_region32_not_empty(&buffer_damage)) {
+  if (track_damages && !pixman_region32_not_empty(&buffer_damage)) {
     // Output isn't damaged but needs buffer swap
     goto renderer_end;
   }
@@ -598,6 +596,11 @@ output_render(struct tbx_output *output, bool track_damages)
   // render box
   if (track_damages && server->config.debug_damages) {
     float color[4] = { 1.0, 0, 0, 1.0 };
+    wlr_renderer_clear(renderer, color);
+  }
+
+  if (!track_damages) {
+    float color[4] = { 0.0, 0, 0, 1.0 };
     wlr_renderer_clear(renderer, color);
   }
 
@@ -624,12 +627,11 @@ output_render(struct tbx_output *output, bool track_damages)
 
       if (server->config.debug_damages) {
         console_log("wlr #%d: %d %d %d %d\n",
-                i,
-                output->scissors[i].x,
-                output->scissors[i].y,
-                output->scissors[i].width,
-                output->scissors[i].height
-            );
+            i,
+            output->scissors[i].x,
+            output->scissors[i].y,
+            output->scissors[i].width,
+            output->scissors[i].height);
       }
 
       scissor_output(output->wlr_output, output->scissors[i]);

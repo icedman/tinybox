@@ -183,9 +183,6 @@ static uint32_t
 xwayland_view_configure(
     struct tbx_view *view, double lx, double ly, int width, int height)
 {
-  if (height < 0)
-    return 0;
-
   console_log("configure %d %d %d %d\n", lx, ly, width, height);
 
   wlr_xwayland_surface_configure(view->xwayland_surface, 0, 0, width, height);
@@ -249,7 +246,7 @@ struct tbx_view_interface xwayland_view_interface = {
 static void
 xwayland_surface_commit(struct wl_listener *listener, void *data)
 {
-  // console_log("commit xwayland");
+  console_log("commit xwayland");
   struct tbx_xwayland_view *xwayland_view =
       wl_container_of(listener, xwayland_view, commit);
   struct tbx_view *view = &xwayland_view->view;
@@ -324,6 +321,10 @@ xwayland_surface_map(struct wl_listener *listener, void *data)
   // always set to zero
   wlr_xwayland_surface_configure(
       view->xwayland_surface, 0, 0, view->width, view->height);
+
+  if (!view->parent) {
+    view_move_to_center(view, NULL);
+  }
 }
 
 static void
@@ -372,6 +373,8 @@ xwayland_request_fullscreen(struct wl_listener *listener, void *data)
       wl_container_of(listener, xwayland_view, request_fullscreen);
   struct tbx_view *view = &xwayland_view->view;
   view->interface->set_fullscreen(view, !view->fullscreen);
+
+  damage_whole(view->server);
 }
 
 static void
@@ -380,6 +383,7 @@ xwayland_set_title(struct wl_listener *listener, void *data)
   struct tbx_xwayland_view *xview = wl_container_of(listener, xview, set_title);
   struct tbx_view *view = &xview->view;
   view->title_dirty = true;
+
   damage_whole(view->server);
 }
 
@@ -410,8 +414,8 @@ xwayland_set_window_type(struct wl_listener *listener, void *data)
   struct tbx_view *view = &xview->view;
 
   int wt = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
+  
   console_log("set_window_type %d", wt);
-
   // for(size_t i=0; i<view->xwayland_surface->window_type_len; i++) {
   //     console_log("window_type %d", view->xwayland_surface->window_type[i]);
   // }

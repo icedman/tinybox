@@ -125,7 +125,7 @@ struct tbx_view {
   // workspace
   int workspace;
 
-  // render region
+  int identifier;
   size_t life;
 };
 
@@ -141,7 +141,7 @@ struct tbx_xdg_shell_view {
   struct wl_listener request_fullscreen;
   struct wl_listener set_title;
   // struct wl_listener set_app_id;
-  // struct wl_listener new_popup;
+  struct wl_listener new_popup;
   struct wl_listener map;
   struct wl_listener unmap;
   struct wl_listener destroy;

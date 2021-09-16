@@ -348,6 +348,8 @@ view_move_to_center(struct tbx_view *view, struct tbx_output *output)
 void
 view_setup(struct tbx_view *view)
 {
+  static int view_id = 1000;
+  view->identifier = view_id++;
   views_online++;
 }
 

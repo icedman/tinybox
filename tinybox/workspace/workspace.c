@@ -1,4 +1,5 @@
 #include "tinybox/workspace.h"
+#include "tinybox/damage.h"
 #include "tinybox/output.h"
 #include "tinybox/render.h"
 #include "tinybox/view.h"
@@ -88,6 +89,7 @@ workspace_activate(struct tbx_server *server, int id, bool animate)
     server->ws_animate = true;
     server->ws_anim_x += dir * main_box->width;
     server->ws_anim_y = 0;
+    damage_whole(server);
   }
 }
 
