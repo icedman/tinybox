@@ -174,7 +174,6 @@ damage_add_commit(struct tbx_server *server, struct tbx_view *view)
       view->view_type == VIEW_TYPE_XDG // problematic
   ) {
     // xdg problematic
-    server->ws_animate_frames = 40;
     damage_add_view(server, view);
     return;
   }
@@ -209,20 +208,29 @@ damage_check(struct tbx_server *server, struct wlr_box *box)
   return false;
 }
 
+#define SUSPEND_DAMAGE_FRAME_COUNT 40
+
 bool
 should_track_damages(struct tbx_server *server)
 {
   if (!server->config.track_damages) {
     return false;
   }
-  struct tbx_cursor *cursor = server->cursor;
-  if (cursor->server->ws_animate ||
-      cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE) {
-    cursor->server->ws_animate_frames = 40;
+  if (server->suspend_damage_tracking > 0) {
+    server->suspend_damage_frames = SUSPEND_DAMAGE_FRAME_COUNT;
   }
-  if (cursor->server->ws_animate_frames-- > 0) {
+
+  if (server->ws_animate ||
+      server->cursor->mode == TBX_CURSOR_SWIPE_WORKSPACE) {
+    server->suspend_damage_frames = SUSPEND_DAMAGE_FRAME_COUNT;
+  }
+
+  if (server->suspend_damage_frames > 0) {
+    server->suspend_damage_frames--;
     damage_whole(server);
+    // console_log("suspend tracking - frames %d", server->suspend_damage_frames);
     return false;
   }
+  
   return true;
 }

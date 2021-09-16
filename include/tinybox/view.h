@@ -129,6 +129,16 @@ struct tbx_view {
   size_t life;
 };
 
+struct tbx_xdg_shell_popup_view {
+  struct wl_list link;
+
+  struct wl_listener new_popup;
+  struct wl_listener map;
+  struct wl_listener unmap;
+
+  struct tbx_view *parent;
+};
+
 struct tbx_xdg_shell_view {
   struct tbx_view view;
 
@@ -145,9 +155,10 @@ struct tbx_xdg_shell_view {
   struct wl_listener map;
   struct wl_listener unmap;
   struct wl_listener destroy;
+
+  struct wl_list popups;
 };
 
-// #if HAVE_XWAYLAND
 struct tbx_xwayland_view {
   struct tbx_view view;
 
@@ -170,7 +181,6 @@ struct tbx_xwayland_view {
   struct wl_listener unmap;
   struct wl_listener destroy;
 };
-// #endif
 
 struct tbx_view *
 view_from_surface(struct tbx_server *server, struct wlr_surface *surface);

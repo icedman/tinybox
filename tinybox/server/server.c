@@ -11,7 +11,10 @@
 #include "tinybox/seat.h"
 #include "tinybox/shell.h"
 #include "tinybox/workspace.h"
+
+#ifdef HAVE_WAYLAND
 #include "tinybox/xwayland.h"
+#endif
 
 #include <getopt.h>
 #include <stdlib.h>
@@ -38,6 +41,8 @@ tbx_server_setup(struct tbx_server *server)
     return false;
   }
 
+  server->suspend_damage_tracking = 0;
+  
   server->wl_event_loop = wl_display_get_event_loop(server->wl_display);
   server->renderer = wlr_backend_get_renderer(server->backend);
 
@@ -59,7 +64,11 @@ tbx_server_setup(struct tbx_server *server)
   // setup protocols
   output_setup(server);
   xdg_shell_setup(server);
+  
+  #ifdef HAVE_WAYLAND
   xwayland_shell_setup(server);
+  #endif
+
   decoration_setup(server);
 
   damage_setup(server);

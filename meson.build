@@ -11,9 +11,10 @@ project(
   ],
 )
 
-add_project_arguments(
+add_global_arguments(
   [
     '-DWLR_USE_UNSTABLE=1',
+    '-DHAVE_WAYLAND=1',
     '-DPACKAGE_NAME="' + meson.project_name() + '"',
     '-DPACKAGE_VERSION="' + meson.project_version() + '"',
     '-Wno-unused-parameter',
@@ -28,7 +29,6 @@ add_project_arguments(
 tinybox_inc = include_directories('include')
 
 cc = meson.get_compiler('c')
-
 math = cc.find_library('m', required : true)
 
 wayland_server = dependency('wayland-server')

@@ -794,17 +794,7 @@ buffer_damage_end:
   if (track_damages) {
     pixman_region32_fini(&buffer_damage);
   }
-
-  goto send_frame_done;
-send_frame_done:
-
-  wl_list_for_each_reverse (view, &server->views, link) {
-    if (!view->mapped || !view->surface) {
-      continue;
-    }
-    wlr_surface_send_frame_done(view->surface, &now);
-  }
-
+  
   output->last_frame = now;
 }
 
