@@ -372,7 +372,9 @@ xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
   struct tbx_xdg_shell_view *xdg_shell_view =
       wl_container_of(listener, xdg_shell_view, request_move);
   struct tbx_view *view = &xdg_shell_view->view;
-  xdg_set_fullscreen(view, !view->fullscreen);
+  bool fullscreen = !view->fullscreen;
+  xdg_set_fullscreen(view, fullscreen);
+  view->server->suspend_damage_tracking += fullscreen ? 1 : - 1;
 }
 
 static void

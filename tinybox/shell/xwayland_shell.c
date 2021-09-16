@@ -138,6 +138,8 @@ xwaylan_set_fullscreen(struct tbx_view *view, bool fullscreen)
   }
 
   wlr_xwayland_surface_set_fullscreen(view->xwayland_surface, fullscreen);
+
+  view->server->suspend_damage_tracking += fullscreen ? 1 : - 1;
 }
 
 static const char *
