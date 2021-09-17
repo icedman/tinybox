@@ -28,18 +28,15 @@ enum tbx_view_prop {
   VIEW_PROP_INSTANCE,
   VIEW_PROP_WINDOW_TYPE,
   VIEW_PROP_WINDOW_ROLE,
-  // #if HAVE_XWAYLAND
+
   VIEW_PROP_X11_WINDOW_ID,
-  VIEW_PROP_X11_PARENT_ID,
-  // #endif
+  VIEW_PROP_X11_PARENT_ID
 };
 
 enum tbx_view_type {
   VIEW_TYPE_UNKNOWN,
   VIEW_TYPE_XDG,
-  // #if HAVE_XWAYLAND
   VIEW_TYPE_XWAYLAND,
-  // #endif
 
   VIEW_TYPE_MENU,
   VIEW_TYPE_BAR,
@@ -64,8 +61,6 @@ struct tbx_view_interface {
   //     wlr_surface_iterator_func_t iterator, void *user_data);
   // void (*for_each_popup)(struct tbx_view *view,
   //     wlr_surface_iterator_func_t iterator, void *user_data);
-  // bool (*is_transient_for)(struct tbx_view* child,
-  //     struct tbx_view* ancestor);
   void (*close)(struct tbx_view *view);
   void (*close_popups)(struct tbx_view *view);
   void (*destroy)(struct tbx_view *view);
@@ -84,7 +79,6 @@ struct tbx_view {
 
   bool mapped;
   int x, y;
-  int lx, ly;
 
   // xwayland
   int width, height;
@@ -125,18 +119,26 @@ struct tbx_view {
   // workspace
   int workspace;
 
+  // popups
+  struct wl_list popups;
+
   int identifier;
   size_t life;
+
 };
 
-struct tbx_xdg_shell_popup_view {
+struct tbx_popup_view {
   struct wl_list link;
 
   struct wl_listener new_popup;
   struct wl_listener map;
   struct wl_listener unmap;
 
+  int x;
+  int y;
+
   struct tbx_view *parent;
+  struct tbx_view *self;
 };
 
 struct tbx_xdg_shell_view {
@@ -155,8 +157,6 @@ struct tbx_xdg_shell_view {
   struct wl_listener map;
   struct wl_listener unmap;
   struct wl_listener destroy;
-
-  struct wl_list popups;
 };
 
 struct tbx_xwayland_view {

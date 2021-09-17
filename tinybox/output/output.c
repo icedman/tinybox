@@ -658,6 +658,14 @@ output_render(struct tbx_output *output, bool track_damages)
       continue;
     }
 
+    if (view->view_type == VIEW_TYPE_XWAYLAND) {
+      struct tbx_popup_view *popup;
+      wl_list_for_each(popup, &view->popups, link) {
+        popup->self->x = popup->x + popup->parent->x;
+        popup->self->y = popup->y + popup->parent->y;
+      }
+    }
+
     if (track_damages) {
       //-----------------
       // scissors

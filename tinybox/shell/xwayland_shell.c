@@ -139,7 +139,7 @@ xwaylan_set_fullscreen(struct tbx_view *view, bool fullscreen)
 
   wlr_xwayland_surface_set_fullscreen(view->xwayland_surface, fullscreen);
 
-  view->server->suspend_damage_tracking += fullscreen ? 1 : - 1;
+  view->server->suspend_damage_tracking += fullscreen ? 1 : -1;
 }
 
 static const char *
@@ -248,7 +248,6 @@ struct tbx_view_interface xwayland_view_interface = {
 static void
 xwayland_surface_commit(struct wl_listener *listener, void *data)
 {
-  console_log("commit xwayland");
   struct tbx_xwayland_view *xwayland_view =
       wl_container_of(listener, xwayland_view, commit);
   struct tbx_view *view = &xwayland_view->view;
@@ -305,16 +304,35 @@ xwayland_surface_map(struct wl_listener *listener, void *data)
       struct tbx_view *ancestor;
       wl_list_for_each (ancestor, &server->views, link) {
         if (root->window_id == ancestor->xwayland_surface->window_id) {
-          view->x += ancestor->x;
-          view->y += ancestor->y;
           view->parent = ancestor;
           break;
         }
       }
+
+      int wt = xwayland_get_int_prop(view, VIEW_PROP_WINDOW_TYPE);
+      console_log("type: %d", wt);
+
+      if (view->parent) {
+        console_log("popup!");
+        struct tbx_popup_view *popup =
+        calloc(1, sizeof(struct tbx_popup_view));
+        popup->parent = ancestor;
+        popup->self = view;
+        popup->x = view->x;
+        popup->y = view->y;
+        view->x += view->parent->x;
+        view->y += view->parent->y;
+        wl_list_insert(&view->popups, &popup->link);
+      }
     }
 
     view_raise(view);
-    view_set_focus(view, view->surface);
+    if (view->parent) {
+      view_set_focus(view->parent, view->parent->surface);
+    }
+    //  else {
+    //   view_set_focus(view, view->surface);
+    // }
     return;
   }
 
@@ -438,11 +456,14 @@ new_xwayland_surface(struct wl_listener *listener, void *data)
   struct tbx_xwayland_view *xwayland_view =
       calloc(1, sizeof(struct tbx_xwayland_view));
   struct tbx_view *view = &xwayland_view->view;
+  view->parent = NULL;
   view->view_type = VIEW_TYPE_XWAYLAND;
   view->interface = &xwayland_view_interface;
 
   view->xwayland_surface = xsurface;
   view->server = server;
+
+  wl_list_init(&view->popups);
 
   /* Listen to the various events it can emit */
   xwayland_view->map.notify = xwayland_surface_map;

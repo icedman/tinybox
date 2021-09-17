@@ -12,19 +12,12 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
-/*
-/ void (*for_each_surface)(struct tbx_view *view,
-//     wlr_surface_iterator_func_t iterator, void *user_data);
-// void (*for_each_popup)(struct tbx_view *view,
-//     wlr_surface_iterator_func_t iterator, void *user_data);
-*/
-
 void
 xdg_popup_map(struct wl_listener *listener, void *data)
 {
   console_log("popup map");
 
-  struct tbx_xdg_shell_popup_view *popup =
+  struct tbx_popup_view *popup =
       wl_container_of(listener, popup, map);
 
   popup->parent->server->suspend_damage_tracking++;
@@ -35,7 +28,7 @@ xdg_popup_unmap(struct wl_listener *listener, void *data)
 {
   console_log("popup unmap");
 
-  struct tbx_xdg_shell_popup_view *popup =
+  struct tbx_popup_view *popup =
       wl_container_of(listener, popup, unmap);
 
   popup->parent->server->suspend_damage_tracking--;
@@ -51,11 +44,10 @@ xdg_new_popup(struct wl_listener *listener, void *data)
       wl_container_of(listener, xdg_shell_view, new_popup);
   struct tbx_view *view = &xdg_shell_view->view;
   
-  struct tbx_xdg_shell_popup_view *popup =
-      calloc(1, sizeof(struct tbx_xdg_shell_popup_view));
-
+  struct tbx_popup_view *popup =
+      calloc(1, sizeof(struct tbx_popup_view));
   popup->parent = view;
-  wl_list_insert(&xdg_shell_view->popups, &popup->link);
+  wl_list_insert(&view->popups, &popup->link);
 
   popup->map.notify = xdg_popup_map;
   wl_signal_add(&wlr_popup->base->events.map, &popup->map);
@@ -374,6 +366,7 @@ xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
   struct tbx_view *view = &xdg_shell_view->view;
   bool fullscreen = !view->fullscreen;
   xdg_set_fullscreen(view, fullscreen);
+
   view->server->suspend_damage_tracking += fullscreen ? 1 : - 1;
 }
 
@@ -421,13 +414,14 @@ server_new_xdg_surface(struct wl_listener *listener, void *data)
   struct tbx_xdg_shell_view *xdg_shell_view =
       calloc(1, sizeof(struct tbx_xdg_shell_view));
   struct tbx_view *view = &xdg_shell_view->view;
+  view->parent = NULL;
   view->view_type = VIEW_TYPE_XDG;
   view->interface = &xdg_view_interface;
 
   view->xdg_surface = xdg_surface;
   view->server = server;
 
-  wl_list_init(&xdg_shell_view->popups);
+  wl_list_init(&view->popups);
 
   /* Listen to the various events it can emit */
   xdg_shell_view->map.notify = xdg_surface_map;

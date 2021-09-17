@@ -367,7 +367,11 @@ view_destroy(struct tbx_view *view)
 
   wl_list_remove(&view->link);
 
-  // remove all listeners
+  // destroy popups
+  // struct tbx_popup_view *popup;
+  // wl_list_for_each (popup, &view->popups, link) {
+  //   free(popup);
+  // }
 
   // focus next view
   struct tbx_view *top = workspace_get_top_view(view->server, workspace);
