@@ -1,3 +1,0 @@
-emerge_styledir = $(pkgdatadir)/styles/Emerge
-
-dist_emerge_style_DATA = data/styles/Emerge/theme.cfg

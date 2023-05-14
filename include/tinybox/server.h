@@ -3,80 +3,57 @@
 
 #include <stdbool.h>
 #include <wayland-server-core.h>
+#include <wlr/util/box.h>
 
-#include "tinybox/config.h"
-#include "tinybox/console.h"
-#include "tinybox/cursor.h"
-#include "tinybox/seat.h"
-#include "tinybox/style.h"
-
-#include "pixman.h"
-
-struct tbx_server_decoration_manager;
-struct tbx_command;
+#include <tinybox/cursor.h>
+#include <tinybox/output.h>
+#include <tinybox/seat.h>
+#include <tinybox/shell.h>
+#include <tinybox/view.h>
 
 struct tbx_server {
-  bool started;
-
   struct wl_display *wl_display;
   struct wlr_backend *backend;
   struct wlr_renderer *renderer;
-  struct wlr_compositor *compositor;
-  struct wl_event_loop *wl_event_loop;
+  struct wlr_allocator *allocator;
+  struct wlr_scene *scene;
 
-  // output
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;
-  struct wl_listener output_destroy;
   struct wl_listener new_output;
-  struct tbx_output *main_output;
 
-  // shell
-  struct tbx_xdg_shell *xdg_shell;
-  struct tbx_xwayland_shell *xwayland_shell;
-
-  // decorations
-  struct tbx_decoration_manager *decoration_manager;
-
-  // views
+  struct tbx_shell xdg_shell;
+  struct tbx_shell xwayland_shell;
   struct wl_list views;
-  struct wl_list unmanaged;
 
-  // workspaces
-  struct wl_list workspaces;
-  int workspace;
-  bool ws_animate;
-  double ws_anim_x;
-  double ws_anim_y;
+  struct wlr_cursor *cursor;
+  struct wlr_xcursor_manager *cursor_mgr;
+  struct wl_listener cursor_motion;
+  struct wl_listener cursor_motion_absolute;
+  struct wl_listener cursor_button;
+  struct wl_listener cursor_axis;
+  struct wl_listener cursor_frame;
 
-  // damage
-  int suspend_damage_tracking;
-  int suspend_damage_frames;
-
-  // input
-  struct tbx_cursor *cursor;
-  struct tbx_seat *seat;
-  struct tbx_command *command;
-
-  struct tbx_config config;
-  struct tbx_style style;
-  struct tbx_console *console;
-
-  // menu system
-  struct tbx_menu *tooltip;
-  struct tbx_menu *menu;
-  struct tbx_menu *menu_hovered;
-  struct tbx_menu *menu_navigation_grab;
-  struct tbx_menu *menu_context; // use only during parsing the menu tree
-  struct wl_list menus;
-  struct wl_list named_menus;
+  struct wlr_seat *seat;
+  struct wl_listener new_input;
+  struct wl_listener request_cursor;
+  struct wl_listener request_set_selection;
+  struct wl_list keyboards;
+  enum tbx_cursor_mode cursor_mode;
+  struct tbx_view *grabbed_view;
+  bool grabbing;
+  double grab_x, grab_y;
+  struct wlr_box grab_geobox;
+  uint32_t resize_edges;
 };
 
 bool
 tbx_server_setup(struct tbx_server *server);
+
 bool
 tbx_server_start(struct tbx_server *server);
+
 void
-tbx_server_terminate(struct tbx_server *server);
+tbx_server_shutdown(struct tbx_server *server);
 
 #endif // TINYBOX_SERVER_H

@@ -1,3 +1,0 @@
-bora_blue_styledir = $(pkgdatadir)/styles/bora_blue
-
-dist_bora_blue_style_DATA = data/styles/bora_blue/theme.cfg

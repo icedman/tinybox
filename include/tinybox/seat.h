@@ -1,36 +1,22 @@
 #ifndef TINYBOX_SEAT_H
 #define TINYBOX_SEAT_H
 
-struct tbx_keyboard;
-struct tbx_keys_pressed;
+#include <stdbool.h>
+#include <wayland-server-core.h>
 
-struct tbx_input_device {
+struct tbx_server;
+
+struct tbx_keyboard {
   struct wl_list link;
-
-  char *identifier;
-  struct wlr_input_device *wlr_device;
-  struct wl_listener device_destroy;
-
   struct tbx_server *server;
-};
+  struct wlr_keyboard *wlr_keyboard;
 
-struct tbx_seat {
-  struct wlr_seat *seat;
-  struct wl_listener new_input;
-  struct wl_listener request_cursor;
-  struct wl_listener request_set_selection;
-
-  struct wl_list input_devices;
-  struct wl_list keyboards;
-
-  struct tbx_keyboard *last_keyboard;
-  struct tbx_keys_pressed *keys_pressed;
-  struct tbx_server *server;
+  struct wl_listener modifiers;
+  struct wl_listener key;
+  struct wl_listener destroy;
 };
 
 bool
-seat_setup(struct tbx_server *server);
-void
-seat_destroy(struct tbx_seat *seat);
+tbx_seat_setup(struct tbx_server *server);
 
 #endif // TINYBOX_SEAT_H

@@ -1,3 +1,0 @@
-bloe_styledir = $(pkgdatadir)/styles/bloe
-
-dist_bloe_style_DATA = data/styles/bloe/theme.cfg

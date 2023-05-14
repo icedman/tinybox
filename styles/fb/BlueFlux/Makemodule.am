@@ -1,3 +1,0 @@
-blueflux_styledir = $(pkgdatadir)/styles/BlueFlux
-
-dist_blueflux_style_DATA = data/styles/BlueFlux/theme.cfg

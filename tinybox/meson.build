@@ -1,46 +1,12 @@
 tinybox_src = files(
   'main.c',
-
-  'common/cairo.c',
-  'common/pango.c',
-  'common/stringop.c',
-  'common/util.c',
-
-  'command/command.c',
-  'command/commands/config.c',
-  'command/commands/global.c',
-  'command/commands/input.c',
-  'command/commands/output.c',
-  'command/commands/style.c',
-  'command/commands/keybindings.c',
-  'command/commands/workspace.c',
-  'command/commands/menu.c',
-  
-  'config/config.c',
-  'style/style.c',
-
-  'input/cursor.c',
-  'input/keyboard.c',
-  'input/seat.c',
-  'input/libinput.c',
-  
-  'workspace/arrange.c',
-  'workspace/view.c',
-  'workspace/workspace.c',
-
-  'output/output.c',
-  'output/render.c',
-  'output/layout.c',
-  'output/console.c',
-  'output/damage.c',
-  
-  'menu/menu.c',
-  'menu/render.c',
-
-  'server/server.c',
-  'shell/decoration.c',
-  'shell/xdg_shell.c',
-  'shell/xwayland_shell.c'
+  'cursor.c',
+  'output.c',
+  'server.c',
+  'view.c',
+  'seat.c',
+  'xdg_shell.c',
+  'xwayland_shell.c',
   )
 
 tinybox_dep = [
@@ -63,4 +29,5 @@ executable(
   include_directories: [tinybox_inc],
   dependencies: [tinybox_dep, server_protos],
   install: true,
+  c_args: '-Wno-unused-variable'
   )
