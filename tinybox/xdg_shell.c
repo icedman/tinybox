@@ -22,6 +22,169 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <float.h>
+
+static void
+xdg_set_activated(struct tbx_view *view, struct wlr_surface *surface, bool activated)
+{
+  /* Note: this function only deals with keyboard focus. */
+  if (view == NULL || surface == NULL) {
+    return;
+  }
+
+  struct tbx_server *server = view->server;
+  struct wlr_seat *seat = server->seat;
+  struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
+  if (prev_surface == surface) {
+    /* Don't re-focus an already focused surface. */
+    return;
+  }
+  if (prev_surface) {
+    /*
+     * Deactivate the previously focused surface. This lets the client know
+     * it no longer has focus and the client will repaint accordingly, e.g.
+     * stop displaying a caret.
+     */
+    struct wlr_xdg_surface *previous = wlr_xdg_surface_try_from_wlr_surface(
+        seat->keyboard_state.focused_surface);
+    assert(previous != NULL && previous->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
+    wlr_xdg_toplevel_set_activated(previous->toplevel, !activated);
+  }
+  struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
+  /* Move the view to the front */
+  wlr_scene_node_raise_to_top(&view->scene_tree->node);
+  wl_list_remove(&view->link);
+  wl_list_insert(&server->views, &view->link);
+  /* Activate the new surface */
+  wlr_xdg_toplevel_set_activated(view->surface.xdg->toplevel, activated);
+  /*
+   * Tell the seat to have the keyboard enter this surface. wlroots will keep
+   * track of this and automatically send key events to the appropriate
+   * clients without additional work on your part.
+   */
+  if (keyboard != NULL) {
+    wlr_seat_keyboard_notify_enter(seat,
+        view->surface.xdg->toplevel->base->surface,
+        keyboard->keycodes,
+        keyboard->num_keycodes,
+        &keyboard->modifiers);
+  }
+}
+
+static void
+xdg_get_constraints(struct tbx_view *view,
+    double *min_width,
+    double *max_width,
+    double *min_height,
+    double *max_height)
+{
+  struct wlr_xdg_toplevel_state *state = &view->surface.xdg->toplevel->current;
+  *min_width = state->min_width > 0 ? state->min_width : DBL_MIN;
+  *max_width = state->max_width > 0 ? state->max_width : DBL_MAX;
+  *min_height = state->min_height > 0 ? state->min_height : DBL_MIN;
+  *max_height = state->max_height > 0 ? state->max_height : DBL_MAX;
+}
+
+static void
+xdg_get_geometry(struct tbx_view *view, struct wlr_box *box)
+{
+  if (view->surface.xdg->toplevel) {
+    wlr_xdg_surface_get_geometry(view->surface.xdg, box);
+    box->x = box->y = 0;
+  } else {
+    box->width = 0;
+    box->height = 0;
+  }
+}
+
+
+static uint32_t
+xdg_view_configure(
+    struct tbx_view *view, double lx, double ly, int width, int height)
+{
+  struct wlr_box box;
+  wlr_xdg_surface_get_geometry(view->surface.xdg, &box);
+
+  view->x = lx - box.x;
+  view->y = ly - box.y;
+
+  if (width != box.width) {
+    // view->title_dirty = true;
+  }
+
+  wlr_xdg_toplevel_set_size(view->surface.xdg->toplevel, width, height);
+  view->request_box.x = view->x;
+  view->request_box.y = view->y;
+  view->request_box.width = width;
+  view->request_box.height = height;
+  return 0;
+}
+
+static void
+xdg_set_fullscreen(struct tbx_view *view, bool fullscreen)
+{
+  if (!view->surface.xdg) {
+    return;
+  }
+
+  // console_log("xdg fullscreen %d", fullscreen);
+
+  if (fullscreen) {
+    view->fullscreen = fullscreen;
+    view->restore_box.x = view->x;
+    view->restore_box.y = view->y;
+
+    struct wlr_box window_box;
+    xdg_get_geometry(view, &window_box);
+    view->restore_box.width = window_box.width;
+    view->restore_box.height = window_box.height;
+
+    // todo get output from view
+    struct wlr_box full_box;
+    wlr_output_layout_get_box(
+        view->server->output_layout,
+        view->server->main_output->wlr_output,
+        &full_box);
+
+    view->x = 0;
+    view->y = 0;
+    view->width = full_box.width;
+    view->height = full_box.height;
+    xdg_view_configure(view, 0, 0, full_box.width, full_box.height);
+  } else {
+    view->fullscreen = fullscreen;
+    view->x = view->restore_box.x;
+    view->y = view->restore_box.y;
+    view->width = view->restore_box.width;
+    view->height = view->restore_box.height;
+    xdg_view_configure(view, 0, 0, view->restore_box.width, view->restore_box.height);
+  }
+
+  // wlr_xdg_furface_set_fullscreen(view->xdg_furface, fullscreen);
+}
+
+static void
+xdg_close(struct tbx_view *view)
+{
+  struct wlr_xdg_surface *surface = view->surface.xdg;
+  if (surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL && surface->toplevel) {
+    wlr_xdg_toplevel_send_close(view->surface.xdg->toplevel);
+  }
+}
+
+static void
+xdg_close_popups(struct tbx_view *view)
+{}
+
+static struct tbx_view_interface xdg_view_interface = {
+  .set_activated = xdg_set_activated,
+  .get_constraints = xdg_get_constraints,
+  .get_geometry = xdg_get_geometry,
+  .configure = xdg_view_configure,
+  .set_fullscreen = xdg_set_fullscreen,
+  .close = xdg_close,
+  .close_popups = xdg_close_popups
+};
 
 static void
 xdg_toplevel_map(struct wl_listener *listener, void *data)
@@ -29,9 +192,16 @@ xdg_toplevel_map(struct wl_listener *listener, void *data)
   /* Called when the surface is mapped, or ready to display on-screen. */
   struct tbx_view *view = wl_container_of(listener, view, map);
 
+  struct wlr_xdg_surface *xdg_surface = view->surface.xdg;
+  view->scene_tree = wlr_scene_xdg_surface_create(
+      view->server->scene_views, view->surface.xdg->toplevel->base);
+  view->scene_tree->node.data = view;
+  xdg_surface->data = view->scene_tree;
+
+  /* Add it to the list of views. */
   wl_list_insert(&view->server->views, &view->link);
 
-  focus_view(view, view->xdg_toplevel->base->surface);
+  view->interface->set_activated(view, view->surface.xdg->toplevel->base->surface, true);
 }
 
 static void
@@ -82,7 +252,7 @@ begin_interactive(
 
   struct wlr_surface *focused_surface =
       server->seat->pointer_state.focused_surface;
-  if (view->xdg_toplevel->base->surface !=
+  if (view->surface.xdg->toplevel->base->surface !=
       wlr_surface_get_root_surface(focused_surface)) {
     /* Deny move/resize requests from unfocused clients. */
     return;
@@ -95,7 +265,7 @@ begin_interactive(
     server->grab_y = server->cursor->y - view->scene_tree->node.y;
   } else {
     struct wlr_box geo_box;
-    wlr_xdg_surface_get_geometry(view->xdg_toplevel->base, &geo_box);
+    wlr_xdg_surface_get_geometry(view->surface.xdg->toplevel->base, &geo_box);
 
     double border_x = (view->scene_tree->node.x + geo_box.x) +
                       ((edges & WLR_EDGE_RIGHT) ? geo_box.width : 0);
@@ -146,7 +316,7 @@ xdg_toplevel_request_maximize(struct wl_listener *listener, void *data)
    * to conform to xdg-shell protocol we still must send a configure.
    * wlr_xdg_surface_schedule_configure() is used to send an empty reply. */
   struct tbx_view *view = wl_container_of(listener, view, request_maximize);
-  wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
+  wlr_xdg_surface_schedule_configure(view->surface.xdg->toplevel->base);
 }
 
 static void
@@ -154,7 +324,7 @@ xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 {
   /* Just as with request_maximize, we must send a configure here. */
   struct tbx_view *view = wl_container_of(listener, view, request_fullscreen);
-  wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
+  wlr_xdg_surface_schedule_configure(view->surface.xdg->toplevel->base);
 }
 
 static void
@@ -162,8 +332,8 @@ server_new_xdg_surface(struct wl_listener *listener, void *data)
 {
   /* This event is raised when wlr_xdg_shell receives a new xdg surface from a
    * client, either a toplevel (application window) or popup. */
-  struct tbx_shell *shell = wl_container_of(listener, shell, new_shell_surface);
-  struct tbx_server *server = shell->server;
+  struct tbx_server *server =
+      wl_container_of(listener, server, new_xdg_surface);
   struct wlr_xdg_surface *xdg_surface = data;
 
   /* We must add xdg popups to the scene graph so they get rendered. The
@@ -183,12 +353,13 @@ server_new_xdg_surface(struct wl_listener *listener, void *data)
 
   /* Allocate a tbx_view for this surface */
   struct tbx_view *view = calloc(1, sizeof(struct tbx_view));
+  memset(view, 0, sizeof(struct tbx_view));
   view->server = server;
+  view->type = TBX_XDG_SHELL;
   view->xdg_toplevel = xdg_surface->toplevel;
-  view->scene_tree = wlr_scene_xdg_surface_create(
-      &view->server->scene->tree, view->xdg_toplevel->base);
-  view->scene_tree->node.data = view;
-  xdg_surface->data = view->scene_tree;
+  view->surface.xdg = xdg_surface;
+
+  view->interface = &xdg_view_interface;
 
   /* Listen to the various events it can emit */
   view->map.notify = xdg_toplevel_map;
@@ -214,19 +385,16 @@ server_new_xdg_surface(struct wl_listener *listener, void *data)
 bool
 tbx_xdg_shell_setup(struct tbx_server *server)
 {
-  struct tbx_shell *shell = &server->xdg_shell;
-  shell->server = server;
-
   /* Set up xdg-shell version 3. The xdg-shell is a Wayland protocol which is
    * used for application windows. For more detail on shells, refer to my
    * article:
    *
    * https://drewdevault.com/2018/07/29/Wayland-shells.html
    */
-  shell->wlr_shell = wlr_xdg_shell_create(server->wl_display, 3);
-  shell->new_shell_surface.notify = server_new_xdg_surface;
+  server->xdg_shell = wlr_xdg_shell_create(server->wl_display, 3);
+  server->new_xdg_surface.notify = server_new_xdg_surface;
   wl_signal_add(
-      &shell->wlr_shell->events.new_surface, &shell->new_shell_surface);
+      &server->xdg_shell->events.new_surface, &server->new_xdg_surface);
 
   return true;
 }

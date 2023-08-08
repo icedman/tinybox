@@ -17,13 +17,21 @@ struct tbx_server {
   struct wlr_renderer *renderer;
   struct wlr_allocator *allocator;
   struct wlr_scene *scene;
+  struct wlr_scene_tree *scene_views;
+  struct wlr_compositor *compositor;
 
   struct wlr_output_layout *output_layout;
   struct wl_list outputs;
   struct wl_listener new_output;
+  struct tbx_output *main_output;
 
-  struct tbx_shell xdg_shell;
-  struct tbx_shell xwayland_shell;
+  struct wlr_xdg_shell *xdg_shell;
+  struct wl_listener new_xdg_surface;
+#ifdef HAVE_XWAYLAND
+  struct wlr_xwayland *xwayland;
+  struct wl_listener xwayland_ready;
+  struct wl_listener new_xwayland_surface;
+#endif
   struct wl_list views;
 
   struct wlr_cursor *cursor;
@@ -46,6 +54,9 @@ struct tbx_server {
   struct wlr_box grab_geobox;
   uint32_t resize_edges;
 };
+
+struct tbx_server *
+tbx_server_instance();
 
 bool
 tbx_server_setup(struct tbx_server *server);

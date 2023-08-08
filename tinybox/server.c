@@ -17,6 +17,14 @@
 #include <time.h>
 #include <unistd.h>
 
+static struct tbx_server server = { 0 };
+
+struct tbx_server *
+tbx_server_instance()
+{
+  return &server;
+}
+
 bool
 tbx_server_setup(struct tbx_server *server)
 {
@@ -66,19 +74,20 @@ tbx_server_setup(struct tbx_server *server)
    * to dig your fingers in and play with their behavior if you want. Note that
    * the clients cannot set the selection directly without compositor approval,
    * see the handling of the request_set_selection event below.*/
-  wlr_compositor_create(server->wl_display, 5, server->renderer);
+  server->compositor =
+      wlr_compositor_create(server->wl_display, 5, server->renderer);
   wlr_subcompositor_create(server->wl_display);
   wlr_data_device_manager_create(server->wl_display);
 
   tbx_output_setup(server);
 
   wl_list_init(&server->views);
-  tbx_xdg_shell_setup(server);
-  // tbx_xwayland_shell_setup(server);
 
   tbx_cursor_setup(server);
   tbx_seat_setup(server);
 
+  tbx_xdg_shell_setup(server);
+  // tbx_xwayland_setup(server);
   return true;
 }
 
@@ -101,8 +110,11 @@ tbx_server_start(struct tbx_server *server)
    * startup command if requested. */
   setenv("WAYLAND_DISPLAY", socket, true);
   if (fork() == 0) {
-    execl("/bin/sh", "/bin/sh", "-c", "kitty", (void *)NULL);
+    execl("/bin/sh", "/bin/sh", "-c", "foot", (void *)NULL);
   }
+  // if (fork() == 0) {
+  //   execl("/bin/sh", "/bin/sh", "-c", "xcalc", (void *)NULL);
+  // }
 
   /* Run the Wayland event loop. This does not return until you exit the
    * compositor. Starting the backend rigged up all of the necessary event
@@ -121,6 +133,6 @@ tbx_server_shutdown(struct tbx_server *server)
     wlr_backend_destroy(server->backend);
   }
   if (server->wl_display) {
-    wl_display_destroy(server->wl_display);
+    // wl_display_destroy(server->wl_display);
   }
 }

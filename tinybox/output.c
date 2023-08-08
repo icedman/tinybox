@@ -5,6 +5,9 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
+
+#include <wlr/types/wlr_xdg_output_v1.h>
+#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
 #include <stdlib.h>
@@ -83,6 +86,8 @@ server_new_output(struct wl_listener *listener, void *data)
   output->wlr_output = wlr_output;
   output->server = server;
 
+  server->main_output = output;
+
   // /* Sets up a listener for the frame event. */
   output->frame.notify = output_frame;
   wl_signal_add(&wlr_output->events.frame, &output->frame);
@@ -129,6 +134,8 @@ tbx_output_setup(struct tbx_server *server)
    * necessary.
    */
   server->scene = wlr_scene_create();
+  server->scene_views = wlr_scene_tree_create(&server->scene->tree);
+
   wlr_scene_attach_output_layout(server->scene, server->output_layout);
   return true;
 }

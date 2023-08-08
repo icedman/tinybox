@@ -32,14 +32,14 @@
 int
 main(int argc, char **argv)
 {
+  struct tbx_server *server = tbx_server_instance();
+
   wlr_log_init(WLR_DEBUG, NULL);
 
-  struct tbx_server server = { 0 };
-
-  tbx_server_setup(&server);
+  tbx_server_setup(server);
 
   // run tinybox
-  tbx_server_start(&server);
-  tbx_server_shutdown(&server);
+  tbx_server_start(server);
+  tbx_server_shutdown(server);
   return 0;
 }
